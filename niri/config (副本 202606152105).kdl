@@ -1,0 +1,324 @@
+// 该配置文件采用 KDL 格式：https://kdl.dev
+// "/-" 用于注释掉其后的节点。
+config-notification {
+    disable-failed
+}
+
+gestures {
+    hot-corners {
+        off
+    }
+}
+
+input {
+    keyboard {
+        xkb {}
+        numlock
+    }
+    touchpad {
+        tap
+        natural-scroll
+    }
+    mouse {
+        accel-speed -0.72
+    }
+    trackpoint {}
+}
+
+output "DP-3" {
+    // 强制指定 2K 180Hz
+    mode "2560x1440@179.999"
+    // 如果支持 G-Sync/FreeSync，建议开启，防掉帧很有效
+    variable-refresh-rate
+}
+
+layout {
+    background-color "transparent"
+    center-focused-column "never"
+    
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+    
+    default-column-width { proportion 0.5; }
+    
+    border {
+        off
+        width 4
+        active-color   "#707070"
+        inactive-color "#d0d0d0"
+        urgent-color   "#cc4444"
+    }
+    
+    shadow {
+        softness 30
+        spread 5
+        offset x=0 y=5
+        color "#0007"
+    }
+    
+    struts {}
+}
+
+// ==========================================
+// 材质与透明度模式切换区 (Blur & Opacity)
+// 💡 使用方法：保留你想要的模式，将其他模式用 `/-` 注释掉
+// ==========================================
+
+// [模式 1：无模糊] - 纯粹扁平，性能最高
+/-blur { passes 0; }
+/-window-rule { opacity 1.0; }
+
+// [模式 2：高可读性厚磨砂] - 🌟 当前启用（最契合 Material Design）
+// 特点：极高的可读性，背景颜色内敛，窗口切换视觉落差极小
+blur {
+    passes 2
+    offset 3.0
+    noise 0.02
+    saturation 1.15   // 降低饱和度，防止壁纸高光刺眼
+}
+window-rule { 
+    // 全局基础透明度（聚焦状态），0.94 保证了代码的绝对清晰
+    opacity 0.94 
+}
+window-rule {
+    // 非聚焦状态，仅降至 0.90，缩小与聚焦窗口的样式差距
+    match is-active=false
+    opacity 0.90
+}
+
+// [模式 3：重度玻璃质感] - 适合喜欢通透感的用户
+/-blur {
+    passes 3
+    offset 4.0
+    noise 0.02
+    saturation 1.4
+}
+/-window-rule { opacity 0.85; }
+/-window-rule { 
+    match is-active=false
+    opacity 0.75 
+}
+// ==========================================
+
+// ==========================================
+// 全局样式基底规则 (Geometry & Effects)
+// 这里定义了所有的圆角和后台模糊开关，不需要去上面来回改
+// ==========================================
+window-rule {
+    geometry-corner-radius 12
+    clip-to-geometry true
+    draw-border-with-background false
+    
+    background-effect {
+        blur true
+        xray false
+    }
+}
+
+
+layer-rule {
+    match namespace="^quickshell$"
+    place-within-backdrop true
+}
+
+overview {
+    workspace-shadow {
+        off
+    }
+}
+
+environment {
+    XDG_CURRENT_DESKTOP "niri"
+    GTK_IM_MODULE ""
+}
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+prefer-no-csd
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+animations {
+    workspace-switch {
+        spring damping-ratio=0.80 stiffness=523 epsilon=0.0001
+    }
+    window-open {
+        duration-ms 150
+        curve "ease-out-expo"
+    }
+    window-close {
+        duration-ms 150
+        curve "ease-out-quad"
+    }
+    horizontal-view-movement {
+        spring damping-ratio=0.85 stiffness=423 epsilon=0.0001
+    }
+    window-movement {
+        spring damping-ratio=0.75 stiffness=323 epsilon=0.0001
+    }
+    window-resize {
+        spring damping-ratio=0.85 stiffness=423 epsilon=0.0001
+    }
+    config-notification-open-close {
+        spring damping-ratio=0.65 stiffness=923 epsilon=0.001
+    }
+    screenshot-ui-open {
+        duration-ms 200
+        curve "ease-out-quad"
+    }
+    overview-open-close {
+        spring damping-ratio=0.85 stiffness=800 epsilon=0.0001
+    }
+}
+
+// ==========================================
+// 应用特定规则 (App-specific Rules)
+// ==========================================
+
+window-rule {
+    match app-id=r#"^org\.wezfurlong\.wezterm$"#
+    default-column-width {}
+}
+
+window-rule {
+    match app-id=r#"^gnome-control-center$"#
+    match app-id=r#"^pavucontrol$"#
+    match app-id=r#"^nm-connection-editor$"#
+    default-column-width { proportion 0.5; }
+    open-floating false
+}
+
+window-rule {
+    match app-id=r#"^org\.gnome\.Calculator$"#
+    match app-id=r#"^gnome-calculator$"#
+    match app-id=r#"^galculator$"#
+    match app-id=r#"^blueman-manager$"#
+    match app-id=r#"^org\.gnome\.Nautilus$"#
+    match app-id=r#"^xdg-desktop-portal$"#
+    open-floating true
+}
+
+window-rule {
+    match app-id=r#"^steam$"# title=r#"^notificationtoasts_\d+_desktop$"#
+    default-floating-position x=10 y=10 relative-to="bottom-right"
+    open-focused false
+}
+
+window-rule {
+    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    match app-id="zoom"
+    open-floating true
+}
+
+window-rule {
+    match app-id=r#"org.quickshell$"#
+    match app-id=r#"com.danklinux.dms$"#
+    open-floating true
+}
+
+window-rule {
+    match app-id="wine"
+    open-floating true
+    default-column-width { proportion 1.0; }
+    draw-border-with-background false
+}
+
+debug {
+    honor-xdg-activation-with-invalid-serial
+}
+
+recent-windows {
+    binds {
+        Alt+Tab         { next-window scope="output"; }
+        Alt+Shift+Tab   { previous-window scope="output"; }
+        Alt+grave       { next-window filter="app-id"; }
+        Alt+Shift+grave { previous-window filter="app-id"; }
+    }
+}
+
+include "dms/colors.kdl"
+include "dms/layout.kdl"
+include "dms/alttab.kdl"
+include "dms/binds.kdl"
+include "dms/outputs.kdl"
+include "dms/cursor.kdl"
+
+binds {
+    Mod+Q { close-window; }           
+    Mod+Shift+E { quit; }             
+    
+    Mod+Shift+R { spawn "niri" "msg" "action" "reload-config"; }
+
+    Mod+R { spawn "dms" "ipc" "call" "spotlight" "toggle"; }  
+    Mod+Return { spawn "ghostty"; }   
+    Mod+E { spawn "nautilus"; }       
+    
+    Mod+Left  { focus-column-left; }
+    Mod+Right { focus-column-right; }
+    
+    Mod+D { focus-workspace-down; }
+
+    Mod+H { focus-column-left; }
+    Mod+J { focus-window-down; }
+    Mod+K { focus-window-up; }
+
+    Mod+Shift+Left  { move-column-left; }
+    Mod+Shift+Right { move-column-right; }
+    Mod+Shift+H     {move-column-left; }
+    Mod+Shift+L     { move-column-right; }
+    Mod+Shift+J     { move-window-down; }
+    Mod+Shift+K     { move-window-up; }
+    Mod+T           { toggle-window-floating; }
+    
+    Mod+F { maximize-column; }        
+    Mod+Shift+F { fullscreen-window; }
+    Mod+Space { switch-preset-column-width; } 
+    
+    Mod+Comma  { consume-window-into-column; }
+    Mod+Period { expel-window-from-column; }
+
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+Shift+1 { move-column-to-workspace 1; }
+    Mod+Shift+2 { move-column-to-workspace 2; }
+    Mod+Shift+3 { move-column-to-workspace 3; }
+
+    Mod+Shift+S { screenshot; } 
+    Mod+L { spawn "swaylock"; } 
+    Mod+Slash { show-hotkey-overlay; }
+
+    XF86AudioRaiseVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
+    XF86AudioLowerVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
+    XF86AudioMute        { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+}
+include "dms/windowrules.kdl"
+
+// ==========================================
+// 游戏专属规则：强制无特效、最高性能
+// ==========================================
+window-rule {
+    // 1. 匹配常见的底层运行环境
+    match app-id=r#"^steam_app_.*"#   // 匹配所有 Steam 游戏（原生或 Proton）
+    match app-id=r#"^gamescope$"#     // 匹配 Gamescope 微型合成器
+    match app-id=r#"^wine$"#          // 匹配普通的 Wine 运行环境
+    
+    // 2. 也可以直接通过窗口标题精准匹配（支持正则忽略大小写）
+    // 比如通过第三方启动器运行的《原神》、《绝区零》等，可以直接抓取标题
+    match title=r#"(?i)genshin impact|zenless zone zero|victoria 3|the sims 4|Endfield"#
+
+    // 禁用透明度，恢复 100% 实体
+    opacity 1.0
+
+    // 关闭模糊效果，节省显卡算力
+    background-effect {
+        blur false
+    }
+
+    // 确保没有边框渲染干扰
+    draw-border-with-background false
+}

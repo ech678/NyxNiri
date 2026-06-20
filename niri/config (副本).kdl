@@ -1,0 +1,436 @@
+// 该配置文件采用 KDL 格式：https://kdl.dev
+// "/-" 用于注释掉其后的节点。
+// 请查阅 wiki 获取完整的配置说明：
+// https://github.com/YaLTeR/niri/wiki/Configuration:-Introduction
+config-notification {
+    disable-failed
+}
+
+gestures {
+    hot-corners {
+        off
+    }
+}
+
+// 输入设备配置。
+// 在 wiki 上查找完整的选项列表：
+// https://github.com/YaLTeR/niri/wiki/Configuration:-Input
+input {
+    keyboard {
+        xkb {
+            // 你可以设置 rules, model, layout, variant 和 options。
+            // 更多信息请参阅 xkeyboard-config(7)。
+
+            // 例如：
+            // layout "us,ru"
+            // options "grp:win_space_toggle,compose:ralt,ctrl:nocaps"
+
+            // 如果此部分留空，niri 将从 org.freedesktop.locale1 获取 xkb 设置。
+            // 你可以使用 localectl set-x11-keymap 控制这些设置。
+        }
+
+        // 启动时启用数字键盘锁定，省略此设置将其禁用。
+        numlock
+    }
+
+    // 以下部分包含 libinput 设置。
+    // 省略设置将禁用它们，或使其保持默认值。
+    // 此处所有注释掉的设置均为示例，而非默认值。
+    touchpad {
+        // off
+        tap
+        // dwt
+        // dwtp
+        // drag false
+        // drag-lock
+        natural-scroll
+        // accel-speed 0.2
+        // accel-profile "flat"
+        // scroll-method "two-finger"
+        // disabled-on-external-mouse
+    }
+
+    mouse {
+        // natural-scroll
+        accel-speed -0.72
+        // accel-profile "adaptive"
+        // scroll-method "no-scroll"
+    }
+
+    trackpoint {
+        // off
+        // natural-scroll
+        // accel-speed 0.2
+        // accel-profile "flat"
+        // scroll-method "on-button-down"
+        // scroll-button 273
+        // scroll-button-lock
+        // middle-emulation
+    }
+
+    // 取消注释此行，使鼠标移动到新聚焦窗口的中心。
+    // warp-mouse-to-focus
+
+    // 鼠标移入时自动聚焦窗口和输出设备。
+    // 设置 max-scroll-amount="0%" 使其仅在完全位于屏幕上的窗口起作用。
+    // focus-follows-mouse max-scroll-amount="0%"
+}
+
+// 你可以通过名称配置输出设备，在 niri 实例中运行 `niri msg outputs` 可以找到设备名称。
+// 笔记本内置显示器通常称为 "eDP-1"。
+// 在 wiki 上查找更多信息：
+// https://github.com/YaLTeR/niri/wiki/Configuration:-Outputs
+// 记得删除 "/-" 来取消注释该节点！
+/-output "eDP-2" {
+    mode "2560x1600@239.998993"
+    position x=2560 y=0
+    variable-refresh-rate
+}
+
+// 影响窗口位置和大小的设置。
+// 更多信息请参阅 wiki：
+// https://github.com/YaLTeR/niri/wiki/Configuration:-Layout
+layout {
+    // 设置逻辑像素中窗口周围的间隙。
+    background-color "transparent"
+    
+    // 切换焦点时何时居中一列，选项为：
+    // - "never", 默认行为，聚焦屏幕外的列将使其保持在屏幕的左侧或右侧边缘。
+    // - "always", 聚焦的列将始终居中。
+    // - "on-overflow", 如果聚焦的列与之前聚焦的列无法一起容纳，则会将其居中。
+    center-focused-column "never"
+    
+    // 你可以自定义 "switch-preset-column-width" (Mod+Space) 切换的宽度。
+    preset-column-widths {
+        // proportion 将宽度设置为输出宽度的比例，并考虑间隙。
+        // 例如，你可以在一个屏幕上完美放置四个大小为 "proportion 0.25" 的窗口。
+        // 默认预设宽度为输出的 1/3、1/2 和 2/3。
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+        // fixed 精确设置逻辑像素中的宽度。
+        // fixed 1920
+    }
+    
+    // 你也可以自定义 "switch-preset-window-height" (Mod+Shift+R) 切换的高度。
+    // preset-window-heights { }
+    
+    // 你可以更改新窗口的默认宽度。
+    default-column-width { proportion 0.5; }
+    
+    // 如果你让括号为空，窗口将自行决定其初始宽度。
+    // default-column-width {}
+    
+    // 默认情况下，焦点环和边框在窗口后面渲染为纯背景矩形。
+    // 这意味着它们会透过半透明窗口显示出来。
+    // 这是因为使用客户端装饰的窗口可以有任意形状。
+    //
+    // 如果你不喜欢这样，应该取消注释下面的 `prefer-no-csd`。
+    // Niri 将在同意省略其客户端装饰的窗口 *周围* 绘制焦点环和边框。
+    //
+    // 或者，你可以使用名为 `draw-border-with-background` 的窗口规则来覆盖它。
+    border {
+        off
+        width 4
+        active-color   "#707070"      // 中性灰
+        inactive-color "#d0d0d0"      // 浅灰
+        urgent-color   "#cc4444"      // 柔和红
+    }
+    
+    shadow {
+        softness 30
+        spread 5
+        offset x=0 y=5
+        color "#0007"
+    }
+    
+    struts {
+    }
+}
+
+// === 全局背景模糊配置 (Blur) 必须放在外层 ===
+blur {
+    // 渲染迭代次数，数值越高模糊越平滑，但性能开销略大（默认是 3）
+    passes 3
+    // 每次迭代的采样偏移距离，增大可增强模糊但过大可能有伪影（默认 3.0）
+    offset 3.0
+    // 添加的噪点强度，有助于减少色彩带（默认 0.02）
+    noise 0.02
+    // 模糊背景的饱和度倍数（默认 1.5）
+    saturation 1.2
+}
+
+/* // --- 备用的新模糊与全局窗口规则效果（作为注释保留） ---
+// blur {
+//     passes 2
+//     offset 3.0
+//     noise 0.02
+//     saturation 1.4
+// }
+// 
+// window-rule {
+//     geometry-corner-radius 12
+//     clip-to-geometry true
+//     opacity 0.8
+// 
+//     draw-border-with-background false
+// 
+//     background-effect {
+//         blur true
+//         xray false
+//     }
+// }
+// ----------------------------------------------------
+*/
+
+layer-rule {
+    match namespace="^quickshell$"
+    place-within-backdrop true
+}
+
+overview {
+    workspace-shadow {
+        off
+    }
+}
+
+// 在启动时生成进程，添加类似下面的行。
+// 请注意，作为会话运行 niri 支持 xdg-desktop-autostart，这可能更方便。
+// 更多启动示例请参阅下方的 binds 部分。
+environment {
+    XDG_CURRENT_DESKTOP "niri"
+    // 显式清空 GTK_IM_MODULE，强制使用 Wayland 原生输入协议
+    GTK_IM_MODULE ""
+}
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+prefer-no-csd
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+animations {
+    workspace-switch {
+        spring damping-ratio=0.80 stiffness=523 epsilon=0.0001
+    }
+    window-open {
+        duration-ms 150
+        curve "ease-out-expo"
+    }
+    window-close {
+        duration-ms 150
+        curve "ease-out-quad"
+    }
+    horizontal-view-movement {
+        spring damping-ratio=0.85 stiffness=423 epsilon=0.0001
+    }
+    window-movement {
+        spring damping-ratio=0.75 stiffness=323 epsilon=0.0001
+    }
+    window-resize {
+        spring damping-ratio=0.85 stiffness=423 epsilon=0.0001
+    }
+    config-notification-open-close {
+        spring damping-ratio=0.65 stiffness=923 epsilon=0.001
+    }
+    screenshot-ui-open {
+        duration-ms 200
+        curve "ease-out-quad"
+    }
+    overview-open-close {
+        spring damping-ratio=0.85 stiffness=800 epsilon=0.0001
+    }
+}
+
+// 窗口规则允许你调整各个窗口的行为。
+// 更多信息请查阅 wiki:
+// https://github.com/YaLTeR/niri/wiki/Configuration:-Window-Rules
+
+// 为 WezTerm 的初始配置错误提供一种变通方法
+// 将 default-column-width 设置为空。
+window-rule {
+    // 这里的正则表达式故意尽可能精确，
+    // 因为这是默认配置，我们不希望有任何误判。
+    // 如果你愿意，只使用 app-id="wezterm" 也可以。
+    match app-id=r#"^org\.wezfurlong\.wezterm$"#
+    default-column-width {}
+}
+
+// 统一为未聚焦的窗口设置轻微的透明度
+window-rule {
+    match is-active=false
+    opacity 0.95
+}
+
+window-rule {
+    match app-id=r#"^org\.gnome\."#
+    draw-border-with-background false
+    geometry-corner-radius 12
+    clip-to-geometry true
+}
+
+window-rule {
+    match app-id=r#"^gnome-control-center$"#
+    match app-id=r#"^pavucontrol$"#
+    match app-id=r#"^nm-connection-editor$"#
+    default-column-width { proportion 0.5; }
+    open-floating false
+}
+
+window-rule {
+    match app-id=r#"^org\.gnome\.Calculator$"#
+    match app-id=r#"^gnome-calculator$"#
+    match app-id=r#"^galculator$"#
+    match app-id=r#"^blueman-manager$"#
+    match app-id=r#"^org\.gnome\.Nautilus$"#
+    match app-id=r#"^xdg-desktop-portal$"#
+    open-floating true
+}
+
+window-rule {
+    match app-id=r#"^steam$"# title=r#"^notificationtoasts_\d+_desktop$"#
+    default-floating-position x=10 y=10 relative-to="bottom-right"
+    open-focused false
+}
+
+window-rule {
+    match app-id=r#"^org\.wezfurlong\.wezterm$"#
+    match app-id="Alacritty"
+    match app-id="zen"
+    match app-id="com.mitchellh.ghostty"
+    match app-id="kitty"
+    draw-border-with-background false
+    
+    // 强制终端/浏览器拥有一定透明度
+    opacity 0.85 
+    
+    // 为特定窗口启用模糊效果
+    background-effect {
+        blur true
+        // false 代表非 Xray 模式：它能穿透并模糊背景中的其他窗口，而不仅仅是模糊桌面壁纸。
+        xray false 
+    }
+}
+
+window-rule {
+    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    match app-id="zoom"
+    open-floating true
+}
+
+// 默认以浮动模式打开 dms 窗口
+window-rule {
+    match app-id=r#"org.quickshell$"#
+    match app-id=r#"com.danklinux.dms$"#
+    open-floating true
+}
+
+// Wine Games
+window-rule {
+    // 匹配所有 Wine 程序
+    match app-id="wine"
+    
+    // 设置为打开时默认浮动，解决画面拉伸和偏移
+    open-floating true
+    
+    // 如果你希望它在平铺模式下也占满一列
+    default-column-width { proportion 1.0; }
+    
+    // 排除特定装饰干扰
+    draw-border-with-background false
+}
+
+debug {
+    honor-xdg-activation-with-invalid-serial
+}
+
+// 覆盖并禁用 super+tab
+recent-windows {
+    binds {
+        Alt+Tab         { next-window scope="output"; }
+        Alt+Shift+Tab   { previous-window scope="output"; }
+        Alt+grave       { next-window filter="app-id"; }
+        Alt+Shift+grave { previous-window filter="app-id"; }
+    }
+}
+
+// 引入 dms 配置文件
+include "dms/colors.kdl"
+include "dms/layout.kdl"
+include "dms/alttab.kdl"
+include "dms/binds.kdl"
+include "dms/outputs.kdl"
+include "dms/cursor.kdl"
+
+binds {
+    // === 1. 基础操作 (符合 Windows/通用习惯) ===
+    Mod+Q { close-window; }           // 关闭当前窗口 (类似 Alt+F4)
+    Mod+Shift+E { quit; }             // 退出 niri
+    
+    // 使用外部命令强制重载，解决 reload-config 报错问题
+    Mod+Shift+R { spawn "niri" "msg" "action" "reload-config"; }
+
+    // === 2. 运行程序 (Windows 键位习惯) ===
+    Mod+R { spawn "dms" "ipc" "call" "spotlight" "toggle"; }  // 运行 (Win+R)
+    Mod+Return { spawn "ghostty"; }   // 终端
+    Mod+E { spawn "nautilus"; }       // 文件资源管理器 (Win+E)
+    
+    // === 3. 窗口聚焦 & 导航 ===
+    // 像左右滑动照片一样切换窗口
+    Mod+Left  { focus-column-left; }
+    Mod+Right { focus-column-right; }
+    
+    // === 返回桌面 (Win+D) ===
+    // 技巧：在 niri 中，返回桌面最好的办法是滑动到一个新的空工作区
+    Mod+D { focus-workspace-down; }
+
+    // 经典的 HJKL 导航 (移除 Mod+L 以免冲突)
+    Mod+H { focus-column-left; }
+    Mod+J { focus-window-down; }
+    Mod+K { focus-window-up; }
+    // 注意：此处不再定义 Mod+L，因为它被留给“锁屏”了
+
+    // === 4. 移动窗口位置 ===
+    Mod+Shift+Left  { move-column-left; }
+    Mod+Shift+Right { move-column-right; }
+    Mod+Shift+H     { move-column-left; }
+    Mod+Shift+L     { move-column-right; }
+    Mod+Shift+J     { move-window-down; }
+    Mod+Shift+K     { move-window-up; }
+    Mod+T           { toggle-window-floating; }
+    
+
+    // === 5. 布局与尺寸调节 ===
+    Mod+F { maximize-column; }        // 窗口最大化/还原 (Win+F)
+    Mod+Shift+F { fullscreen-window; }// 全屏
+    Mod+Space { switch-preset-column-width; } // 循环切换窗口宽度
+    
+    // 窗口合并与拆分 (把旁边的窗口吸过来或弹出去)
+    Mod+Comma  { consume-window-into-column; }
+    Mod+Period { expel-window-from-column; }
+
+    // === 6. 工作区切换 (类似虚拟桌面) ===
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+Shift+1 { move-column-to-workspace 1; }
+    Mod+Shift+2 { move-column-to-workspace 2; }
+    Mod+Shift+3 { move-column-to-workspace 3; }
+
+    // === 7. 系统功能 ===
+    // 截图 (Win+Shift+S 习惯)
+    Mod+Shift+S { screenshot; } 
+    
+    // 锁屏 (Win+L 习惯) - 确保你系统里有 swaylock，如果没有可改为通知
+    Mod+L { spawn "swaylock"; } 
+    
+    // 显示快捷键帮助面板
+    Mod+Slash { show-hotkey-overlay; }
+
+    // 音量与亮度控制 (笔记本用户实用)
+    XF86AudioRaiseVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
+    XF86AudioLowerVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
+    XF86AudioMute        { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+}
+include "dms/windowrules.kdl"
