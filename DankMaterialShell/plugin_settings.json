@@ -1,0 +1,30 @@
+{
+  "weatherArt": {
+    "enabled": false
+  },
+  "desktopCommand": {
+    "enabled": false
+  },
+  "dankAudioVisualizer": {
+    "enabled": false
+  },
+  "dankDesktopWeather": {
+    "enabled": false
+  },
+  "activateLinux": {
+    "enabled": false
+  },
+  "dmsconky": {
+    "enabled": true
+  },
+  "appShortcut": {
+    "enabled": true
+  },
+  "liveLyrics": {
+    "enabled": true,
+    "source1": "lrclib",
+    "source3": "navidrome",
+    "source4": "none",
+    "source2": "navidrome"
+  }
+}

@@ -40,13 +40,6 @@ input {
     trackpoint {}
 }
 
-output "DP-3" {
-    // 强制指定 2K 180Hz
-    mode "2560x1440@179.999"
-    // 如果支持 G-Sync/FreeSync，建议开启，防掉帧很有效
-    /-variable-refresh-rate
-}
-
 layout {
     background-color "transparent"
     // Set gaps around windows in logical pixels.
@@ -232,6 +225,7 @@ layer-rule {
     place-within-backdrop true
 }
 
+
 overview {
     workspace-shadow {
         off
@@ -282,6 +276,7 @@ animations {
         spring damping-ratio=0.85 stiffness=800 epsilon=0.0001
     }
 }
+
 
 // ==========================================
 // 应用特定规则 (App-specific Rules)

@@ -1,0 +1,7 @@
+layer-rule {
+    match namespace="^noctalia-bar-default$"
+    opacity 1.0
+    geometry-corner-radius 0
+    shadow { off; }
+    background-effect { blur false; }
+}

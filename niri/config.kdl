@@ -1,24 +1,3 @@
-// 该配置文件采用 KDL 格式：https://kdl.dev
-// "/-" 用于注释掉其后的节点。
-config-notification {
-    disable-failed
-}
-
-/-cursor {
-    // 光标主题名称，必须与/usr/share/icons/下的文件夹名称完全一致
-    xcursor-theme "Vimix-cursors"
-    
-    // 光标大小，推荐24-32
-    xcursor-size 20
-    
-    // 闲置时隐藏光标（毫秒），可选
-    hide-after-inactive-ms 3000
-    
-    // 输入时隐藏光标，可选
-    hide-when-typing
-}
-
-
 gestures {
     hot-corners {
         off
@@ -40,182 +19,68 @@ input {
     trackpoint {}
 }
 
-output "DP-3" {
-    // 强制指定 2K 180Hz
-    mode "2560x1440@179.999"
-    // 如果支持 G-Sync/FreeSync，建议开启，防掉帧很有效
-    /-variable-refresh-rate
-}
-
 layout {
+    // 从 glassy-niri 引入的平铺区深色背景，取消注释可体验：
+    // background-color "00000020"
     background-color "transparent"
-    // Set gaps around windows in logical pixels.
-    gaps 8
-
-    // When to center a column when changing focus, options are:
-    // - "never", default behavior, focusing an off-screen column will keep at the left
-    //   or right edge of the screen.
-    // - "always", the focused column will always be centered.
-    // - "on-overflow", focusing a column will center it if it doesn't fit
-    //   together with the previously focused column.
+    gaps 12
     center-focused-column "never"
-
-    // You can customize the widths that "switch-preset-column-width" (Mod+R) toggles between.
     preset-column-widths {
-        // Proportion sets the width as a fraction of the output width, taking gaps into account.
-        // For example, you can perfectly fit four windows sized "proportion 0.25" on an output.
-        // The default preset widths are 1/3, 1/2 and 2/3 of the output.
         proportion 0.33333
         proportion 0.5
         proportion 0.66667
-
-        // Fixed sets the width in logical pixels exactly.
-        // fixed 1920
     }
-
-    // You can also customize the heights that "switch-preset-window-height" (Mod+Shift+R) toggles between.
-    // preset-window-heights { }
-
-    // You can change the default width of the new windows.
     default-column-width { proportion 0.5; }
-    // If you leave the brackets empty, the windows themselves will decide their initial width.
-    // default-column-width {}
-
-    // By default focus ring and border are rendered as a solid background rectangle
-    // behind windows. That is, they will show up through semitransparent windows.
-    // This is because windows using client-side decorations can have an arbitrary shape.
-    //
-    // If you don't like that, you should uncomment `prefer-no-csd` below.
-    // Niri will draw focus ring and border *around* windows that agree to omit their
-    // client-side decorations.
-    //
-    // Alternatively, you can override it with a window rule called
-    // `draw-border-with-background`.
-
-    // You can change how the focus ring looks.
     focus-ring {
-        // Uncomment this line to disable the focus ring.
-        // off
-
-        // How many logical pixels the ring extends out from the windows.
-        width 2
-        
-        // Colors can be set in a variety of ways:
-        // - CSS named colors: "red"
-        // - RGB hex: "#rgb", "#rgba", "#rrggbb", "#rrggbbaa"
-        // - CSS-like notation: "rgb(255, 127, 0)", rgba(), hsl() and a few others.
-
-        // Color of the ring on the active monitor.
-        active-color "#7fc8ff"
-
-        // Color of the ring on inactive monitors.
-        //
-        // The focus ring only draws around the active window, so the only place
-        // where you can see its inactive-color is on other monitors.
-        inactive-color "#505050"
-
-        // You can also use gradients. They take precedence over solid colors.
-        // Gradients are rendered the same as CSS linear-gradient(angle, from, to).
-        // The angle is the same as in linear-gradient, and is optional,
-        // defaulting to 180 (top-to-bottom gradient).
-        // You can use any CSS linear-gradient tool on the web to set these up.
-        // Changing the color space is also supported, check the wiki for more info.
-        //
-        // active-gradient from="#ff80dd80" to="#ffb5e550" angle=45
-
-        // You can also color the gradient relative to the entire view
-        // of the workspace, rather than relative to just the window itself.
-        // To do that, set relative-to="workspace-view".
-        //
-        // inactive-gradient from="#505050" to="#808080" angle=45 relative-to="workspace-view"
-    }
-
-    // You can also add a border. It's similar to the focus ring, but always visible.
-    border {
-        // The settings are the same as for the focus ring.
-        // If you enable the border, you probably want to disable the focus ring.
         off
-
-        width 2
-        active-color "#ffc87f"
-        inactive-color "#505050"
-
-        // Color of the border around windows that request your attention.
-        urgent-color "#9b0000"
-
-        // Gradients can use a few different interpolation color spaces.
-        // For example, this is a pastel rainbow gradient via in="oklch longer hue".
-        //
-        // active-gradient from="#e5989b" to="#ffb4a2" angle=45 relative-to="workspace-view" in="oklch longer hue"
-
-        // inactive-gradient from="#505050" to="#808080" angle=45 relative-to="workspace-view"
+        width 0
+        active-color "#b6c7e7"
+        inactive-color "#131315"
+        urgent-color "#ffb4ab"
     }
-
-    // You can enable drop shadows for windows.
     shadow {
-        // Uncomment the next line to enable shadows.
-        // on
-
-        // By default, the shadow draws only around its window, and not behind it.
-        // Uncomment this setting to make the shadow draw behind its window.
-        //
-        // Note that niri has no way of knowing about the CSD window corner
-        // radius. It has to assume that windows have square corners, leading to
-        // shadow artifacts inside the CSD rounded corners. This setting fixes
-        // those artifacts.
-        //
-        // However, instead you may want to set prefer-no-csd and/or
-        // geometry-corner-radius. Then, niri will know the corner radius and
-        // draw the shadow correctly, without having to draw it behind the
-        // window. These will also remove client-side shadows if the window
-        // draws any.
-        //
-        // draw-behind-window true
-
-        // You can change how shadows look. The values below are in logical
-        // pixels and match the CSS box-shadow properties.
-
-        // Softness controls the shadow blur radius.
-        softness 30
-
-        // Spread expands the shadow.
-        spread 5
-
-        // Offset moves the shadow relative to the window.
-        offset x=0 y=5
-
-        // You can also change the shadow color and opacity.
-        color "#0007"
+        on
+        softness 10
+        spread 4
+        offset x=0 y=0
+        color "#00000070"
     }
 
-    // Struts shrink the area occupied by windows, similarly to layer-shell panels.
-    // You can think of them as a kind of outer gaps. They are set in logical pixels.
-    // Left and right struts will cause the next window to the side to always be visible.
-    // Top and bottom struts will simply add outer gaps in addition to the area occupied by
-    // layer-shell panels and regular gaps.
-    struts {
-        // left 64
-        // right 64
-        // top 64
-        // bottom 64
+    tab-indicator {
+        active-color   "#b6c7e7"
+        inactive-color "#374761"
+        urgent-color   "#ffb4ab"
+    }
+
+    insert-hint {
+        color "#b6c7e780"
     }
 }
 
 // 全局窗口规则
 window-rule {
-    // 这一行规则可以让niri变成传统桌面那样的堆叠式桌面。
-    //open-floating true
+    opacity 0.9
     // 圆角
-    geometry-corner-radius 8
+    geometry-corner-radius 12
     // 去掉超出圆角的窗口内容
     clip-to-geometry true
-    // 全局透明度
-    opacity 0.9
     // 禁止边框画到背景里
     draw-border-with-background false
     background-effect {
         blur true
+        xray true
     }
+}
+
+/-window-rule{
+    //exclude app-id="app.zen_browser.zen" // 排除zen,zen聚焦时单独设置透明度
+    // 全局透明度
+    opacity 0.9
+}
+
+window-rule {
+    match is-focused=false
+    opacity 0.85
 }
 
 blur {
@@ -228,11 +93,29 @@ blur {
 
 
 layer-rule {
+    match namespace="^noctalia-wallpaper*"
+    place-within-backdrop true
+}
+
+layer-rule {
     match namespace="^quickshell$"
     place-within-backdrop true
 }
 
+// namespace for noctalia(v5.0.0) bar
+layer-rule {
+    match namespace="^noctalia-bar-default$"
+    opacity 1.0
+    geometry-corner-radius 0
+    shadow { off; }
+    background-effect {
+        blur true
+        //xray true // 可选：如果开启，只模糊背后的壁纸，性能更好且通常观感更干净
+    }
+}
+
 overview {
+    backdrop-color "#4c566a90"
     workspace-shadow {
         off
     }
@@ -240,8 +123,15 @@ overview {
 
 environment {
     XDG_CURRENT_DESKTOP "niri"
+    XDG_SESSION_TYPE "wayland"
     GTK_IM_MODULE ""
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+    QT_QPA_PLATFORM "wayland"
+    QT_QPA_PLATFORMTHEME "gtk3"
+    QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
 }
+
+// spawn-at-startup "noctalia" "-d"
 
 hotkey-overlay {
     skip-at-startup
@@ -284,6 +174,8 @@ animations {
 }
 
 
+
+
 // ==========================================
 // 应用特定规则 (App-specific Rules)
 // ==========================================
@@ -314,7 +206,7 @@ window-rule {
 window-rule {
     match app-id=r#"^steam$"# title=r#"^notificationtoasts_\d+_desktop$"#
     default-floating-position x=10 y=10 relative-to="bottom-right"
-    open-focused false
+    // opened false
 }
 
 window-rule {
@@ -325,7 +217,6 @@ window-rule {
 
 window-rule {
     match app-id=r#"org.quickshell$"#
-    match app-id=r#"com.danklinux.dms$"#
     open-floating true
 }
 
@@ -334,6 +225,39 @@ window-rule {
     open-floating true
     default-column-width { proportion 1.0; }
     draw-border-with-background false
+}
+
+// 从 glassy-niri 复制的特定应用美化规则
+window-rule {
+    match app-id="org.pwmt.zathura"
+    opacity 0.8
+    background-effect { blur true; xray true; }
+}
+window-rule {
+    match app-id="codium"
+    opacity 0.85
+    background-effect { blur true; xray true; }
+}
+window-rule {
+    match app-id="steam"
+    opacity 0.9
+    background-effect { blur true; xray true; }
+}
+window-rule {
+    match app-id="obsidian"
+    opacity 0.9
+    background-effect { blur true; xray true; }
+}
+//Zen
+window-rule {
+    match app-id="app.zen_browser.zen"
+    draw-border-with-background false
+    background-effect { blur true; xray true; }
+}
+window-rule {
+    match app-id=r#"^org\.gnome\.Nautilus$"#
+    draw-border-with-background false
+    background-effect { blur true; xray true; }
 }
 
 debug {
@@ -347,28 +271,56 @@ recent-windows {
         Alt+grave       { next-window filter="app-id"; }
         Alt+Shift+grave { previous-window filter="app-id"; }
     }
+    highlight {
+        corner-radius 12
+        active-color   "#b6c7e7"
+        urgent-color   "#ffb4ab"
+    }
 }
 
-include "dms/colors.kdl"
-/-include "dms/layout.kdl"
-include "dms/alttab.kdl"
-include "dms/binds.kdl"
-include "dms/outputs.kdl"
-include "dms/cursor.kdl"
+// --- Merged from dms/outputs.kdl ---
+output "DP-2" {
+    mode "2560x1440@179.999"
+    scale 1
+    position x=0 y=1655
+}
+
+output "DP-1" {
+    mode "1920x1080@143.999"
+    scale 1
+    transform "90"
+    position x=463 y=0
+}
+
+output "DP-3" {
+    mode "2560x1440@179.999"
+    scale 1
+    position x=1543 y=480
+}
+
+// --- Merged from dms/cursor.kdl ---
+cursor {
+    xcursor-theme "Adwaita"
+    xcursor-size 24
+}
 
 binds {
+    Mod+Tab repeat=false { toggle-overview; }
     Mod+Q { close-window; }           
     Mod+Shift+E { quit; }             
     
     Mod+Shift+R { spawn "niri" "msg" "action" "load-config-file"; }
 
     Mod+R { spawn "dms" "ipc" "call" "spotlight" "toggle"; }  
+    Mod+X { spawn "dms" "ipc" "call" "powermenu" "toggle"; }
+    Mod+I { spawn "dms" "ipc" "call" "settings" "focusOrToggle"; }
+    Mod+V { spawn "dms" "ipc" "call" "clipboard" "toggle"; }
     Mod+Return { spawn "kitty"; }   
     Mod+E { spawn "nautilus"; }       
     
-    Mod+Left  { focus-column-left; }
-    Mod+Right { focus-column-right; }
-    
+    Mod+Z  { focus-column-left; }
+    Mod+C { focus-column-right; }
+
     Mod+D { focus-workspace-down; }
 
     Mod+H { focus-column-left; }
@@ -404,9 +356,57 @@ binds {
     XF86AudioRaiseVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
     XF86AudioLowerVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
     XF86AudioMute        { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
-}
-include "dms/windowrules.kdl"
 
+    // === Mouse Wheel Navigation ===
+    Mod+WheelScrollDown      cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp        cooldown-ms=150 { focus-workspace-up; }
+    Mod+Ctrl+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
+    Mod+Ctrl+WheelScrollUp   cooldown-ms=150 { move-column-to-workspace-up; }
+
+    Mod+WheelScrollRight      { focus-column-right; }
+    Mod+WheelScrollLeft       { focus-column-left; }
+    Mod+Ctrl+WheelScrollRight { move-column-right; }
+    Mod+Ctrl+WheelScrollLeft  { move-column-left; }
+
+    Mod+Shift+WheelScrollDown      { focus-column-right; }
+    Mod+Shift+WheelScrollUp        { focus-column-left; }
+    Mod+Ctrl+Shift+WheelScrollDown { move-column-right; }
+    Mod+Ctrl+Shift+WheelScrollUp   { move-column-left; }
+
+    // === Extra Workspaces ===
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+    Mod+Shift+4 { move-column-to-workspace 4; }
+    Mod+Shift+5 { move-column-to-workspace 5; }
+    Mod+Shift+6 { move-column-to-workspace 6; }
+    Mod+Shift+7 { move-column-to-workspace 7; }
+    Mod+Shift+8 { move-column-to-workspace 8; }
+    Mod+Shift+9 { move-column-to-workspace 9; }
+
+    // === Monitor Navigation ===
+    Mod+Ctrl+Left  { focus-monitor-left; }
+    Mod+Ctrl+Right { focus-monitor-right; }
+    Mod+Ctrl+Down  { focus-monitor-down; }
+    Mod+Ctrl+Up    { focus-monitor-up; }
+
+    Mod+Shift+Ctrl+Left  { move-column-to-monitor-left; }
+    Mod+Shift+Ctrl+Right { move-column-to-monitor-right; }
+    Mod+Shift+Ctrl+Down  { move-column-to-monitor-down; }
+    Mod+Shift+Ctrl+Up    { move-column-to-monitor-up; }
+
+    // === Extra Keys ===
+    Print { screenshot; }
+    Ctrl+Print { screenshot-screen; }
+    Alt+Print { screenshot-window; }
+
+    // === Brightness Controls ===
+    XF86MonBrightnessUp allow-when-locked=true { spawn "sh" "-c" "ddcutil setvcp 10 + 10"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "sh" "-c" "ddcutil setvcp 10 - 10"; }
+}
 // ==========================================
 // 游戏专属规则：强制无特效、最高性能
 // ==========================================

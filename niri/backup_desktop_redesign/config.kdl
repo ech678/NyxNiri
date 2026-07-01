@@ -25,104 +25,86 @@ input {
     trackpoint {}
 }
 
-output "DP-3" {
-    // 强制指定 2K 180Hz
-    mode "2560x1440@179.999"
-    // 如果支持 G-Sync/FreeSync，建议开启，防掉帧很有效
-    variable-refresh-rate
-}
-
 layout {
     background-color "transparent"
+    gaps 8
     center-focused-column "never"
-    
     preset-column-widths {
         proportion 0.33333
         proportion 0.5
         proportion 0.66667
     }
-    
     default-column-width { proportion 0.5; }
-    
+    focus-ring {
+        width 2
+        active-color "#9acbff"
+        inactive-color "#8b919a"
+        urgent-color "#ffb4ab"
+    }
+
     border {
         off
-        width 4
-        active-color   "#707070"
-        inactive-color "#d0d0d0"
-        urgent-color   "#cc4444"
+
+        width 2
+        active-color "#9acbff"
+        inactive-color "#8b919a"
+        urgent-color "#ffb4ab"
     }
-    
+
     shadow {
         softness 30
         spread 5
         offset x=0 y=5
-        color "#0007"
+        color "#00000070"
     }
-    
-    struts {}
+
+    tab-indicator {
+        active-color   "#9acbff"
+        inactive-color "#8b919a"
+        urgent-color   "#ffb4ab"
+    }
+
+    insert-hint {
+        color "#9acbff80"
+    }
 }
 
-// ==========================================
-// 材质与透明度模式切换区 (Blur & Opacity)
-// 💡 使用方法：保留你想要的模式，将其他模式用 `/-` 注释掉
-// ==========================================
-
-// [模式 1：无模糊] - 纯粹扁平，性能最高
-/-blur { passes 0; }
-/-window-rule { opacity 1.0; }
-
-// [模式 2：高可读性厚磨砂] - 🌟 当前启用（最契合 Material Design）
-// 特点：极高的可读性，背景颜色内敛，窗口切换视觉落差极小
-blur {
-    passes 2
-    offset 3.0
-    noise 0.02
-    saturation 1.15   // 降低饱和度，防止壁纸高光刺眼
-}
-window-rule { 
-    // 全局基础透明度（聚焦状态），0.94 保证了代码的绝对清晰
-    opacity 0.94 
-}
+// 全局窗口规则
 window-rule {
-    // 非聚焦状态，仅降至 0.90，缩小与聚焦窗口的样式差距
-    match is-active=false
-    opacity 0.90
-}
-
-// [模式 3：重度玻璃质感] - 适合喜欢通透感的用户
-/-blur {
-    passes 3
-    offset 4.0
-    noise 0.02
-    saturation 1.4
-}
-/-window-rule { opacity 0.85; }
-/-window-rule { 
-    match is-active=false
-    opacity 0.75 
-}
-// ==========================================
-
-// ==========================================
-// 全局样式基底规则 (Geometry & Effects)
-// 这里定义了所有的圆角和后台模糊开关，不需要去上面来回改
-// ==========================================
-window-rule {
-    geometry-corner-radius 12
+    // 这一行规则可以让niri变成传统桌面那样的堆叠式桌面。
+    //open-floating true
+    // 圆角
+    geometry-corner-radius 8
+    // 去掉超出圆角的窗口内容
     clip-to-geometry true
+    // 全局透明度
+    opacity 0.9
+    // 禁止边框画到背景里
     draw-border-with-background false
-    
     background-effect {
         blur true
-        xray false
     }
 }
 
+blur {
+    // off
+    passes 3
+    offset 2.3
+    noise 0.001
+    saturation 2
+}
+
+
+layer-rule {
+    match namespace="^noctalia-wallpaper*"
+    place-within-backdrop true
+}
 
 layer-rule {
     match namespace="^quickshell$"
     place-within-backdrop true
 }
+
 
 overview {
     workspace-shadow {
@@ -132,8 +114,15 @@ overview {
 
 environment {
     XDG_CURRENT_DESKTOP "niri"
+    XDG_SESSION_TYPE "wayland"
     GTK_IM_MODULE ""
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+    QT_QPA_PLATFORM "wayland"
+    QT_QPA_PLATFORMTHEME "gtk3"
+    QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
 }
+
+spawn-at-startup "noctalia" "-d"
 
 hotkey-overlay {
     skip-at-startup
@@ -174,6 +163,7 @@ animations {
         spring damping-ratio=0.85 stiffness=800 epsilon=0.0001
     }
 }
+
 
 // ==========================================
 // 应用特定规则 (App-specific Rules)
@@ -216,7 +206,6 @@ window-rule {
 
 window-rule {
     match app-id=r#"org.quickshell$"#
-    match app-id=r#"com.danklinux.dms$"#
     open-floating true
 }
 
@@ -238,23 +227,50 @@ recent-windows {
         Alt+grave       { next-window filter="app-id"; }
         Alt+Shift+grave { previous-window filter="app-id"; }
     }
+    highlight {
+        corner-radius 12
+        active-color   "#3573a9"
+        urgent-color   "#ffb4ab"
+    }
 }
 
-include "dms/colors.kdl"
-include "dms/layout.kdl"
-include "dms/alttab.kdl"
-include "dms/binds.kdl"
-include "dms/outputs.kdl"
-include "dms/cursor.kdl"
+// --- Merged from dms/outputs.kdl ---
+output "DP-2" {
+    mode "2560x1440@179.999"
+    scale 1
+    position x=0 y=1655
+}
+
+output "DP-1" {
+    mode "1920x1080@143.999"
+    scale 1
+    transform "90"
+    position x=463 y=0
+}
+
+output "DP-3" {
+    mode "2560x1440@179.999"
+    scale 1
+    position x=1543 y=480
+}
+
+// --- Merged from dms/cursor.kdl ---
+cursor {
+    xcursor-theme "Adwaita"
+    xcursor-size 24
+}
 
 binds {
+    Mod+Tab repeat=false { toggle-overview; }
     Mod+Q { close-window; }           
     Mod+Shift+E { quit; }             
     
-    Mod+Shift+R { spawn "niri" "msg" "action" "reload-config"; }
+    Mod+Shift+R { spawn "niri" "msg" "action" "load-config-file"; }
 
-    Mod+R { spawn "dms" "ipc" "call" "spotlight" "toggle"; }  
-    Mod+Return { spawn "ghostty"; }   
+    Mod+R { spawn-sh "noctalia msg panel-toggle launcher"; }  
+    Mod+X { spawn-sh "noctalia msg panel-toggle session"; }
+    Mod+I { spawn-sh "noctalia msg panel-toggle control-center"; }
+    Mod+Return { spawn "kitty"; }   
     Mod+E { spawn "nautilus"; }       
     
     Mod+Left  { focus-column-left; }
@@ -295,8 +311,59 @@ binds {
     XF86AudioRaiseVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
     XF86AudioLowerVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
     XF86AudioMute        { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+
+    // === Mouse Wheel Navigation ===
+    Mod+WheelScrollDown      cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp        cooldown-ms=150 { focus-workspace-up; }
+    Mod+Ctrl+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
+    Mod+Ctrl+WheelScrollUp   cooldown-ms=150 { move-column-to-workspace-up; }
+
+    Mod+WheelScrollRight      { focus-column-right; }
+    Mod+WheelScrollLeft       { focus-column-left; }
+    Mod+Ctrl+WheelScrollRight { move-column-right; }
+    Mod+Ctrl+WheelScrollLeft  { move-column-left; }
+
+    Mod+Shift+WheelScrollDown      { focus-column-right; }
+    Mod+Shift+WheelScrollUp        { focus-column-left; }
+    Mod+Ctrl+Shift+WheelScrollDown { move-column-right; }
+    Mod+Ctrl+Shift+WheelScrollUp   { move-column-left; }
+
+    // === Extra Workspaces ===
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+    Mod+Shift+4 { move-column-to-workspace 4; }
+    Mod+Shift+5 { move-column-to-workspace 5; }
+    Mod+Shift+6 { move-column-to-workspace 6; }
+    Mod+Shift+7 { move-column-to-workspace 7; }
+    Mod+Shift+8 { move-column-to-workspace 8; }
+    Mod+Shift+9 { move-column-to-workspace 9; }
+
+    // === Monitor Navigation ===
+    Mod+Ctrl+Left  { focus-monitor-left; }
+    Mod+Ctrl+Right { focus-monitor-right; }
+    Mod+Ctrl+Down  { focus-monitor-down; }
+    Mod+Ctrl+Up    { focus-monitor-up; }
+
+    Mod+Shift+Ctrl+Left  { move-column-to-monitor-left; }
+    Mod+Shift+Ctrl+Right { move-column-to-monitor-right; }
+    Mod+Shift+Ctrl+Down  { move-column-to-monitor-down; }
+    Mod+Shift+Ctrl+Up    { move-column-to-monitor-up; }
+
+    // === Extra Keys ===
+    Print { screenshot; }
+    Ctrl+Print { screenshot-screen; }
+    Alt+Print { screenshot-window; }
+
+    // === Brightness Controls ===
+    XF86MonBrightnessUp allow-when-locked=true { spawn "sh" "-c" "ddcutil setvcp 10 + 10"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "sh" "-c" "ddcutil setvcp 10 - 10"; }
 }
-include "dms/windowrules.kdl"
+// Removed dms/windowrules.kdl
+
 
 // ==========================================
 // 游戏专属规则：强制无特效、最高性能
@@ -321,4 +388,19 @@ window-rule {
 
     // 确保没有边框渲染干扰
     draw-border-with-background false
+}
+
+// 视频画中画
+window-rule {
+    match app-id="firefox" title="画中画"
+    match app-id="firefox" title="Picture-in-Picture"
+
+    open-floating true
+    
+    // 让窗口自己决定初始大小，从而解锁拉伸限制
+    default-column-width {}
+    default-window-height {}
+
+    // 依然可以保持右下角定位
+    default-floating-position x=20 y=20 relative-to="bottom-right"
 }
