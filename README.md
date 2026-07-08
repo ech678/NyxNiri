@@ -1,4 +1,116 @@
-# 🌌 Niri & Noctalia Desktop Dotfiles (桌面美化与配置文件仓库)
+# 🌌 Niri & Noctalia Desktop Dotfiles
+
+<p align="center">
+  <a href="#-niri--noctalia-desktop-dotfiles">English</a> • 
+  <a href="#-niri--noctalia-desktop-dotfiles-zh">简体中文</a>
+</p>
+
+![Preview](./preview.png)
+
+Welcome to my personal Linux desktop configuration and customization repository. This repository has been refactored and is now divided into two main version branches, containing my latest configurations for the `Niri` scroll-tiling window manager and the `Noctalia V5` desktop suite.
+
+---
+
+## 📂 Repository Structure
+
+To save storage space and standardize version management, this repository is designed with a parallel structure:
+
+```text
+.
+├── v1(forDMS)/             # [Archived] Old Dank Material Shell (DMS) configuration
+│   ├── kitty/              # Old Kitty terminal color scheme and keybindings
+│   ├── niri/               # Old Niri config (including dms modular configuration)
+│   └── DankMaterialShell/  # Old DMS shell suite configuration and plugins
+├── v2(forNoctaliaV5)/      # [Active] Latest Noctalia V5 desktop environment configuration suite
+│   ├── niri/               # Latest Niri window manager config (cleaned of history redundancy and backups)
+│   ├── noctalia/           # Noctalia V5 configuration files and core theme sync scripts
+│   ├── kitty/              # Kitty terminal advanced features and keybindings
+│   ├── fish/               # Fish Shell config (auto-start Niri, Material You terminal color sequence application)
+│   ├── fastfetch/          # Catppuccin style modular system information display
+│   └── starship.toml       # Minimalist, modern Starship prompt configuration
+└── wallpapers/             # [Shared Wallpaper Library] Synced with system wallpaper directory, shared by both generations to save storage
+```
+
+---
+
+## ✨ v2(forNoctaliaV5) New Features & Upgrades
+
+The new `v2` configuration introduces modern desktop aesthetics and deep system-level optimizations:
+
+### 1. 🔄 System Theme Synchronization (`theme-sync.sh`)
+* **Mechanism**: Based on the `theme_mode_changed` hook provided by `Noctalia`. When the wallpaper changes or the theme mode is toggled (light/dark), the script `/v2(forNoctaliaV5)/noctalia/theme-sync.sh` is automatically executed.
+* **Sync Scope**:
+  * Automatically updates **GSettings** (updates `color-scheme` and `gtk-theme` under `org.gnome.desktop.interface`).
+  * Dynamically updates **GTK 3.0** (`settings.ini`) and **GTK 4.0** (`settings.ini`) configuration files to seamlessly transition Firefox, Chromium, VS Code, and other GTK/Adwaita applications.
+
+### 2. 🐚 Advanced Fish Shell Integration
+* **tty1 Auto-Start**: Includes `auto-Niri.fish` logic to automatically launch a Niri session when logging into tty1.
+* **Material You Terminal Colors**: Reads and applies terminal sequence colors (`sequences.txt`) extracted from the wallpaper, keeping terminal colors in sync with your wallpaper changes.
+* **Proxy Helpers**: Simple `proxy_on` and `proxy_off` functions to quickly toggle terminal proxy settings.
+* **Handy Aliases**: Integrates `eza` with icons and fixes an issue in Kitty where running `clear` didn't fully clear the scrollback history.
+
+### 3. 📛 Modular Capsule Bar Design
+* Features a new **Capsule status bar** design with a translucent background, rounded corners, and edge glows.
+* Integrates a complete suite of components: Application Launcher, workspace switcher, active window titles, media controls, system tray drawer, wallpaper control, volume/notification, and session management.
+
+### 4. ⌨️ Kitty Terminal Windows-Style Keybindings
+* Supports Windows-style copy/paste behavior (`Ctrl+C` for smart copy/interrupt, `Ctrl+V` to paste).
+* Supports `Ctrl+Backspace` to delete a word backward, and `Ctrl+Delete` to delete a word forward.
+* Supports `Ctrl+A` to copy the entire terminal scrollback history to the clipboard.
+* Enables Kitty's native `cursor_trail` fading pointer effect.
+
+---
+
+## 🚀 Quick Start & Installation Guide
+
+Follow these steps to back up your original configurations and link the folders to deploy this setup.
+
+> [!CAUTION]
+> Make sure to back up your existing configurations before creating symbolic links (`ln -s`) to prevent data loss.
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/your-username/niri-kitty-dotfiles.git ~/项目/dotfiles
+```
+
+### 2. Deploy v2(forNoctaliaV5) Configurations
+
+```bash
+# Back up existing configs
+mv ~/.config/niri ~/.config/niri.bak
+mv ~/.config/noctalia ~/.config/noctalia.bak
+mv ~/.config/kitty ~/.config/kitty.bak
+mv ~/.config/fish ~/.config/fish.bak
+mv ~/.config/fastfetch ~/.config/fastfetch.bak
+mv ~/.config/starship.toml ~/.config/starship.toml.bak
+
+# Create symbolic links
+ln -s ~/项目/dotfiles/v2\(forNoctaliaV5\)/niri ~/.config/niri
+ln -s ~/项目/dotfiles/v2\(forNoctaliaV5\)/noctalia ~/.config/noctalia
+ln -s ~/项目/dotfiles/v2\(forNoctaliaV5\)/kitty ~/.config/kitty
+ln -s ~/项目/dotfiles/v2\(forNoctaliaV5\)/fish ~/.config/fish
+ln -s ~/项目/dotfiles/v2\(forNoctaliaV5\)/fastfetch ~/.config/fastfetch
+ln -s ~/项目/dotfiles/v2\(forNoctaliaV5\)/starship.toml ~/.config/starship.toml
+```
+
+### 3. Link Wallpapers
+```bash
+# If your wallpaper directory doesn't exist, link it to your Pictures directory
+ln -s ~/项目/dotfiles/wallpapers ~/图片/wallpapers
+```
+
+---
+
+## 🎨 Visual Highlights
+* **Window Manager (WM)**: Niri
+* **Status Bar & UI**: Noctalia V5 Shell (includes `theme-sync` utility)
+* **Default Shell**: Fish + Starship Prompt
+* **Main Fonts**: JetBrains Mono / Noto Sans CJK SC
+
+---
+---
+
+# 🌌 Niri & Noctalia Desktop Dotfiles (ZH)
 
 欢迎来到我的个人 Linux 桌面美化配置文件仓库。本仓库经过重构，现已划分为两个主要版本分支，并包含了我最新的 `Niri` 滚动平铺窗口管理器与 `Noctalia V5` 桌面套件的配置。
 
@@ -94,7 +206,7 @@ ln -s ~/项目/dotfiles/wallpapers ~/图片/wallpapers
 
 ---
 
-## 🎨 视觉效果一览 (Visual Highlights)
+## 🎨 视觉效果一览
 * **平铺管理器 (WM)**: Niri
 * **状态栏 & 桌面组件**: Noctalia V5 Shell (含 `theme-sync` 主题同步)
 * **默认 Shell**: Fish + Starship Prompt
