@@ -1,0 +1,93 @@
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "type": "small",
+        "padding": {
+            "top": 1,
+            "left": 1
+        }
+    },
+    "display": {
+        "separator": "   "
+    },
+    "modules": [
+        {
+            "type": "title",
+            "format": "    {#38;2;243;139;168} {#38;2;249;226;175}{user-name}{#38;2;205;214;244}@{#38;2;137;180;250}{host-name}"
+        },
+        {
+            "type": "custom",
+            "format": "    {#38;2;203;166;247}──────────────────────────────{#}"
+        },
+        {
+            "type": "os",
+            "key": "    {#38;2;243;139;168}{#} OS       ",
+            "format": "{3} {12}"
+        },
+        {
+            "type": "host",
+            "key": "    {#38;2;250;179;135}󰌢{#} Host     ",
+            "format": "{2} {3}"
+        },
+        {
+            "type": "kernel",
+            "key": "    {#38;2;249;226;175}{#} Kernel   "
+        },
+        {
+            "type": "uptime",
+            "key": "    {#38;2;166;227;161}󰅐{#} Uptime   "
+        },
+        {
+            "type": "packages",
+            "key": "    {#38;2;148;226;213}󰏖{#} Packages "
+        },
+        "break",
+        {
+            "type": "cpu",
+            "key": "    {#38;2;137;180;250}{#} CPU      ",
+            "format": "{1}"
+        },
+        {
+            "type": "gpu",
+            "key": "    {#38;2;203;166;247}󰢮{#} GPU      ",
+            "format": "{2}"
+        },
+        {
+            "type": "memory",
+            "key": "    {#38;2;245;194;231}{#} Memory   "
+        },
+        {
+            "type": "disk",
+            "key": "    {#38;2;180;190;254}{#} Disk (/) "
+            // Removed folders filter to show all disks, or we can keep folders: "/"
+        },
+        "break",
+        {
+            "type": "de",
+            "key": "    {#38;2;137;220;235}{#} DE       "
+        },
+        {
+            "type": "wm",
+            "key": "    {#38;2;137;180;250}{#} WM       "
+        },
+        {
+            "type": "shell",
+            "key": "    {#38;2;166;227;161}{#} Shell    "
+        },
+        {
+            "type": "terminal",
+            "key": "    {#38;2;249;226;175}{#} Terminal "
+        },
+        {
+            "type": "localip",
+            "key": "    {#38;2;148;226;213}󰩟{#} Local IP " ,
+            "compact": true
+        },
+        "break",
+        {
+            "type": "colors",
+            "key": "    {#38;2;203;166;247}{#} Colors   ",
+            "symbol": "circle"
+        }
+    ]
+}
