@@ -28,6 +28,7 @@ layout {
     background-color "transparent"
     gaps 12
     center-focused-column "never"
+    always-center-single-column
     preset-column-widths {
         proportion 0.33333
         proportion 0.5
@@ -184,7 +185,7 @@ animations {
 // ==========================================
 
 window-rule {
-    match app-id=r#"^dev\.noctalia\.Noctalia\.Settings$"#
+    match app-id=r#"dev.noctalia.Noctalia"#
     open-floating true
 }
 
@@ -430,7 +431,7 @@ window-rule {
     
     // 2. 也可以直接通过窗口标题精准匹配（支持正则忽略大小写）
     // 比如通过第三方启动器运行的《原神》、《绝区零》等，可以直接抓取标题
-    match title=r#"(?i)genshin impact|zenless zone zero|victoria 3|the sims 4|Endfield"#
+    match title=r#"(?i)genshin impact|zenless zone zero|victoria 3|Minecraft|Endfield"#
 
     // 禁用透明度，恢复 100% 实体
     opacity 1.0
@@ -448,8 +449,8 @@ window-rule {
 window-rule {
     match app-id="firefox" title="画中画"
     match app-id="firefox" title="Picture-in-Picture"
-    match app-id="app.zen_browser.zen" title="画中画"
-    match app-id="app.zen_browser.zen" title="Picture-in-Picture"
+    match app-id="zen" title="画中画"
+    match app-id="zen" title="Picture-in-Picture"
 
     open-floating true
     opacity 1.0
