@@ -32,8 +32,10 @@ update_ini() {
 
 if [ "$THEME_MODE" = "light" ]; then
     # 1. Update GSettings (affects Firefox, Chromium, VS Code, and libadwaita apps)
-    gsettings set org.gnome.desktop.interface color-scheme 'prefer-light'
-    gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3'
+    if command -v gsettings >/dev/null 2>&1; then
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-light'
+        gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3'
+    fi
     
     # 2. Update GTK 3.0 settings.ini
     update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-application-prefer-dark-theme" "false"
@@ -43,8 +45,10 @@ if [ "$THEME_MODE" = "light" ]; then
     update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-application-prefer-dark-theme" "false"
 else
     # 1. Update GSettings
-    gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
-    gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3-dark'
+    if command -v gsettings >/dev/null 2>&1; then
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+        gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3-dark'
+    fi
     
     # 2. Update GTK 3.0 settings.ini
     update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-application-prefer-dark-theme" "true"

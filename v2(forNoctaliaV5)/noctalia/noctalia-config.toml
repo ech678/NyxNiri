@@ -6,29 +6,29 @@ blur_intensity = 0.68999998457729816
 tint_intensity = 0.0
 
 [bar]
-order = [ "bar" ]
+order = ["bar"]
 
-    [bar.bar]
-    background_opacity = 0.0
-    border_width = 0.0
-    capsule = true
-    capsule_border = "outline"
-    capsule_foreground = "secondary"
-    capsule_opacity = 0.78999998234212399
-    capsule_padding = 10.0
-    capsule_radius = 80
-    capsule_thickness = 0.95999998226761818
-    enabled = true
-    end = [ "media", "tray", "wallpaper", "volume", "notifications", "session" ]
-    font_family = "JetBrains Mono"
-    margin_ends = 14
-    scale = 1.1000000089406967
-    shadow = false
-    start = [ "launcher", "workspaces", "active_window" ]
-    thickness = 36
-
-        [bar.bar.monitor.DP-1]
-        enabled = false
+[bar.bar]
+background_opacity = 0.0
+border_width = 0.0
+capsule = true
+capsule_border = "outline"
+capsule_foreground = "secondary"
+capsule_opacity = 0.79
+capsule_padding = 10.0
+capsule_radius = 80
+capsule_thickness = 0.95999998226761818
+enabled = true
+panel_overlap = 12
+font_family = "JetBrains Mono"
+margin_ends = 14
+margin_edge = 10
+scale = 1.1
+shadow = false
+end = ["media", "tray", "wallpaper", "volume", "notifications", "session"]
+center = ["ray/echolyrics:echolyrics"]
+start = ["launcher", "workspaces", "active_window"]
+thickness = 36
 
 [battery.device."/org/freedesktop/UPower/devices/battery_hidpp_battery_0"]
 warning_threshold = 30
@@ -38,25 +38,24 @@ enable_ddcutil = true
 
 [desktop_widgets]
 schema_version = 2
-widget_order = [ "desktop-widget-0000000000000003" ]
+widget_order = ["desktop-widget-0000000000000003"]
 
-    [desktop_widgets.grid]
-    cell_size = 16
-    major_interval = 4
-    visible = true
+[desktop_widgets.grid]
+cell_size = 16
+major_interval = 4
+visible = true
 
-    [desktop_widgets.widget.desktop-widget-0000000000000003]
-    box_height = 0.0
-    box_width = 0.0
-    cx = 1280.0
-    cy = 720.0
-    output = "DP-2"
-    rotation = 0.0
-    type = "fancy_audio_visualizer"
+[desktop_widgets.widget.desktop-widget-0000000000000003]
+box_height = 0.0
+box_width = 0.0
+cx = 1280.0
+cy = 720.0
+rotation = 0.0
+type = "fancy_audio_visualizer"
 
-        [desktop_widgets.widget.desktop-widget-0000000000000003.settings]
-        background = false
-        visualization_mode = "wave_rings"
+[desktop_widgets.widget.desktop-widget-0000000000000003.settings]
+background = false
+visualization_mode = "wave_rings"
 
 [dock]
 auto_hide = true
@@ -66,83 +65,22 @@ reserve_space = false
 show_dots = true
 
 [hooks]
-theme_mode_changed = [ "/home/ray/.config/noctalia/theme-sync.sh" ]
+theme_mode_changed = ["/home/ray/.config/noctalia/theme-sync.sh"]
 
 [hot_corners.bottom_right]
 action = "window_switcher"
 
-[location]
-address = "重庆,中国"
-
 [lockscreen_widgets]
 enabled = false
 schema_version = 2
-widget_order = [ "lockscreen-login-box@DP-1", "lockscreen-login-box@winit", "lockscreen-login-box@DP-2" ]
+widget_order = []
 
-    [lockscreen_widgets.grid]
-    cell_size = 16
-    major_interval = 4
-    visible = true
+[lockscreen_widgets.grid]
+cell_size = 16
+major_interval = 4
+visible = true
 
-    [lockscreen_widgets.widget."lockscreen-login-box@DP-1"]
-    box_height = 70.0
-    box_width = 400.0
-    cx = 540.0
-    cy = 1801.0
-    output = "DP-1"
-    rotation = 0.0
-    type = "login_box"
 
-        [lockscreen_widgets.widget."lockscreen-login-box@DP-1".settings]
-        background_color = "surface_variant"
-        background_opacity = 0.88
-        background_radius = 12.0
-        input_opacity = 1.0
-        input_radius = 6.0
-        show_caps_lock = true
-        show_keyboard_layout = true
-        show_login_button = true
-        show_password_hint = true
-
-    [lockscreen_widgets.widget."lockscreen-login-box@DP-2"]
-    box_height = 70.0
-    box_width = 400.0
-    cx = 1280.0
-    cy = 1321.0
-    output = "DP-2"
-    rotation = 0.0
-    type = "login_box"
-
-        [lockscreen_widgets.widget."lockscreen-login-box@DP-2".settings]
-        background_color = "surface_variant"
-        background_opacity = 0.88
-        background_radius = 12.0
-        input_opacity = 1.0
-        input_radius = 6.0
-        show_caps_lock = true
-        show_keyboard_layout = true
-        show_login_button = true
-        show_password_hint = true
-
-    [lockscreen_widgets.widget."lockscreen-login-box@winit"]
-    box_height = 70.0
-    box_width = 400.0
-    cx = 631.0
-    cy = 1253.0
-    output = "winit"
-    rotation = 0.0
-    type = "login_box"
-
-        [lockscreen_widgets.widget."lockscreen-login-box@winit".settings]
-        background_color = "surface_variant"
-        background_opacity = 0.88
-        background_radius = 12.0
-        input_opacity = 1.0
-        input_radius = 6.0
-        show_caps_lock = true
-        show_keyboard_layout = true
-        show_login_button = true
-        show_password_hint = true
 
 [nightlight]
 temperature_day = 10000
@@ -154,62 +92,66 @@ offset_y = 20
 position = "bottom_center"
 scale = 0.90000000596046448
 
-    [osd.kinds]
-    media = false
+[osd.kinds]
+media = false
 
 [shell]
 font_family = "Noto Sans CJK SC"
 settings_show_advanced = true
 ui_scale = 1.2000000104308128
 
-    [shell.panel]
-    control_center_placement = "floating"
-    control_center_position = "top_right"
-    transparency_mode = "soft"
-    wallpaper_placement = "floating"
-    wallpaper_position = "center"
+[shell.greeter_sync]
+auto_sync = true
+privilege_command = "pkexec"
 
-    [[shell.session.actions]]
-    action = "lock"
-    countdown_seconds = 0.0
-    enabled = true
-    shortcut = "1"
-    variant = "default"
+[shell.panel]
+control_center_placement = "floating"
+control_center_position = "top_right"
+transparency_mode = "soft"
+wallpaper_placement = "floating"
+wallpaper_position = "center"
 
-    [[shell.session.actions]]
-    action = "logout"
-    countdown_seconds = 0.0
-    enabled = true
-    shortcut = "2"
-    variant = "default"
+[[shell.session.actions]]
+action = "lock"
+countdown_seconds = 0.0
+enabled = true
+shortcut = "1"
+variant = "default"
 
-    [[shell.session.actions]]
-    action = "lock_and_suspend"
-    countdown_seconds = 0.0
-    enabled = true
-    shortcut = "3"
-    variant = "default"
+[[shell.session.actions]]
+action = "logout"
+countdown_seconds = 0.0
+enabled = true
+shortcut = "2"
+variant = "default"
 
-    [[shell.session.actions]]
-    action = "reboot"
-    countdown_seconds = 0.0
-    enabled = true
-    shortcut = "4"
-    variant = "default"
+[[shell.session.actions]]
+action = "lock_and_suspend"
+countdown_seconds = 0.0
+enabled = true
+shortcut = "3"
+variant = "default"
 
-    [[shell.session.actions]]
-    action = "shutdown"
-    countdown_seconds = 0.0
-    enabled = true
-    shortcut = "5"
-    variant = "destructive"
+[[shell.session.actions]]
+action = "reboot"
+countdown_seconds = 0.0
+enabled = true
+shortcut = "4"
+variant = "default"
 
-    [[shell.session.actions]]
-    action = "command"
-    command = "notify-send 'Noctalia' 'Custom session entry'"
-    countdown_seconds = 0.0
-    enabled = false
-    variant = "default"
+[[shell.session.actions]]
+action = "shutdown"
+countdown_seconds = 0.0
+enabled = true
+shortcut = "5"
+variant = "destructive"
+
+[[shell.session.actions]]
+action = "command"
+command = "notify-send 'Noctalia' 'Custom session entry'"
+countdown_seconds = 0.0
+enabled = false
+variant = "default"
 
 [theme]
 builtin = "Ayu"
@@ -218,40 +160,15 @@ mode = "dark"
 source = "wallpaper"
 wallpaper_scheme = "m3-content"
 
-    [theme.templates]
-    builtin_ids = [ "kitty", "qt", "starship" ]
-    community_ids = [ "zen-browser" ]
+[theme.templates]
+builtin_ids = ["kitty", "qt", "starship"]
+community_ids = ["zen-browser"]
 
 [wallpaper]
 directory = "/home/ray/图片/wallpapers"
+fill_mode = "crop"
 
-    [wallpaper.default]
-    path = "/home/ray/图片/wallpapers/wallhaven-w5126q.jpg"
 
-    [wallpaper.last]
-    path = "/home/ray/图片/wallpapers/wallhaven-w5126q.jpg"
-
-    [wallpaper.monitors.DP-1]
-    path = "/home/ray/图片/wallpapers/1345656.png"
-
-    [wallpaper.monitors.DP-2]
-    path = "/home/ray/图片/wallpapers/wallhaven-w5126q.jpg"
-
-    [[wallpaper.favorite]]
-    palette_source = "wallpaper"
-    path = "/home/ray/图片/wallpapers/wallhaven-qrlqw7.png"
-    theme_mode = "dark"
-    wallpaper_scheme = "m3-content"
-
-    [[wallpaper.favorite]]
-    path = "/home/ray/图片/wallpapers/【哲风壁纸】傍晚-冷色调-富士山.png"
-    theme_mode = "auto"
-
-    [[wallpaper.favorite]]
-    palette_source = "wallpaper"
-    path = "/home/ray/图片/wallpapers/3291689053_ezgif-frame-001_waifu2x_4x_3n_png.png"
-    theme_mode = "dark"
-    wallpaper_scheme = "m3-content"
 
 [widget.active_window]
 min_length = 0
@@ -262,3 +179,9 @@ format = "{:%a, %d %b %H:%M}"
 [widget.tray]
 detached_panel = true
 drawer = true
+
+[widget."ray/echolyrics:echolyrics"]
+capsule = false
+
+[plugin_settings."noctalia/mpvpaper"]
+mpv_options = "--script=~/.config/noctalia/mpv-hook.lua"
