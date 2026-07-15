@@ -9,7 +9,8 @@ gestures {
 
 input {
     keyboard {
-        xkb {}
+        xkb 
+
         numlock
     }
     touchpad {
@@ -19,7 +20,7 @@ input {
     mouse {
         accel-speed -0.72
     }
-    trackpoint {}
+    trackpoint 
 }
 
 layout {
@@ -63,16 +64,16 @@ layout {
 
 // 全局窗口规则
 window-rule {
-    opacity 0.9
     // 圆角
     geometry-corner-radius 12
     // 去掉超出圆角的窗口内容
     clip-to-geometry true
     // 禁止边框画到背景里
     draw-border-with-background false
+    opacity 0.9
     background-effect {
         blur true
-        xray true
+        xray false
     }
 }
 
@@ -102,6 +103,11 @@ layer-rule {
 
 layer-rule {
     match namespace="^quickshell$"
+    place-within-backdrop true
+}
+
+layer-rule {
+    match namespace="^mpvpaper$"
     place-within-backdrop true
 }
 
@@ -136,6 +142,11 @@ environment {
     QT_QPA_PLATFORM "wayland"
     QT_QPA_PLATFORMTHEME "gtk3"
     QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
+
+    // NVIDIA environment variables for proper EGL/OpenGL rendering on Wayland
+    GBM_BACKEND "nvidia-drm"
+    __GLX_VENDOR_LIBRARY_NAME "nvidia"
+    LIBVA_DRIVER_NAME "nvidia"
 }
 
 spawn-at-startup "noctalia"
@@ -149,7 +160,7 @@ screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 
 animations {
     workspace-switch {
-        spring damping-ratio=0.80 stiffness=523 epsilon=0.0001
+        spring damping-ratio=0.8 stiffness=523 epsilon=0.0001
     }
     window-open {
         duration-ms 150
@@ -185,47 +196,47 @@ animations {
 // ==========================================
 
 window-rule {
-    match app-id=r#"dev.noctalia.Noctalia"#
+    match app-id=r"dev.noctalia.Noctalia"
     open-floating true
 }
 
 window-rule {
-    match app-id=r#"^org\.wezfurlong\.wezterm$"#
-    default-column-width {}
+    match app-id=r"^org\.wezfurlong\.wezterm$"
+    default-column-width 
 }
 
 window-rule {
-    match app-id=r#"^gnome-control-center$"#
-    match app-id=r#"^pavucontrol$"#
-    match app-id=r#"^nm-connection-editor$"#
+    match app-id=r"^gnome-control-center$"
+    match app-id=r"^pavucontrol$"
+    match app-id=r"^nm-connection-editor$"
     default-column-width { proportion 0.5; }
     open-floating false
 }
 
 window-rule {
-    match app-id=r#"^org\.gnome\.Calculator$"#
-    match app-id=r#"^gnome-calculator$"#
-    match app-id=r#"^galculator$"#
-    match app-id=r#"^blueman-manager$"#
-    match app-id=r#"^org\.gnome\.Nautilus$"#
-    match app-id=r#"^xdg-desktop-portal$"#
+    match app-id=r"^org\.gnome\.Calculator$"
+    match app-id=r"^gnome-calculator$"
+    match app-id=r"^galculator$"
+    match app-id=r"^blueman-manager$"
+    match app-id=r"^org\.gnome\.Nautilus$"
+    match app-id=r"^xdg-desktop-portal$"
     open-floating true
 }
 
 window-rule {
-    match app-id=r#"^steam$"# title=r#"^notificationtoasts_\d+_desktop$"#
+    match app-id=r"^steam$" title=r"^notificationtoasts_\d+_desktop$"
     default-floating-position x=10 y=10 relative-to="bottom-right"
     // opened false // 默认不处于打开状态
 }
 
 window-rule {
-    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    match app-id=r"firefox$" title="^Picture-in-Picture$"
     match app-id="zoom"
     open-floating true
 }
 
 window-rule {
-    match app-id=r#"org.quickshell$"#
+    match app-id=r"org.quickshell$"
     open-floating true
 }
 
@@ -269,7 +280,7 @@ window-rule {
 }
 
 window-rule {
-    match app-id=r#"^org\.gnome\.Nautilus$"#
+    match app-id=r"^org\.gnome\.Nautilus$"
     draw-border-with-background false
     background-effect { blur true; xray true; }
 }
@@ -370,10 +381,10 @@ binds {
     XF86AudioMute        { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
 
     // === 鼠标滚轮导航 ===
-    Mod+WheelScrollDown            cooldown-ms=150 { focus-workspace-down; }
-    Mod+WheelScrollUp              cooldown-ms=150 { focus-workspace-up; }
-    Mod+Ctrl+WheelScrollDown       cooldown-ms=150 { move-column-to-workspace-down; }
-    Mod+Ctrl+WheelScrollUp         cooldown-ms=150 { move-column-to-workspace-up; }
+    Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp cooldown-ms=150 { focus-workspace-up; }
+    Mod+Ctrl+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
+    Mod+Ctrl+WheelScrollUp cooldown-ms=150 { move-column-to-workspace-up; }
 
     Mod+WheelScrollRight           { focus-column-right; }
     Mod+WheelScrollLeft            { focus-column-left; }
@@ -416,8 +427,8 @@ binds {
     Alt+Print              { screenshot-window; }
 
     // === 亮度控制 ===
-    XF86MonBrightnessUp    allow-when-locked=true { spawn "sh" "-c" "ddcutil setvcp 10 + 10"; }
-    XF86MonBrightnessDown  allow-when-locked=true { spawn "sh" "-c" "ddcutil setvcp 10 - 10"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn "sh" "-c" "ddcutil setvcp 10 + 10"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "sh" "-c" "ddcutil setvcp 10 - 10"; }
 }
 
 // ==========================================
@@ -425,13 +436,13 @@ binds {
 // ==========================================
 window-rule {
     // 1. 匹配常见的底层运行环境
-    match app-id=r#"^steam_app_.*"#   // 匹配所有 Steam 游戏（原生或 Proton）
-    match app-id=r#"^gamescope$"#     // 匹配 Gamescope 微型合成器
-    match app-id=r#"^wine$"#          // 匹配普通的 Wine 运行环境
+    match app-id=r"^steam_app_.*"   // 匹配所有 Steam 游戏（原生或 Proton）
+    match app-id=r"^gamescope$"     // 匹配 Gamescope 微型合成器
+    match app-id=r"^wine$"          // 匹配普通的 Wine 运行环境
     
     // 2. 也可以直接通过窗口标题精准匹配（支持正则忽略大小写）
     // 比如通过第三方启动器运行的《原神》、《绝区零》等，可以直接抓取标题
-    match title=r#"(?i)genshin impact|zenless zone zero|victoria 3|Minecraft|Endfield"#
+    match title=r"(?i)genshin impact|zenless zone zero|victoria 3|Minecraft|Endfield"
 
     // 禁用透明度，恢复 100% 实体
     opacity 1.0
@@ -456,8 +467,10 @@ window-rule {
     opacity 1.0
     
     // 让窗口自己决定初始大小，从而解锁拉伸限制
-    default-column-width {}
-    default-window-height {}
+    default-column-width 
+
+    default-window-height 
+
 
     // 依然可以保持右下角定位
     default-floating-position x=20 y=20 relative-to="bottom-right"

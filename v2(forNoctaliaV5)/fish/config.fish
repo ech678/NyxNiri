@@ -16,6 +16,35 @@ function proxy_off
     echo "[-] 终端代理已关闭"
 end
 
+# 查看代理状态
+function proxy_status
+    echo "--- 代理环境变量 (Proxy Env) ---"
+    for var in http_proxy https_proxy all_proxy
+        if set -q $var
+            echo "$var: "$$var
+        else
+            echo "$var: [未设置]"
+        end
+    end
+
+    echo ""
+    echo "--- 连通性测试 (Connectivity) ---"
+    echo -n "测试 Google.com... "
+    set -l start (date +%s%3N)
+    set -l code (curl -I -s --connect-timeout 3 -o /dev/null -w "%{http_code}" https://www.google.com 2>/dev/null)
+    set -l end (date +%s%3N)
+    if test "$code" = "200" -o "$code" = "301" -o "$code" = "302"
+        set -l duration (math $end - $start)
+        echo "成功 (HTTP $code, $duration ms)"
+    else
+        echo "失败"
+    end
+
+    echo ""
+    echo "--- IP 地理位置 (IP Location) ---"
+    curl -s -m 3 cip.cc 2>/dev/null | head -n 3
+end
+
 function ask_agy
     proxy_on
     agy $argv
@@ -42,6 +71,42 @@ if status is-interactive
     alias clear "printf '\033[2J\033[3J\033[1;1H'" # fix: kitty doesn't clear scrollback properly
     alias celar "printf '\033[2J\033[3J\033[1;1H'"
     alias claer "printf '\033[2J\033[3J\033[1;1H'"
+    
+    # Shelly 统一包管理别名 (CachyOS 官方推荐)
+    alias up='shelly upgrade-all'                 # 一键更新官方包、AUR、Flatpak、AppImage
+    alias update='shelly upgrade-all'             # 同上，完整拼写
+    alias in='shelly install'                     # 安装软件包 (支持官方源/AUR/Flatpak)
+    alias un='shelly remove'                      # 卸载软件包
+    alias se='shelly query'                       # 搜索/查询软件包
+    alias clean='shelly purify && shelly cache-clean' # 清除孤立包、损坏包及本地包缓存
+    
+    # 自定义指令与别名总览说明 (Custom Commands & Aliases Help)
+    function custom_help
+        echo "=== 终端自定义快捷指令 (Custom Commands & Aliases) ==="
+        echo ""
+        echo "  --- 代理控制 (Proxy Controls) ---"
+        echo "  proxy_on       -> 开启终端代理 (Socks5/HTTP :7890)"
+        echo "  proxy_off      -> 关闭终端代理"
+        echo "  proxy_status   -> 检查代理连通性及公网 IP 位置"
+        echo ""
+        echo "  --- 包管理 (Package Management - Shelly) ---"
+        echo "  up / update    -> shelly upgrade-all"
+        echo "                    (一键更新官方包、AUR、Flatpak、AppImage)"
+        echo "  in <包名>      -> shelly install <包名>"
+        echo "                    (安装软件包，支持官方/AUR/Flatpak)"
+        echo "  un <包名>      -> shelly remove <包名>"
+        echo "                    (卸载并清理软件包)"
+        echo "  se <关键字>    -> shelly query <关键字>"
+        echo "                    (全局搜索/查询软件包)"
+        echo "  clean          -> shelly purify && shelly cache-clean"
+        echo "                    (清理残留孤立包、损坏包及本地缓存)"
+        echo ""
+        echo "提示: 可用 'custom_help'、'pkg_help' 或 'my_help' 触发此菜单。"
+    end
+    alias pkg_help='custom_help'
+    alias my_help='custom_help'
+    alias shelly_help='custom_help'
+    
     if command -v eza &>/dev/null
         alias ls 'eza --icons'
     end
