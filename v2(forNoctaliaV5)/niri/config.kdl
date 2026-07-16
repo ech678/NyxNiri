@@ -303,24 +303,24 @@ recent-windows {
     }
 }
 
-output "DP-2" {
-    mode "2560x1440@179.999"
-    scale 1
-    position x=0 y=1655
-}
-
-output "DP-1" {
-    mode "1920x1080@143.999"
-    scale 1
-    transform "90"
-    position x=463 y=0
-}
-
-output "DP-3" {
-    mode "2560x1440@179.999"
-    scale 1
-    position x=1543 y=480
-}
+// output "DP-2" {
+//     mode "2560x1440@179.999"
+//     scale 1
+//     position x=0 y=1655
+// }
+// 
+// output "DP-1" {
+//     mode "1920x1080@143.999"
+//     scale 1
+//     transform "90"
+//     position x=463 y=0
+// }
+// 
+// output "DP-3" {
+//     mode "2560x1440@179.999"
+//     scale 1
+//     position x=1543 y=480
+// }
 
 cursor {
     xcursor-theme "Adwaita"
@@ -479,6 +479,12 @@ window-rule {
 // mpv
 window-rule {
     match app-id="mpv"
+    opacity 1.0
+}
+
+// kdenlive
+window-rule {
+    match app-id="org.kde.kdenlive"
     opacity 1.0
 }
 

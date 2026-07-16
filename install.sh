@@ -320,20 +320,31 @@ install_configs() {
         fi
     done
     
+    local pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/图片")
     local wp_src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/Wallpapers"
-    local wp_dest="$HOME/图片/Wallpapers"
+    local wp_dest="$pics_dir/Wallpapers"
     if [ -d "$wp_src" ]; then
         if [ -e "$wp_dest" ] || [ -L "$wp_dest" ]; then
             rm -rf "$wp_dest"
         fi
-        mkdir -p "$HOME/图片"
+        mkdir -p "$pics_dir"
         cp -a "$wp_src" "$wp_dest"
-        echo "  Deployed: ~/图片/Wallpapers"
+        echo "  Deployed: $wp_dest"
     fi
     
     # Ensure clean-cache is executable
     if [ -f "$HOME/.config/fish/clean-cache" ]; then
         chmod +x "$HOME/.config/fish/clean-cache"
+    fi
+
+    # Post-process to replace hardcoded '/home/ray' path with the actual '$HOME' for portability
+    if [ -f "$HOME/.config/noctalia/noctalia-config.toml" ]; then
+        sed -i "s|/home/ray/图片/Wallpapers|$wp_dest|g" "$HOME/.config/noctalia/noctalia-config.toml"
+        sed -i "s|/home/ray/图片/wallpapers|$wp_dest|g" "$HOME/.config/noctalia/noctalia-config.toml"
+        sed -i "s|/home/ray|$HOME|g" "$HOME/.config/noctalia/noctalia-config.toml"
+    fi
+    if [ -f "$HOME/.config/fish/fish_variables" ]; then
+        sed -i "s|/home/ray|$HOME|g" "$HOME/.config/fish/fish_variables"
     fi
     
     msg copy_done
