@@ -1,0 +1,342 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Linux System Cache Cleaner Script (Robust & Dotfiles-Ready Version)
+# A comprehensive cache clearing tool designed for portability across Arch/Debian/macOS.
+# Features:
+#   - Dynamic home directory paths ($HOME instead of hardcoded paths)
+#   - Traps for clean termination of background sudo keep-alive processes
+#   - Robust safety guards on all directories to prevent accidental empty/root deletions
+#   - Pure Bash integer math formatting (no external dependencies like 'bc')
+#   - Graceful fallback for various package managers (shelly, pacman, yay, paru, flatpak, apt, brew)
+# ==============================================================================
+
+# Ensure output uses UTF-8 and standard formatting
+export LANG=en_US.UTF-8
+
+# Color codes for pretty output (only if terminal supports colors)
+if [[ -t 1 ]]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    MAGENTA='\033[0;35m'
+    CYAN='\033[0;36m'
+    BOLD='\033[1m'
+    NC='\033[0m'
+else
+    RED='' GREEN='' YELLOW='' BLUE='' MAGENTA='' CYAN='' BOLD='' NC=''
+fi
+
+# Helper: Print styled messages
+log_info() {
+    echo -e "${BLUE}[*]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[+]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[!]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[-]${NC} $1"
+}
+
+log_header() {
+    echo -e "\n${BOLD}${CYAN}=== $1 ===${NC}"
+}
+
+# Cleanup hook for background processes
+SUDO_KEEPALIVE_PID=""
+cleanup_bg_jobs() {
+    if [[ -n "$SUDO_KEEPALIVE_PID" ]]; then
+        kill "$SUDO_KEEPALIVE_PID" 2>/dev/null
+    fi
+}
+trap cleanup_bg_jobs EXIT INT TERM
+
+# Function to get available disk space in bytes
+get_free_space() {
+    df -B1 "$HOME" 2>/dev/null | awk 'NR==2 {print $4}'
+}
+
+# Function to format bytes to human readable format (pure bash, no 'bc' dependency)
+format_size() {
+    local bytes=$1
+    if [[ -z "$bytes" || $bytes -le 0 ]]; then
+        echo "0 B"
+        return
+    fi
+    local -a units=("B" "KiB" "MiB" "GiB" "TiB")
+    local unit=0
+    local size=$bytes
+    local remainder=0
+    
+    while [[ $size -ge 1024 && $unit -lt 4 ]]; do
+        remainder=$((size % 1024))
+        size=$((size / 1024))
+        ((unit++))
+    done
+    
+    if [[ $unit -eq 0 ]]; then
+        echo "${bytes} B"
+    else
+        # Compute 2 decimal places: remainder * 100 / 1024
+        local decimal=$((remainder * 100 / 1024))
+        printf "%d.%02d %s\n" "$size" "$decimal" "${units[$unit]}"
+    fi
+}
+
+# Function to safely clean a directory's contents
+clean_dir_contents() {
+    local dir=$1
+    local name=$2
+    # CRITICAL Safety Guards:
+    # 1. Non-empty path
+    # 2. Not root directory
+    # 3. Not home directory
+    # 4. Must be an actual existing directory
+    if [[ -n "$dir" && "$dir" != "/" && "$dir" != "$HOME" && -d "$dir" ]]; then
+        # Check size before deletion
+        local size
+        size=$(du -sb "$dir" 2>/dev/null | awk '{print $1}')
+        if [[ -n "$size" && "$size" -gt 0 ]]; then
+            local readable_size
+            readable_size=$(format_size "$size")
+            log_info "清理 ${name} (${readable_size})..."
+            # Delete contents but keep the directory structure itself
+            find "$dir" -mindepth 1 -delete 2>/dev/null
+            log_success "${name} 清理完成"
+        else
+            log_info "${name} 已经是空的"
+        fi
+    fi
+}
+
+# Print Script Banner
+echo -e "${BOLD}${MAGENTA}"
+echo "    ██████╗██╗     ███████╗ █████╗ ███╗   ██╗"
+echo "   ██╔════╝██║     ██╔════╝██╔══██╗████╗  ██║"
+echo "   ██║     ██║     █████╗  ███████║██╔██╗ ██║"
+echo "   ██║     ██║     ██╔══╝  ██╔══██║██║╚██╗██║"
+echo "   ╚██████╗███████╗███████╗██║  ██║██║ ╚████║"
+echo "    ╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝"
+echo -e "         一键系统缓存清理工具 V1.2 (鲁棒版) ${NC}"
+echo "=============================================="
+
+# 1. Capture Initial Disk Space
+INITIAL_SPACE=$(get_free_space)
+log_info "当前可用空间: $(format_size "$INITIAL_SPACE")"
+
+# 2. User Space Cache Directory Clean
+log_header "清理用户缓存目录 (~/.cache)"
+
+# Specific user caches that grow very large
+clean_dir_contents "$HOME/.cache/zen" "Zen 浏览器缓存"
+clean_dir_contents "$HOME/.cache/spotify" "Spotify 缓存"
+clean_dir_contents "$HOME/.cache/google-chrome" "Google Chrome 缓存"
+clean_dir_contents "$HOME/.cache/chromium" "Chromium 浏览器缓存"
+clean_dir_contents "$HOME/.cache/mozilla" "Firefox/Mozilla 缓存"
+clean_dir_contents "$HOME/.cache/nvidia" "NVIDIA 显卡着色器缓存"
+clean_dir_contents "$HOME/.cache/thumbnails" "系统缩略图缓存"
+clean_dir_contents "$HOME/.cache/fontconfig" "字体配置缓存"
+clean_dir_contents "$HOME/.cache/tracker3" "Tracker3 索引缓存"
+clean_dir_contents "$HOME/.cache/JetBrains" "JetBrains IDE 临时缓存"
+clean_dir_contents "$HOME/.cache/pip" "Python Pip 缓存"
+
+# Package manager user-space build & clone folders
+clean_dir_contents "$HOME/.cache/yay" "Yay AUR 构建与下载缓存"
+clean_dir_contents "$HOME/.cache/paru" "Paru AUR 构建与下载缓存"
+clean_dir_contents "$HOME/.cache/Shelly" "Shelly 用户本地缓存"
+
+# Safe generic ~/.cache cleanup: Remove files older than 14 days inside ~/.cache
+# but exclude active app folders to avoid breaking running configurations
+log_info "清理 ~/.cache 中超过 14 天未访问的零散临时文件..."
+find "$HOME/.cache" -type f -atime +14 -delete 2>/dev/null
+log_success "零散临时文件清理完成"
+
+
+# 3. Programming Language & Package Managers Cache
+log_header "清理开发工具及包管理器缓存"
+
+# Python Pip
+if command -v pip &>/dev/null; then
+    log_info "检测到 pip，正在清理 pip 缓存..."
+    pip cache purge &>/dev/null
+    log_success "pip 缓存清理完成"
+fi
+
+# Node.js NPM
+if command -v npm &>/dev/null; then
+    log_info "检测到 npm，正在清理 npm 缓存..."
+    npm cache clean --force &>/dev/null
+    log_success "npm 缓存清理完成"
+fi
+
+# Yarn
+if command -v yarn &>/dev/null; then
+    log_info "检测到 yarn，正在清理 yarn 缓存..."
+    yarn cache clean &>/dev/null
+    log_success "yarn 缓存清理完成"
+fi
+
+# PNPM
+if command -v pnpm &>/dev/null; then
+    log_info "检测到 pnpm，正在清理 pnpm 储存库..."
+    pnpm store prune &>/dev/null
+    log_success "pnpm 缓存清理完成"
+fi
+
+# Bun
+if command -v bun &>/dev/null; then
+    log_info "检测到 bun，正在清理 bun 缓存..."
+    bun pm cache clean &>/dev/null
+    log_success "bun 缓存清理完成"
+fi
+
+# Go Cache
+if command -v go &>/dev/null; then
+    log_info "检测到 go，正在清理 Go 构建及模块缓存..."
+    go clean -cache -modcache &>/dev/null
+    log_success "Go 缓存清理完成"
+fi
+
+# Cargo (Rust) Registry Cache
+if [[ -d "$HOME/.cargo/registry/cache" ]]; then
+    clean_dir_contents "$HOME/.cargo/registry/cache" "Cargo 注册表下载缓存"
+    clean_dir_contents "$HOME/.cargo/git/db" "Cargo Git 数据库缓存"
+fi
+
+
+# 4. System Trash Clean
+log_header "清理系统垃圾箱"
+clean_dir_contents "$HOME/.local/share/Trash" "系统回收站"
+
+
+# 5. System-Level Cache (Requires root/sudo)
+log_header "系统级缓存清理 (需要 sudo 权限)"
+
+# Ask the user if they want to perform root level cleaning
+read -r -p "是否进行系统级清理 (包含系统日志、系统包缓存、内存缓存等)? [y/N] " response
+response=${response,,} # to lowercase
+
+if [[ "$response" =~ ^(yes|y)$ ]]; then
+    # Prompt for sudo early to avoid multiple prompts
+    if sudo -v; then
+        # Keep-alive sudo until script finishes
+        while kill -0 "$$" 2>/dev/null; do sleep 1; sudo -n true; tmp_val=$?; if [ $tmp_val -ne 0 ]; then break; fi; done &
+        SUDO_KEEPALIVE_PID=$!
+        
+        # 5.1 Shelly (Package Manager Cleanup)
+        if command -v shelly &>/dev/null; then
+            log_info "运行 Shelly 清理孤立包与本地下载缓存..."
+            sudo shelly purify --no-confirm
+            sudo shelly cache-clean --no-confirm
+            log_success "Shelly 包管理缓存清理完成"
+        fi
+
+        # 5.2 Pacman & Paccache (Arch Linux specific)
+        if command -v pacman &>/dev/null; then
+            if command -v paccache &>/dev/null; then
+                log_info "运行 paccache 清理未安装包的 Pacman 缓存 (仅保留最近 3 个版本的安装包)..."
+                sudo paccache -r
+                log_info "清理所有已被卸载软件的包缓存..."
+                sudo paccache -ruk0
+            else
+                log_info "清除未安装包的 Pacman 缓存..."
+                sudo pacman -Sc --nointeractive --noconfirm
+            fi
+            
+            # Remove Pacman Orphans
+            local orphans
+            orphans=$(pacman -Qtdq)
+            if [[ -n "$orphans" ]]; then
+                log_info "发现系统孤立包，正在卸载: $orphans"
+                sudo pacman -Rns $orphans --noconfirm
+            fi
+            log_success "Pacman 缓存及孤立包清理完成"
+        fi
+
+        # 5.3 Yay & Paru (AUR package manager cleanup)
+        if command -v yay &>/dev/null; then
+            log_info "运行 yay 清理 AUR 缓存及未使用的依赖包..."
+            yay -Scc --noconfirm &>/dev/null
+            yay -Yc --noconfirm &>/dev/null
+            log_success "yay 缓存清理完成"
+        fi
+
+        if command -v paru &>/dev/null; then
+            log_info "运行 paru 清理 AUR 缓存及未使用的依赖包..."
+            paru -Scc --noconfirm &>/dev/null
+            paru -c --noconfirm &>/dev/null
+            log_success "paru 缓存清理完成"
+        fi
+
+        # 5.4 Apt (Debian/Ubuntu specific)
+        if command -v apt-get &>/dev/null; then
+            log_info "运行 apt-get 清理缓存与孤立包..."
+            sudo apt-get clean
+            sudo apt-get autoclean
+            sudo apt-get autoremove -y
+            log_success "APT 包管理器清理完成"
+        fi
+
+        # 5.5 Homebrew (macOS / Linuxbrew specific)
+        if command -v brew &>/dev/null; then
+            log_info "运行 brew 清理缓存与旧版本软件..."
+            brew cleanup
+            log_success "Homebrew 清理完成"
+        fi
+
+        # 5.6 Flatpak
+        if command -v flatpak &>/dev/null; then
+            log_info "清理未使用的 Flatpak 运行时与缓存..."
+            sudo flatpak uninstall --unused -y
+            clean_dir_contents "$HOME/.var/app/*/cache" "Flatpak 应用缓存"
+            log_success "Flatpak 清理完成"
+        fi
+
+        # 5.7 Systemd Journal (Linux specific)
+        if command -v journalctl &>/dev/null; then
+            log_info "清理 Systemd 日志缓存 (仅保留最近 2 天的日志)..."
+            sudo journalctl --vacuum-time=2d
+            log_success "Systemd 日志清理完成"
+        fi
+
+        # 5.8 RAM Cache (PageCache, dentries, inodes)
+        if [[ -f /proc/sys/vm/drop_caches ]]; then
+            log_info "释放系统内存缓存 (Drop Caches)..."
+            sync
+            echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
+            log_success "内存缓存释放完成"
+        fi
+
+        # Kill sudo keepalive
+        kill "$SUDO_KEEPALIVE_PID" 2>/dev/null
+        SUDO_KEEPALIVE_PID=""
+    else
+        log_warning "未获得 sudo 权限，已跳过系统级清理。"
+    fi
+else
+    log_info "已跳过系统级清理。"
+fi
+
+
+# 6. Summary of results
+log_header "清理结果汇总"
+
+FINAL_SPACE=$(get_free_space)
+FREED_SPACE=$((FINAL_SPACE - INITIAL_SPACE))
+
+echo -e "初始可用空间: ${YELLOW}$(format_size "$INITIAL_SPACE")${NC}"
+echo -e "当前可用空间: ${GREEN}$(format_size "$FINAL_SPACE")${NC}"
+
+if [[ $FREED_SPACE -gt 0 ]]; then
+    echo -e "${BOLD}${GREEN}成功释放了: $(format_size "$FREED_SPACE") 空间！${NC}"
+else
+    echo -e "${BOLD}${BLUE}系统已经很干净，没有释放额外空间。${NC}"
+fi
+
+echo -e "\n${BOLD}${GREEN}✔ 缓存清理完成！${NC}\n"

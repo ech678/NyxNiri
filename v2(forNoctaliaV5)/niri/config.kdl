@@ -476,6 +476,12 @@ window-rule {
     default-floating-position x=20 y=20 relative-to="bottom-right"
 }
 
+// mpv
+window-rule {
+    match app-id="mpv"
+    opacity 1.0
+}
+
 // Ente-Auth 适配
 window-rule {
     match app-id="io.ente.auth"

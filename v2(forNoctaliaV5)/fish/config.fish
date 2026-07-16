@@ -78,7 +78,7 @@ if status is-interactive
     alias in='shelly install'                     # 安装软件包 (支持官方源/AUR/Flatpak)
     alias un='shelly remove'                      # 卸载软件包
     alias se='shelly query'                       # 搜索/查询软件包
-    alias clean='shelly purify && shelly cache-clean' # 清除孤立包、损坏包及本地包缓存
+    alias clean='~/.config/fish/clean-cache'      # 运行一键缓存清理脚本
     
     # 自定义指令与别名总览说明 (Custom Commands & Aliases Help)
     function custom_help
@@ -97,9 +97,8 @@ if status is-interactive
         echo "  un <包名>      -> shelly remove <包名>"
         echo "                    (卸载并清理软件包)"
         echo "  se <关键字>    -> shelly query <关键字>"
-        echo "                    (全局搜索/查询软件包)"
-        echo "  clean          -> shelly purify && shelly cache-clean"
-        echo "                    (清理残留孤立包、损坏包及本地缓存)"
+        echo "  clean          -> ~/.config/fish/clean-cache"
+        echo "                    (一键清理系统与用户缓存，包含多维度清理)"
         echo ""
         echo "提示: 可用 'custom_help'、'pkg_help' 或 'my_help' 触发此菜单。"
     end
