@@ -22,7 +22,7 @@
 
 **NyxNiri** is a premium, scroll-tiling desktop setup powered by the **Niri** window manager and the **Noctalia V5** shell framework. Designed for Arch Linux and CachyOS, it features seamless Material You color extraction from wallpapers, responsive layout dynamics, global theme synchronizations, and an optimized terminal environment.
 
-<video src="./preview.mp4" width="100%" autoplay loop muted playsinline></video>
+![Preview](./preview.webp)
 
 ---
 
