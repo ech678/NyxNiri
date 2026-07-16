@@ -1,4 +1,6 @@
-source /usr/share/cachyos-fish-config/cachyos-config.fish
+if test -f /usr/share/cachyos-fish-config/cachyos-config.fish
+    source /usr/share/cachyos-fish-config/cachyos-config.fish
+end
 
 # 开启代理
 function proxy_on
@@ -51,7 +53,7 @@ function ask_agy
 end
 
 # Added by Antigravity CLI installer
-set -gx PATH "/home/ray/.local/bin" $PATH
+set -gx PATH "$HOME/.local/bin" $PATH
 
 if status is-interactive
     # No greeting

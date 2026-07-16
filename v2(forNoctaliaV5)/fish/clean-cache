@@ -294,7 +294,11 @@ if [[ "$response" =~ ^(yes|y)$ ]]; then
         if command -v flatpak &>/dev/null; then
             log_info "清理未使用的 Flatpak 运行时与缓存..."
             sudo flatpak uninstall --unused -y
-            clean_dir_contents "$HOME/.var/app/*/cache" "Flatpak 应用缓存"
+            for d in "$HOME/.var/app/"*/cache; do
+                if [[ -d "$d" ]]; then
+                    clean_dir_contents "$d" "Flatpak 应用缓存 ($(basename "$(dirname "$d")"))"
+                fi
+            done
             log_success "Flatpak 清理完成"
         fi
 

@@ -66,6 +66,7 @@ show_dots = true
 
 [hooks]
 theme_mode_changed = ["/home/ray/.config/noctalia/theme-sync.sh"]
+wallpaper_changed = ["/home/ray/.config/noctalia/wallpaper-hook.sh"]
 
 [hot_corners.bottom_right]
 action = "window_switcher"
@@ -165,7 +166,7 @@ builtin_ids = ["kitty", "qt", "starship"]
 community_ids = ["zen-browser"]
 
 [wallpaper]
-directory = "/home/ray/图片/wallpapers"
+directory = "/home/ray/图片/Wallpapers"
 fill_mode = "crop"
 
 

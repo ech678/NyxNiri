@@ -15,7 +15,8 @@ update_ini() {
     local val="$3"
     
     if [ ! -f "$file" ]; then
-        return
+        mkdir -p "$(dirname "$file")"
+        echo "[Settings]" > "$file"
     fi
     
     if grep -q "^${key}=" "$file"; then
