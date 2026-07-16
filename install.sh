@@ -57,7 +57,7 @@ msg() {
             backing_up) echo -e "\n\e[1;34m🛡️  安装前正在自动备份当前配置...\e[0m" ;;
             backup_done) echo -e "\e[1;32m✅ 备份完成！备份路径为: $1\e[0m" ;;
             copying_configs) echo -e "\n\e[1;34m⚙️  正在部署 dotfiles 配置文件...\e[0m" ;;
-            copy_done) echo -e "\e[1;32m✅ 配置文件部署与软链接成功！\e[0m" ;;
+            copy_done) echo -e "\e[1;32m✅ 配置文件部署与复制成功！\e[0m" ;;
             
             # Doctor Strings
             running_doctor) echo -e "\n\e[1;35m🩺 正在运行 System Doctor 进行系统诊断...\e[0m" ;;
@@ -70,6 +70,7 @@ msg() {
             # Warnings / Prompt after installation
             warn_deps_missing) echo -e "\n\e[1;33m⚠️  警告: 检测到你缺少一些运行所需的依赖组件！\e[0m" ;;
             ask_install_now) echo -e "是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
+            ask_backup_again) echo -e "检测到今天已备份过配置，是否重新备份？[y/N]: " ;;
         esac
     else
         case "$key" in
@@ -99,7 +100,7 @@ msg() {
             backing_up) echo -e "\n\e[1;34m🛡️  Automatically backing up current configs before installation...\e[0m" ;;
             backup_done) echo -e "\e[1;32m✅ Backup completed! Path: $1\e[0m" ;;
             copying_configs) echo -e "\n\e[1;34m⚙️  Deploying dotfiles configuration files...\e[0m" ;;
-            copy_done) echo -e "\e[1;32m✅ Configurations deployed and symlinked successfully!\e[0m" ;;
+            copy_done) echo -e "\e[1;32m✅ Configurations deployed and copied successfully!\e[0m" ;;
             
             # Doctor Strings
             running_doctor) echo -e "\n\e[1;35m🩺 Running System Doctor for diagnostics...\e[0m" ;;
@@ -112,6 +113,7 @@ msg() {
             # Warnings / Prompt after installation
             warn_deps_missing) echo -e "\n\e[1;33m⚠️  Warning: Some required dependencies are missing on your system!\e[0m" ;;
             ask_install_now) echo -e "Would you like to check and install missing dependencies now? [Y/n]: " ;;
+            ask_backup_again) echo -e "A backup has already been made today. Do you want to back up again? [y/N]: " ;;
         esac
     fi
 }
@@ -246,6 +248,24 @@ install_selected_deps() {
 }
 
 backup_configs() {
+    local today=$(date +%Y%m%d)
+    local existing_backups=($HOME/.config/dotfiles_backup_${today}_*)
+    local has_today_backup=false
+    
+    for d in "${existing_backups[@]}"; do
+        if [ -d "$d" ]; then
+            has_today_backup=true
+            break
+        fi
+    done
+    
+    if [ "$has_today_backup" = true ]; then
+        read -p "$(msg ask_backup_again)" choice
+        if [[ ! "$choice" =~ ^[Yy]$ ]]; then
+            return 0
+        fi
+    fi
+
     msg backing_up
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_dir="$HOME/.config/dotfiles_backup_$timestamp"
@@ -295,24 +315,25 @@ install_configs() {
         
         if [ -e "$src" ]; then
             rm -rf "$dest"
-            ln -sf "$src" "$dest"
-            echo "  Linked: ~/.config/$item -> $src"
+            cp -a "$src" "$dest"
+            echo "  Deployed: ~/.config/$item"
         fi
     done
     
     local wp_src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/Wallpapers"
     local wp_dest="$HOME/图片/Wallpapers"
     if [ -d "$wp_src" ]; then
-        if [ -e "$wp_dest" ]; then
-            if [ ! -L "$wp_dest" ]; then
-                mv "$wp_dest" "${wp_dest}_backup_$(date +%Y%m%d_%H%M%S)"
-            else
-                rm -f "$wp_dest"
-            fi
+        if [ -e "$wp_dest" ] || [ -L "$wp_dest" ]; then
+            rm -rf "$wp_dest"
         fi
         mkdir -p "$HOME/图片"
-        ln -sf "$wp_src" "$wp_dest"
-        echo "  Linked: ~/图片/Wallpapers -> $wp_src"
+        cp -a "$wp_src" "$wp_dest"
+        echo "  Deployed: ~/图片/Wallpapers"
+    fi
+    
+    # Ensure clean-cache is executable
+    if [ -f "$HOME/.config/fish/clean-cache" ]; then
+        chmod +x "$HOME/.config/fish/clean-cache"
     fi
     
     msg copy_done
@@ -380,6 +401,19 @@ run_doctor() {
             fi
         fi
     done
+    
+    # Check clean-cache in fish config directory
+    local cc_path="$HOME/.config/fish/clean-cache"
+    if [ -f "$cc_path" ]; then
+        if [ -x "$cc_path" ]; then
+            msg doctor_ok "Scripts: clean-cache is executable."
+        else
+            msg doctor_warn "Scripts: clean-cache is not executable. Fixing permissions..."
+            chmod +x "$cc_path"
+        fi
+    else
+        msg doctor_err "Scripts: clean-cache is missing from ~/.config/fish/."
+    fi
     
     if [[ "$SHELL" == *fish ]]; then
         msg doctor_ok "Shell: Fish is the current default shell."
