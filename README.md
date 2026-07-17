@@ -183,12 +183,19 @@ cd ~/NyxNiri
 ./install.sh
 ```
 
-### ⚡ 极速一键安装（独立脚本模式）
-如果您想直接运行安装器而无需手动克隆仓库：
+### ⚡ 极速一键安装（独立脚本模式 - 含国内镜像）
+如果您想直接运行安装器，可以使用官方默认通道，在国内网络环境下也支持使用镜像加速通道直接运行：
 ```bash
+# 官方默认通道 (通常需要代理)
 curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+
+# 国内镜像加速通道 A (KKGitHub)
+curl -sL https://raw.kkgithub.com/ech678/NyxNiri/main/install.sh | bash
+
+# 国内镜像加速通道 B (GHProxy.net)
+curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
-脚本会自动将配置仓库克隆到本地 `~/.cache/NyxNiri` 缓存中并启动控制面板，省时省力。
+脚本在克隆仓库时也会自动进行网络连通性测试，若 github.com 无法访问，将自动切换为国内镜像源克隆，省时省力。
 
 ---
 
