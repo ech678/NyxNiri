@@ -458,10 +458,8 @@ window-rule {
 
 // 视频画中画
 window-rule {
-    match app-id="firefox" title="画中画"
-    match app-id="firefox" title="Picture-in-Picture"
-    match app-id="zen" title="画中画"
-    match app-id="zen" title="Picture-in-Picture"
+    match title="画中画"
+    match title="Picture-in-Picture"
 
     open-floating true
     opacity 1.0
@@ -476,15 +474,11 @@ window-rule {
     default-floating-position x=20 y=20 relative-to="bottom-right"
 }
 
-// mpv
-window-rule {
-    match app-id="mpv"
-    opacity 1.0
-}
-
-// kdenlive
+// 视频软件适配
 window-rule {
     match app-id="org.kde.kdenlive"
+    match app-id="mpv"
+    match app-id="kazumi"
     opacity 1.0
 }
 
