@@ -1,68 +1,59 @@
-# 🌌 NyxNiri — Ultimate Scroll-Tiling Desktop Setup
+<div align="center">
 
-<p align="center">
-  <img src="https://img.shields.io/badge/OS-Arch%20%7C%20CachyOS-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white" alt="OS" />
-  <img src="https://img.shields.io/badge/WM-Niri%20Scroll--Tiling-89B4FA?style=for-the-badge&logo=wayland&logoColor=white" alt="WM" />
-  <img src="https://img.shields.io/badge/Shell-Fish%20%2B%20Starship-F9E2AF?style=for-the-badge&logo=fish&logoColor=white" alt="Shell" />
-  <img src="https://img.shields.io/badge/Bar%20%26%20UI-Noctalia%20V5%20Shell-F5C2E7?style=for-the-badge&logo=material-design&logoColor=white" alt="Bar" />
-</p>
+# 🌌 NyxNiri
 
-<p align="center">
-  <a href="#-overview">Overview</a> •
-  <a href="#-repository-structure">Repository Structure</a> •
-  <a href="#-key-features">Key Features</a> •
-  <a href="#-quick-bindings">Quick Bindings</a> •
-  <a href="#-installation">Installation</a> •
-  <a href="#chinese">简体中文</a>
-</p>
+Personal desktop config built on Niri + Noctalia V5, for Arch / CachyOS.
 
----
+<img src="https://img.shields.io/badge/OS-Arch%20%7C%20CachyOS-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white" alt="OS" />
+<img src="https://img.shields.io/badge/WM-Niri-89B4FA?style=for-the-badge&logo=wayland&logoColor=white" alt="WM" />
+<img src="https://img.shields.io/badge/Shell-Fish%20%2B%20Starship-F9E2AF?style=for-the-badge&logo=fish&logoColor=black" alt="Shell" />
+<img src="https://img.shields.io/badge/UI-Noctalia%20V5-F5C2E7?style=for-the-badge&logo=material-design&logoColor=black" alt="Bar" />
+
+[Overview](#-overview) • [Structure](#-repository-structure) • [Features](#-key-features) • [Bindings](#️-quick-bindings) • [Install](#-installation) • [简体中文](#-项目概述)
+
+<br/>
+
+<img src="./preview.webp" alt="Preview" width="90%" />
+
+</div>
 
 ## 🌌 Overview
 
-**NyxNiri** is a premium, scroll-tiling desktop setup powered by the **Niri** window manager and the **Noctalia V5** shell framework. Designed for Arch Linux and CachyOS, it features seamless Material You color extraction from wallpapers, responsive layout dynamics, global theme synchronizations, and an optimized terminal environment.
-
-![Preview](./preview.webp)
-
----
+**NyxNiri** is my personal desktop setup built around the **Niri** scroll-tiling window manager and the **Noctalia V5** shell, targeting Arch Linux and CachyOS. It pulls Material You colors from your wallpaper or live wallpaper, keeps light/dark themes in sync across the whole system, and packs in a bunch of terminal quality-of-life tweaks.
 
 ## 📂 Repository Structure
 
 ```text
 NyxNiri
 ├── install.sh                  # Interactive bilingual installer (backups, hooks, dependencies)
-├── Wallpapers/                 # Curated wallpaper collections (deployed to ~/Pictures/Wallpapers)
-├── v1(forDMS)/                 # [Archived] Old DMS (Dank Material Shell) configurations
-└── v2(forNoctaliaV5)/          # [Active] Latest Noctalia V5 configurations
-    ├── niri/                   # Niri configuration (bindings, layout, window rules)
-    ├── noctalia/               # Desktop widgets, daemon settings, and automation hooks
-    ├── kitty/                  # GPU-accelerated terminal config (custom shortcuts, trails)
-    ├── fish/                   # Fish shell integrations (proxy helpers, aliases, clean script)
-    ├── fastfetch/              # Minimal sys-info fetch screen
-    └── starship.toml           # Multi-layered prompt theme
+├── Wallpapers/                 # Wallpaper collection (deployed to ~/Pictures/Wallpapers)
+├── v1(forDMS)/                 # [Archived] Old DMS (Dank Material Shell) configs
+└── v2(forNoctaliaV5)/          # [Active] Current Noctalia V5 configs
+    ├── niri/                   # Niri config (bindings, layout, window rules)
+    ├── noctalia/               # Desktop widgets, daemon settings, automation hooks
+    ├── kitty/                  # Kitty terminal config (custom shortcuts, cursor trail)
+    ├── fish/                   # Fish shell (proxy helpers, aliases, cache cleaner)
+    ├── fastfetch/              # Minimal system info fetch
+    └── starship.toml           # Starship prompt theme
 ```
 
 > [!NOTE]
-> All configs are safely backed up before deployment. Wallpapers are dynamically linked to your default Pictures folder.
-
----
+> All existing configs are backed up before deployment. Wallpapers are copied to your Pictures folder.
 
 ## ✨ Key Features
 
-* **🎬 Dynamic Video Wallpapers & Color Sync**: 
-  * Seamless integration with `mpvpaper` for high-performance video wallpapers.
-  * An automated Lua hook (`mpv-hook.lua`) extracts keyframes from videos on the fly, allowing Noctalia's Material You engine to generate matching terminal and desktop color palettes.
-* **🌓 Unified Light/Dark Mode (`theme-sync.sh`)**:
-  * Automatically synchronizes GTK 3.0/4.0 settings, GSettings, and application theme modes (prefer-light/prefer-dark) globally upon theme switching.
-* **🐚 Optimized Terminal Experience (Fish Shell)**:
-  * Built-in proxy utilities: `proxy_on` (enable proxy), `proxy_off` (disable proxy), and `proxy_status` (diagnose proxy connectivity and retrieve public geo-IP).
-  * Unified CachyOS/AUR package management wrappers via `shelly` (`up`, `in`, `un`, `se`).
-  * A robust, multi-tier system cache cleaner (`clean` -> `clean-cache`).
-* **💻 Power-user Terminal (Kitty)**:
-  * Enables smooth GPU cursor trail rendering (`cursor_trail`).
-  * Native Windows-style shortcuts mapping: `Ctrl+C` (intelligent copy or interrupt), `Ctrl+V` (paste), `Ctrl+Backspace`/`Ctrl+Delete` (word-by-word deletion), and `Ctrl+A` (copy entire terminal history to clipboard).
-
----
+* **🎬 Live Wallpapers & Color Sync**:
+  * `mpvpaper` for live wallpapers.
+  * A Lua hook (`mpv-hook.lua`) extracts a keyframe when a video loads and passes it to Noctalia's Material You engine — terminal and desktop colors update to match.
+* **🌓 Light/Dark Mode Sync (`theme-sync.sh`)**:
+  * Writes to GTK 3.0/4.0 `settings.ini` and GSettings at the same time, so all GTK/Libadwaita apps switch together.
+* **🐚 Fish Shell**:
+  * `proxy_on` / `proxy_off` / `proxy_status` — proxy toggle + public IP check.
+  * `shelly` aliases (`up`, `in`, `un`, `se`) wrapping pacman/paru for CachyOS/AUR.
+  * `clean` / `clean-cache` — multi-tier cache cleaner (logs, package leftovers, runtime caches, trash).
+* **💻 Kitty**:
+  * GPU cursor trail (`cursor_trail`).
+  * Windows-style shortcuts: `Ctrl+C` (smart copy-or-interrupt), `Ctrl+V` (paste), `Ctrl+Backspace`/`Ctrl+Delete` (word delete), `Ctrl+A` (copy full terminal buffer).
 
 ## ⌨️ Quick Bindings
 
@@ -70,138 +61,137 @@ NyxNiri
 |:---|:---|:---|
 | <kbd>Super</kbd> + <kbd>Return</kbd> | Open Terminal | Kitty |
 | <kbd>Super</kbd> + <kbd>Q</kbd> | Close Window | Niri |
-| <kbd>Super</kbd> + <kbd>R</kbd> | Toggle App Launcher | Noctalia |
-| <kbd>Super</kbd> + <kbd>X</kbd> | Toggle Session Menu | Noctalia |
-| <kbd>Super</kbd> + <kbd>V</kbd> | Toggle Clipboard History | Noctalia |
-| <kbd>Super</kbd> + <kbd>I</kbd> | Toggle Settings Panel | Noctalia |
-| <kbd>Super</kbd> + <kbd>E</kbd> | Open File Manager | Nautilus |
-| <kbd>Super</kbd> + <kbd>Tab</kbd> | Toggle Overview Mode | Niri |
+| <kbd>Super</kbd> + <kbd>R</kbd> | App Launcher | Noctalia |
+| <kbd>Super</kbd> + <kbd>E</kbd> | File Manager | Nautilus |
+| <kbd>Super</kbd> + <kbd>Tab</kbd> | Overview | Niri |
 | <kbd>Super</kbd> + <kbd>H</kbd> / <kbd>L</kbd> | Column Left / Right | Niri |
 | <kbd>Super</kbd> + <kbd>J</kbd> / <kbd>K</kbd> | Window Down / Up | Niri |
-
----
+| <kbd>Super</kbd> + <kbd>X</kbd> | Session Menu | Noctalia |
+| <kbd>Super</kbd> + <kbd>I</kbd> | Settings Panel | Noctalia |
+| <kbd>Super</kbd> + <kbd>V</kbd> | Clipboard History | Noctalia |
 
 ## 🚀 Installation
 
-Ensure your system is up-to-date, then clone and run the bilingual menu-driven setup:
+One-liner — the script will clone into `~/.cache/NyxNiri` on its own:
 
-```bash
-# Clone the repository
-git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
-
-# Execute the installer
-cd ~/NyxNiri
-./install.sh
-```
-
-### ⚡ Quick One-liner (Standalone Mode)
-If you just want to run the installer directly without cloning first:
 ```bash
 curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
-This will automatically clone the repository into `~/.cache/NyxNiri` and load the control panel.
+
+<details>
+<summary>Manual installation</summary>
+
+```bash
+git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
+cd ~/NyxNiri && ./install.sh
+```
+</details>
+
+## 🎨 Stack
+
+| | |
+|:---|:---|
+| **WM** | Niri (scroll-tiling) |
+| **Desktop Shell** | Noctalia V5 |
+| **Terminal** | Kitty |
+| **Shell / Prompt** | Fish + Starship |
+| **Fonts** | JetBrains Mono, Noto Sans CJK SC |
+
+<br/>
 
 ---
 
-<div id="chinese"></div>
+<div id="chinese" align="center">
+
+[↑ English](#-nyxniri)
+
+</div>
 
 ## 🌌 项目概述
 
-**NyxNiri** 是一个基于 **Niri** 滚动平铺窗口管理器与 **Noctalia V5** 桌面套件的极致美化与效率配置方案。原生适配 Arch Linux 与 CachyOS，深度集成了 Material You 视频/壁纸色彩动态提取、全局跨应用主题同步以及高度定制的现代终端环境。
-
-<p align="center">
-  <a href="#-overview">English Documentation</a>
-</p>
-
----
+**NyxNiri** 是我自用的桌面配置，基于 **Niri** 滚动平铺窗口管理器和 **Noctalia V5** 桌面套件，适配 Arch Linux 与 CachyOS。支持从壁纸和动态壁纸中提取 Material You 配色，全局明暗主题同步，并带有一些终端体验上的改进。
 
 ## 📂 目录结构
 
 ```text
 NyxNiri
-├── install.sh                  # 双语交互式安装脚本（包含配置备份、依赖检测、Doctor 诊断）
-├── Wallpapers/                 # 精选壁纸库（自动部署至系统图片目录下的 Wallpapers/ 目录）
+├── install.sh                  # 双语交互式安装脚本（配置备份、依赖检测、Doctor 诊断）
+├── Wallpapers/                 # 壁纸库（部署至 ~/Pictures/Wallpapers）
 ├── v1(forDMS)/                 # [已归档] 旧版 DMS 桌面套件配置
-└── v2(forNoctaliaV5)/          # [当前激活] Noctalia V5 桌面环境配置
-    ├── niri/                   # Niri 窗口管理器配置（快捷键、窗口模糊、游戏性能规则）
-    ├── noctalia/               # 桌面组件、状态栏面板与自动配色同步脚本
-    ├── kitty/                  # GPU 加速终端配置（包含渐变光标轨道与 Windows 快捷键映射）
-    ├── fish/                   # Fish shell 设置（自启动、代理快捷函数与统一包管理别名）
-    ├── fastfetch/              # 极简系统看板信息展示
-    └── starship.toml           # 终端 Starship 多色状态提示符
+└── v2(forNoctaliaV5)/          # [当前] Noctalia V5 配置
+    ├── niri/                   # Niri 配置（快捷键、布局、窗口规则）
+    ├── noctalia/               # 桌面组件、状态栏、自动配色脚本
+    ├── kitty/                  # Kitty 终端配置（光标轨迹、快捷键映射）
+    ├── fish/                   # Fish shell（代理函数、包管理别名、缓存清理）
+    ├── fastfetch/              # 系统信息展示
+    └── starship.toml           # Starship 提示符主题
 ```
 
 > [!NOTE]
-> 安装前脚本会安全地自动备份你现有的配置。壁纸文件会自动根据系统语言环境适配部署到对应的图片文件夹中。
-
----
+> 安装前会自动备份现有配置。壁纸会复制到系统图片目录。
 
 ## ✨ 核心特性
 
-* **🎬 动态视频壁纸与色彩同步**：
-  * 无缝集成 `mpvpaper`，支持流畅的动态视频壁纸渲染。
-  * 内置 `mpv-hook.lua` 钩子，在加载视频时自动截取关键帧，动态生成 Material You 色彩主题，使终端与桌面配色与视频画面自动契合。
+* **🎬 动态壁纸与自动配色**：
+  * 用 `mpvpaper` 播放动态壁纸。
+  * `mpv-hook.lua` 在视频加载时截一帧，交给 Noctalia 的 Material You 引擎生成配色——终端和桌面颜色跟着视频走。
 * **🌓 全局明暗主题同步 (`theme-sync.sh`)**：
-  * 在切换壁纸或明暗模式时，自动且同步地刷新 GSettings 及 GTK 3.0/4.0 的 `settings.ini` 配置文件，保证所有 GTK/Libadwaita 应用外观一致。
-* **🐚 极致顺滑的 Fish Shell 环境**：
-  * **便捷代理管理**：提供 `proxy_on`、`proxy_off` 控制命令，以及 `proxy_status` 测速与 IP 地理位置检测工具。
-  * **现代包管理别名**：继承了 CachyOS 推荐的 `shelly` 统一包管理别名（`up` 升级、`in` 安装、`un` 卸载）。
-  * **一键缓存清理**：集成 `clean-cache` 脚本，可按需清理系统日志、包管理残留、各语言运行时缓存与用户垃圾桶。
-* **💻 现代 Kitty 终端优化**：
-  * 配置了流畅的 GPU 渐变光标轨迹（`cursor_trail`）。
-  * 支持符合直觉的快捷键映射：`Ctrl+C`（智能复制/中断）、`Ctrl+V`（粘贴）、`Ctrl+Backspace`/`Ctrl+Delete`（词级向前/向后删除），以及 `Ctrl+A`（一键复制整个终端历史缓冲区到剪贴板）。
-
----
+  * 同时写 GSettings 和 GTK 3.0/4.0 的 `settings.ini`，所有 GTK/Libadwaita 应用一起切换。
+* **🐚 Fish Shell**：
+  * `proxy_on` / `proxy_off` / `proxy_status` — 代理开关 + 公网 IP 检测。
+  * `shelly` 别名（`up`、`in`、`un`、`se`）封装 pacman/paru。
+  * `clean-cache` 多级缓存清理（日志、包残留、运行时缓存、垃圾桶）。
+* **💻 Kitty 终端**：
+  * GPU 光标轨迹（`cursor_trail`）。
+  * Windows 风格快捷键：`Ctrl+C`（智能复制/中断）、`Ctrl+V`（粘贴）、`Ctrl+Backspace`/`Ctrl+Delete`（词级删除）、`Ctrl+A`（复制整个终端缓冲区）。
 
 ## ⌨️ 常用快捷键
 
-| 快捷键 | 执行动作 | 所属组件 |
+| 快捷键 | 动作 | 组件 |
 |:---|:---|:---|
-| <kbd>Super</kbd> + <kbd>回车</kbd> | 打开终端 | Kitty 终端 |
-| <kbd>Super</kbd> + <kbd>Q</kbd> | 关闭当前窗口 | Niri 窗口管理器 |
-| <kbd>Super</kbd> + <kbd>R</kbd> | 开启/关闭 应用启动器 | Noctalia 面板 |
-| <kbd>Super</kbd> + <kbd>X</kbd> | 开启/关闭 会话电源菜单 | Noctalia 面板 |
-| <kbd>Super</kbd> + <kbd>V</kbd> | 开启/关闭 剪贴板历史 | Noctalia 面板 |
-| <kbd>Super</kbd> + <kbd>I</kbd> | 开启/关闭 桌面控制中心 | Noctalia 面板 |
-| <kbd>Super</kbd> + <kbd>E</kbd> | 打开文件管理器 | Nautilus |
-| <kbd>Super</kbd> + <kbd>Tab</kbd> | 切换多工作区总览 (Overview) | Niri 窗口管理器 |
-| <kbd>Super</kbd> + <kbd>H</kbd> / <kbd>L</kbd> | 聚焦左侧 / 右侧列 | Niri 窗口管理器 |
-| <kbd>Super</kbd> + <kbd>J</kbd> / <kbd>K</kbd> | 聚焦下方 / 上方窗口 | Niri 窗口管理器 |
+| <kbd>Super</kbd> + <kbd>回车</kbd> | 打开终端 | Kitty |
+| <kbd>Super</kbd> + <kbd>Q</kbd> | 关闭窗口 | Niri |
+| <kbd>Super</kbd> + <kbd>R</kbd> | 应用启动器 | Noctalia |
+| <kbd>Super</kbd> + <kbd>E</kbd> | 文件管理器 | Nautilus |
+| <kbd>Super</kbd> + <kbd>Tab</kbd> | 工作区总览 | Niri |
+| <kbd>Super</kbd> + <kbd>H</kbd> / <kbd>L</kbd> | 聚焦左/右列 | Niri |
+| <kbd>Super</kbd> + <kbd>J</kbd> / <kbd>K</kbd> | 聚焦上/下窗口 | Niri |
+| <kbd>Super</kbd> + <kbd>X</kbd> | 会话/电源菜单 | Noctalia |
+| <kbd>Super</kbd> + <kbd>I</kbd> | 桌面控制中心 | Noctalia |
+| <kbd>Super</kbd> + <kbd>V</kbd> | 剪贴板历史 | Noctalia |
 
----
+## 🚀 部署
 
-## 🚀 部署指南
-
-提供交互式安装脚本，会安全地自动备份你现有的配置：
+一行命令安装，脚本会自动克隆到 `~/.cache/NyxNiri`（内置网络检测，GitHub 不可达时自动切换国内镜像）：
 
 ```bash
-# 克隆仓库
-git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
-
-# 运行安装器
-cd ~/NyxNiri
-./install.sh
+curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
-### ⚡ 极速一键安装（独立脚本模式 - 含国内镜像）
-如果您想直接运行安装器，可以使用官方默认通道，在国内网络环境下也支持使用镜像加速通道直接运行：
-```bash
-# 官方默认通道 (通常需要代理)
-curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+<details>
+<summary>手动安装</summary>
 
-# 国内镜像加速通道 A (KKGitHub)
+```bash
+git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
+cd ~/NyxNiri && ./install.sh
+```
+</details>
+
+<details>
+<summary>国内镜像</summary>
+
+```bash
+# KKGitHub
 curl -sL https://raw.kkgithub.com/ech678/NyxNiri/main/install.sh | bash
 
-# 国内镜像加速通道 B (GHProxy.net)
+# GHProxy.net
 curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
-脚本在克隆仓库时也会自动进行网络连通性测试，若 github.com 无法访问，将自动切换为国内镜像源克隆，省时省力。
+</details>
 
----
-
-## 🎨 视觉与细节
+## 🎨 组件一览
 
 * **窗口管理器**: Niri Scroll-Tiling WM
-* **桌面套件 & 状态栏**: Noctalia V5 Shell (基于 Quickshell)
-* **默认 Shell**: Fish Shell + Starship Prompt
-* **推荐字体**: JetBrains Mono (等宽) / Noto Sans CJK SC (中文字体)
+* **桌面套件 & 状态栏**: Noctalia V5 Shell
+* **Shell**: Fish + Starship
+* **推荐字体**: JetBrains Mono / Noto Sans CJK SC
