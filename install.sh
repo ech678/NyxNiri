@@ -178,7 +178,16 @@ ensure_repo() {
         fi
         if [ ! -d "$CACHE_DIR" ]; then
             msg cloning_repo
-            git clone "$REPO_URL" "$CACHE_DIR"
+            
+            # Test connection to github.com
+            local active_repo_url="$REPO_URL"
+            echo "Testing connection to github.com..."
+            if ! curl -I -s --connect-timeout 3 https://github.com >/dev/null 2>&1; then
+                echo "⚠️ Connection to github.com failed. Switching to domestic mirror (KKGitHub)..."
+                active_repo_url="https://kkgithub.com/ech678/NyxNiri.git"
+            fi
+            
+            git clone "$active_repo_url" "$CACHE_DIR"
         fi
     fi
 }
