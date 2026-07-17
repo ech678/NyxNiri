@@ -235,6 +235,8 @@ DEPS=(
     "fzf"
     "fd"
     "bat"
+    "ttf-jetbrains-mono-nerd"
+    "noto-fonts-cjk"
 )
 
 DEP_STATUS=()
@@ -243,11 +245,27 @@ DEP_SELECT=()
 check_all_deps() {
     for i in "${!DEPS[@]}"; do
         local cmd="${DEPS[$i]}"
+        local is_installed=0
+        
         if [ "$cmd" = "inotify-tools" ]; then
             cmd="inotifywait"
         fi
         
-        if command -v "$cmd" >/dev/null 2>&1; then
+        if [ "$cmd" = "ttf-jetbrains-mono-nerd" ]; then
+            if fc-list : family 2>/dev/null | grep -qi "JetBrainsMono"; then
+                is_installed=1
+            fi
+        elif [ "$cmd" = "noto-fonts-cjk" ]; then
+            if fc-list : family 2>/dev/null | grep -qi "Noto Sans CJK"; then
+                is_installed=1
+            fi
+        else
+            if command -v "$cmd" >/dev/null 2>&1; then
+                is_installed=1
+            fi
+        fi
+        
+        if [ "$is_installed" -eq 1 ]; then
             DEP_STATUS[$i]=1
             DEP_SELECT[$i]=0
         else
@@ -482,6 +500,12 @@ run_doctor() {
         msg doctor_ok "Compositor: Niri is currently running."
     else
         msg doctor_warn "Compositor: Current desktop environment is '$XDG_CURRENT_DESKTOP' (Niri is not running)."
+    fi
+    
+    if [ -f "/usr/share/wayland-sessions/niri.desktop" ]; then
+        msg doctor_ok "Session: Niri Wayland session desktop file is registered."
+    else
+        msg doctor_warn "Session: /usr/share/wayland-sessions/niri.desktop is missing. (Niri might not show up on your Display Manager login screen)"
     fi
     
     if noctalia msg status >/dev/null 2>&1; then

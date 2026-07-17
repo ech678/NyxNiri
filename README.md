@@ -87,12 +87,19 @@ Ensure your system is up-to-date, then clone and run the bilingual menu-driven s
 
 ```bash
 # Clone the repository
-git clone git@github.com:ech678/NyxNiri.git ~/NyxNiri
+git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
 
 # Execute the installer
 cd ~/NyxNiri
 ./install.sh
 ```
+
+### ⚡ Quick One-liner (Standalone Mode)
+If you just want to run the installer directly without cloning first:
+```bash
+curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+```
+This will automatically clone the repository into `~/.cache/NyxNiri` and load the control panel.
 
 ---
 
@@ -169,12 +176,19 @@ NyxNiri
 
 ```bash
 # 克隆仓库
-git clone git@github.com:ech678/NyxNiri.git ~/NyxNiri
+git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
 
 # 运行安装器
 cd ~/NyxNiri
 ./install.sh
 ```
+
+### ⚡ 极速一键安装（独立脚本模式）
+如果您想直接运行安装器而无需手动克隆仓库：
+```bash
+curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+```
+脚本会自动将配置仓库克隆到本地 `~/.cache/NyxNiri` 缓存中并启动控制面板，省时省力。
 
 ---
 
