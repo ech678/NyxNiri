@@ -159,7 +159,7 @@ select_language() {
     echo "  1) English"
     echo "  2) 简体中文 (Simplified Chinese)"
     echo ""
-    read -p "Select Language / 请选择语言 [1/2]: " lang_choice
+    read -p "Select Language / 请选择语言 [1/2]: " lang_choice < /dev/tty
     if [ "$lang_choice" = "2" ]; then
         LANG_MODE="zh"
     else
@@ -315,7 +315,7 @@ run_dep_menu_loop() {
     while true; do
         check_all_deps
         show_dep_menu
-        read -p "> " choice
+        read -p "> " choice < /dev/tty
         if [ -z "$choice" ]; then
             break
         fi
@@ -376,7 +376,7 @@ backup_configs() {
     done
     
     if [ "$has_today_backup" = true ]; then
-        read -p "$(msg ask_backup_again)" choice
+        read -p "$(msg ask_backup_again)" choice < /dev/tty
         if [[ ! "$choice" =~ ^[Yy]$ ]]; then
             return 0
         fi
@@ -491,7 +491,7 @@ install_configs() {
     
     if [ "$missing_count" -gt 0 ]; then
         msg warn_deps_missing
-        read -p "$(msg ask_install_now)" choice
+        read -p "$(msg ask_install_now)" choice < /dev/tty
         if [[ "$choice" =~ ^[Yy]$ || -z "$choice" ]]; then
             run_dep_menu_loop
         fi
@@ -592,28 +592,28 @@ main_menu() {
         msg menu_opt5
         msg menu_opt6
         echo ""
-        read -p "$(msg menu_prompt)" opt
+        read -p "$(msg menu_prompt)" opt < /dev/tty
         
         case "$opt" in
             1)
                 install_configs
-                read -p "$(msg press_any_key)" -n 1
+                read -p "$(msg press_any_key)" -n 1 < /dev/tty
                 ;;
             2)
                 run_dep_menu_loop
-                read -p "$(msg press_any_key)" -n 1
+                read -p "$(msg press_any_key)" -n 1 < /dev/tty
                 ;;
             3)
                 run_doctor
-                read -p "$(msg press_any_key)" -n 1
+                read -p "$(msg press_any_key)" -n 1 < /dev/tty
                 ;;
             4)
                 backup_configs
-                read -p "$(msg press_any_key)" -n 1
+                read -p "$(msg press_any_key)" -n 1 < /dev/tty
                 ;;
             5)
                 update_repo_and_script
-                read -p "$(msg press_any_key)" -n 1
+                read -p "$(msg press_any_key)" -n 1 < /dev/tty
                 ;;
             6)
                 exit 0
