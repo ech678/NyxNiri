@@ -59,6 +59,20 @@ if status is-interactive
     # No greeting
     set fish_greeting
 
+    # Tab 智能自动补全：优先采纳灰色历史建议，无建议时触发 Tab 列表补全
+    function custom_tab_complete
+        if commandline -f accept-autosuggestion
+            # 成功采纳自动提示建议
+        else
+            commandline -f complete
+        end
+    end
+
+    function fish_user_key_bindings
+        # 绑定 Tab 键
+        bind \t custom_tab_complete
+    end
+
     # Use starship prompt
     if command -v starship &>/dev/null
         starship init fish | source
@@ -101,6 +115,14 @@ if status is-interactive
         echo "  se <关键字>    -> shelly query <关键字>"
         echo "  clean          -> ~/.config/fish/clean-cache"
         echo "                    (一键清理系统与用户缓存，包含多维度清理)"
+        echo ""
+        echo "  --- 智能自动补全与模糊搜索 (Autocomplete & Fuzzy Search) ---"
+        echo "  Tab            -> 优先采纳灰色历史建议，无建议时触发 Tab 列表补全"
+        echo "  Ctrl + R       -> 模糊搜索历史命令 (fzf 历史记录)"
+        echo "  Ctrl + Alt + F -> 模糊查找文件并插入路径 (fzf 文件)"
+        echo "  Ctrl + Alt + L -> 模糊浏览 git commit 历史 (fzf Git Log)"
+        echo "  Ctrl + Alt + S -> 模糊浏览 git status 状态 (fzf Git Status)"
+        echo "  (提示: 括号和单双引号均已配置自动双向配对补全)"
         echo ""
         echo "提示: 可用 'custom_help'、'pkg_help' 或 'my_help' 触发此菜单。"
     end

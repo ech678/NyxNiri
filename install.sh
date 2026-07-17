@@ -147,6 +147,9 @@ DEPS=(
     "ffmpeg"
     "jq"
     "inotify-tools"
+    "fzf"
+    "fd"
+    "bat"
 )
 
 # Status of each dependency (0 = missing, 1 = installed)
@@ -348,6 +351,21 @@ install_configs() {
     fi
     
     msg copy_done
+
+    # Install/Update Fisher plugins if fish is available
+    if command -v fish >/dev/null 2>&1; then
+        echo "⚙️  Installing/Updating Fisher plugins..."
+        fish -c "
+            if not functions -q fisher
+                echo 'Fisher not found, installing fisher...'
+                curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher
+            end
+            if test -f ~/.config/fish/fish_plugins
+                echo 'Installing plugins listed in fish_plugins...'
+                fisher update
+            end
+        "
+    fi
     
     # 3. Prompt for dependencies if missing
     check_all_deps
