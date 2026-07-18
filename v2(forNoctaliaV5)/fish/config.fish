@@ -2,13 +2,17 @@ if test -f /usr/share/cachyos-fish-config/cachyos-config.fish
     source /usr/share/cachyos-fish-config/cachyos-config.fish
 end
 
+# 代理配置 (Proxy Configuration) — 修改此处以适配你的代理端口
+set -g PROXY_ADDR "127.0.0.1:7890"
+
 # 开启代理
 function proxy_on
-    set -gx http_proxy "http://127.0.0.1:7890"
-    set -gx https_proxy "http://127.0.0.1:7890"
-    set -gx all_proxy "socks5://127.0.0.1:7890"
-    echo "[+] 终端代理已开启 (Port: 7890)"
+    set -gx http_proxy "http://$PROXY_ADDR"
+    set -gx https_proxy "http://$PROXY_ADDR"
+    set -gx all_proxy "socks5://$PROXY_ADDR"
+    echo "[+] 终端代理已开启 (Proxy: $PROXY_ADDR)"
 end
+
 
 # 关闭代理
 function proxy_off
