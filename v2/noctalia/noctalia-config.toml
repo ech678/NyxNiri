@@ -163,7 +163,7 @@ wallpaper_scheme = "m3-content"
 
 [theme.templates]
 builtin_ids = ["kitty", "qt", "starship"]
-community_ids = []
+community_ids = ["zen-browser"]
 
 [wallpaper]
 directory = "/home/ray/图片/Wallpapers"
