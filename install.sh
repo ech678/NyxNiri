@@ -350,8 +350,12 @@ install_selected_deps() {
     fi
     
     msg installing_selected
-    local pkg_manager="yay"
-    if ! command -v yay >/dev/null 2>&1; then
+    local pkg_manager=""
+    if command -v paru >/dev/null 2>&1; then
+        pkg_manager="paru"
+    elif command -v yay >/dev/null 2>&1; then
+        pkg_manager="yay"
+    else
         pkg_manager="sudo pacman"
     fi
     
@@ -459,6 +463,9 @@ install_configs() {
         sed -i "s|/home/ray/图片/wallpapers|$wp_dest|g" "$HOME/.config/noctalia/noctalia-config.toml"
         sed -i "s|/home/ray|$HOME|g" "$HOME/.config/noctalia/noctalia-config.toml"
     fi
+    if [ -f "$HOME/.config/niri/config.kdl" ]; then
+        sed -i "s|/home/ray|$HOME|g" "$HOME/.config/niri/config.kdl"
+    fi
     if [ -f "$HOME/.config/fish/fish_variables" ]; then
         sed -i "s|/home/ray|$HOME|g" "$HOME/.config/fish/fish_variables"
     fi
@@ -523,10 +530,11 @@ run_doctor() {
         msg doctor_err "Noctalia Daemon: Not running. (Launch: niri msg action spawn -- noctalia)"
     fi
     
-    if [ -d "$HOME/图片/Wallpapers" ]; then
-        msg doctor_ok "Wallpapers: ~/图片/Wallpapers directory exists."
+    local doc_pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")
+    if [ -d "$doc_pics_dir/Wallpapers" ]; then
+        msg doctor_ok "Wallpapers: $doc_pics_dir/Wallpapers directory exists."
     else
-        msg doctor_err "Wallpapers: ~/图片/Wallpapers directory is missing."
+        msg doctor_err "Wallpapers: $doc_pics_dir/Wallpapers directory is missing."
     fi
     
     local missing_critical=0

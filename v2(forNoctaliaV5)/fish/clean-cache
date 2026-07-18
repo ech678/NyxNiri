@@ -13,6 +13,11 @@
 # Ensure output uses UTF-8 and standard formatting
 export LANG=en_US.UTF-8
 
+# Configuration Constants
+CACHE_RETENTION_DAYS=14
+JOURNAL_RETENTION_DAYS=2
+
+
 # Color codes for pretty output (only if terminal supports colors)
 if [[ -t 1 ]]; then
     RED='\033[0;31m'
@@ -151,11 +156,12 @@ clean_dir_contents "$HOME/.cache/yay" "Yay AUR 构建与下载缓存"
 clean_dir_contents "$HOME/.cache/paru" "Paru AUR 构建与下载缓存"
 clean_dir_contents "$HOME/.cache/Shelly" "Shelly 用户本地缓存"
 
-# Safe generic ~/.cache cleanup: Remove files older than 14 days inside ~/.cache
+# Safe generic ~/.cache cleanup: Remove files older than configured days inside ~/.cache
 # but exclude active app folders to avoid breaking running configurations
-log_info "清理 ~/.cache 中超过 14 天未访问的零散临时文件..."
-find "$HOME/.cache" -type f -atime +14 -delete 2>/dev/null
+log_info "清理 ~/.cache 中超过 ${CACHE_RETENTION_DAYS} 天未访问的零散临时文件..."
+find "$HOME/.cache" -type f -atime +${CACHE_RETENTION_DAYS} -delete 2>/dev/null
 log_success "零散临时文件清理完成"
+
 
 
 # 3. Programming Language & Package Managers Cache
@@ -304,10 +310,11 @@ if [[ "$response" =~ ^(yes|y)$ ]]; then
 
         # 5.7 Systemd Journal (Linux specific)
         if command -v journalctl &>/dev/null; then
-            log_info "清理 Systemd 日志缓存 (仅保留最近 2 天的日志)..."
-            sudo journalctl --vacuum-time=2d
+            log_info "清理 Systemd 日志缓存 (仅保留最近 ${JOURNAL_RETENTION_DAYS} 天的日志)..."
+            sudo journalctl --vacuum-time=${JOURNAL_RETENTION_DAYS}d
             log_success "Systemd 日志清理完成"
         fi
+
 
         # 5.8 RAM Cache (PageCache, dentries, inodes)
         if [[ -f /proc/sys/vm/drop_caches ]]; then
