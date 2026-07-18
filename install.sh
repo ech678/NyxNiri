@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Detect running mode
 # - "repo": Running inside a local cloned repository
 # - "standalone": Running as a single script file (e.g. downloaded via curl)
-if [ -d "$SCRIPT_DIR/v2(forNoctaliaV5)" ] && [ -d "$SCRIPT_DIR/Wallpapers" ]; then
+if [ -d "$SCRIPT_DIR/v2" ] && [ -d "$SCRIPT_DIR/Wallpapers" ]; then
     RUN_MODE="repo"
     REPO_DIR="$SCRIPT_DIR"
 else
@@ -421,7 +421,7 @@ install_configs() {
 
     # 2. Deploy
     msg copying_configs
-    local repo_config_dir="$REPO_DIR/v2(forNoctaliaV5)"
+    local repo_config_dir="$REPO_DIR/v2"
     
     local configs=(
         "fish"

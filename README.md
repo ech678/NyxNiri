@@ -27,7 +27,7 @@ Personal desktop config built on Niri + Noctalia V5, for Arch / CachyOS.
 NyxNiri
 ├── install.sh                  # Interactive bilingual installer (backups, hooks, dependencies)
 ├── Wallpapers/                 # Wallpaper collection (deployed to ~/Pictures/Wallpapers)
-└── v2(forNoctaliaV5)/          # ✅ [Active] Current Noctalia V5 configs
+└── v2/                         # ✅ [Active] Current Noctalia V5 configs
     ├── niri/                   # Niri config (bindings, layout, window rules)
     ├── noctalia/               # Desktop widgets, daemon settings, automation hooks
     ├── kitty/                  # Kitty terminal config (custom shortcuts, cursor trail)
@@ -119,7 +119,7 @@ cd ~/NyxNiri && ./install.sh
 NyxNiri
 ├── install.sh                  # 双语交互式安装脚本（配置备份、依赖检测、Doctor 诊断）
 ├── Wallpapers/                 # 壁纸库（部署至 ~/Pictures/Wallpapers）
-└── v2(forNoctaliaV5)/          # ✅ [当前] Noctalia V5 配置
+└── v2/                         # ✅ [当前] Noctalia V5 配置
     ├── niri/                   # Niri 配置（快捷键、布局、窗口规则）
     ├── noctalia/               # 桌面组件、状态栏、自动配色脚本
     ├── kitty/                  # Kitty 终端配置（光标轨迹、快捷键映射）
