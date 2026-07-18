@@ -101,6 +101,27 @@ cd ~/NyxNiri && ./install.sh
 
 <br/>
 
+## ❓ FAQ & Troubleshooting
+
+### Noctalia takes a long time to start after logging into Niri
+If your wallpaper, bar, and widgets take several seconds (or even minutes) to load after logging in, check the following two common causes:
+1. **DDC/CI scanning blocking (I2C timeout)**:
+   Noctalia attempts to detect monitor brightness controls by querying the I2C bus via `ddcutil`. This can hang the startup process on certain hardware, especially with NVIDIA drivers.
+   * **Fix**: Edit `~/.config/noctalia/noctalia-config.toml` and disable DDC/CI under the `[brightness]` section:
+     ```toml
+     [brightness]
+     enable_ddcutil = false
+     ```
+2. **Corrupted local plugin repositories**:
+   If the git index of the cached plugin repositories becomes corrupted or desynced, the `git checkout` commands Noctalia runs to unpack plugins during startup will hang. You can check `~/.cache/noctalia/noctalia.log` for logs like `git checkout ... took 20000ms`.
+   * **Fix**: Force-reset the plugin git caches:
+     ```bash
+     git -C ~/.local/state/noctalia/plugins/sources/community/repo reset --hard HEAD
+     git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
+     ```
+
+<br/>
+
 ---
 
 <div id="chinese" align="center">
@@ -199,3 +220,22 @@ curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/ma
 * **桌面套件 & 状态栏**: Noctalia V5 Shell
 * **Shell**: Fish + Starship
 * **推荐字体**: JetBrains Mono / Noto Sans CJK SC
+
+## ❓ 常见问题与故障排除 (FAQ)
+
+### 登录进入 Niri 后，Noctalia 桌面套件要等很久才启动
+如果登录后状态栏和桌面组件卡住很久不显示，请检查以下两个最常见的原因：
+1. **DDC/CI 显示器亮度扫描阻塞（I2C 超时）**：
+   Noctalia 默认通过 `ddcutil` 扫描所有 I2C 总线来检测外接显示器。在 NVIDIA 独显或部分特定硬件环境下，这种扫描会发生严重超时并阻塞主线程。
+   * **解决办法**：修改 `~/.config/noctalia/noctalia-config.toml`，在 `[brightness]` 选项下禁用 DDC/CI 扫描：
+     ```toml
+     [brightness]
+     enable_ddcutil = false
+     ```
+2. **本地插件 Git 仓库缓存状态损坏**：
+   如果本地缓存的插件仓库元数据损坏（如文件全部处于已删除的暂存状态），Noctalia 在启动释放插件时执行 `git checkout` 会陷入严重阻塞。你可以检查 `~/.cache/noctalia/noctalia.log` 日志是否包含 `git checkout ... took xxxxxms` 类似记录。
+   * **解决办法**：对本地插件仓库执行硬重置以恢复干净状态：
+     ```bash
+     git -C ~/.local/state/noctalia/plugins/sources/community/repo reset --hard HEAD
+     git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
+     ```

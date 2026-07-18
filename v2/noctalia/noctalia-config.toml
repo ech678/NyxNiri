@@ -34,7 +34,7 @@ thickness = 36
 warning_threshold = 30
 
 [brightness]
-enable_ddcutil = true
+enable_ddcutil = false
 
 [desktop_widgets]
 schema_version = 2
