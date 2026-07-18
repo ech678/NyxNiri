@@ -4,20 +4,20 @@
 
 _A calm, Material You desktop — Niri + Noctalia V5, for Arch / CachyOS_
 
-<img src="https://img.shields.io/badge/License-GPLv3-89B4FA?style=flat-square" alt="license" /> &nbsp;
+<img src="https://img.shields.io/badge/License-GPLv3-89B4FA?style=flat-square" alt="license" />
 <img src="https://img.shields.io/github/stars/ech678/NyxNiri?style=flat-square&color=F5C2E7&label=stars" alt="stars" />
 <!-- Reddit badge slot — drop your subreddit/post link in and uncomment:
 <img src="https://img.shields.io/badge/Reddit-discuss-FF4500?style=flat-square&logo=reddit&logoColor=white" alt="Reddit" />
 -->
 
-<img src="https://img.shields.io/badge/OS-Arch%20%7C%20CachyOS-1793D1?style=flat-square&logo=arch-linux&logoColor=white" alt="OS" /> &nbsp;
-<img src="https://img.shields.io/badge/WM-Niri-89B4FA?style=flat-square&logo=wayland&logoColor=white" alt="WM" /> &nbsp;
-<img src="https://img.shields.io/badge/Shell-Fish%20%2B%20Starship-F9E2AF?style=flat-square&logo=fish&logoColor=black" alt="Shell" /> &nbsp;
+<img src="https://img.shields.io/badge/OS-Arch%20%7C%20CachyOS-1793D1?style=flat-square&logo=arch-linux&logoColor=white" alt="OS" />
+<img src="https://img.shields.io/badge/WM-Niri-89B4FA?style=flat-square&logo=wayland&logoColor=white" alt="WM" />
+<img src="https://img.shields.io/badge/Shell-Fish%20%2B%20Starship-F9E2AF?style=flat-square&logo=fish&logoColor=black" alt="Shell" />
 <img src="https://img.shields.io/badge/UI-Noctalia%20V5-F5C2E7?style=flat-square&logo=material-design&logoColor=black" alt="Bar" />
 
-<br/>
-
 [简体中文](#-项目概述)
+
+<br/>
 
 <img src="./preview.webp" alt="Preview" width="90%" />
 
