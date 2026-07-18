@@ -27,8 +27,7 @@ Personal desktop config built on Niri + Noctalia V5, for Arch / CachyOS.
 NyxNiri
 ├── install.sh                  # Interactive bilingual installer (backups, hooks, dependencies)
 ├── Wallpapers/                 # Wallpaper collection (deployed to ~/Pictures/Wallpapers)
-├── v1(forDMS)/                 # [Archived] Old DMS (Dank Material Shell) configs
-└── v2(forNoctaliaV5)/          # [Active] Current Noctalia V5 configs
+└── v2(forNoctaliaV5)/          # ✅ [Active] Current Noctalia V5 configs
     ├── niri/                   # Niri config (bindings, layout, window rules)
     ├── noctalia/               # Desktop widgets, daemon settings, automation hooks
     ├── kitty/                  # Kitty terminal config (custom shortcuts, cursor trail)
@@ -39,6 +38,9 @@ NyxNiri
 
 > [!NOTE]
 > All existing configs are backed up before deployment. Wallpapers are copied to your Pictures folder.
+
+> [!WARNING]
+> The legacy DMS (Dank Material Shell) configurations have been archived and moved to the **`archive/v1-dms`** branch. The `main` branch now contains only the active V2 configs to stay clean and minimal. You can inspect the old configs by switching to that branch.
 
 ## ✨ Key Features
 
@@ -117,8 +119,7 @@ cd ~/NyxNiri && ./install.sh
 NyxNiri
 ├── install.sh                  # 双语交互式安装脚本（配置备份、依赖检测、Doctor 诊断）
 ├── Wallpapers/                 # 壁纸库（部署至 ~/Pictures/Wallpapers）
-├── v1(forDMS)/                 # [已归档] 旧版 DMS 桌面套件配置
-└── v2(forNoctaliaV5)/          # [当前] Noctalia V5 配置
+└── v2(forNoctaliaV5)/          # ✅ [当前] Noctalia V5 配置
     ├── niri/                   # Niri 配置（快捷键、布局、窗口规则）
     ├── noctalia/               # 桌面组件、状态栏、自动配色脚本
     ├── kitty/                  # Kitty 终端配置（光标轨迹、快捷键映射）
@@ -129,6 +130,9 @@ NyxNiri
 
 > [!NOTE]
 > 安装前会自动备份现有配置。壁纸会复制到系统图片目录。
+
+> [!WARNING]
+> 旧版的 DMS（Dank Material Shell）桌面配置已归档并移至 **`archive/v1-dms`** 分支。`main` 分支现在仅保留活跃的 V2 配置以实现极致简洁。若需参考旧配置，请在 GitHub 或本地切换到该分支查看。
 
 ## ✨ 核心特性
 
