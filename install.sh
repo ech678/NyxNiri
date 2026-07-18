@@ -97,6 +97,7 @@ msg() {
             warn_deps_missing) echo -e "\n\e[1;33m⚠️  警告: 检测到你缺少一些运行所需的依赖组件！\e[0m" ;;
             ask_install_now) echo -e "是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
             ask_backup_again) echo -e "检测到今天已备份过配置，是否重新备份？[y/N]: " ;;
+            ask_backup_before_deploy) echo -e "是否在部署前备份当前配置？[Y/n]: " ;;
         esac
     else
         case "$key" in
@@ -148,6 +149,7 @@ msg() {
             warn_deps_missing) echo -e "\n\e[1;33m⚠️  Warning: Some required dependencies are missing on your system!\e[0m" ;;
             ask_install_now) echo -e "Would you like to check and install missing dependencies now? [Y/n]: " ;;
             ask_backup_again) echo -e "A backup has already been made today. Do you want to back up again? [y/N]: " ;;
+            ask_backup_before_deploy) echo -e "Do you want to back up current configs before deploying? [Y/n]: " ;;
         esac
     fi
 }
@@ -411,8 +413,11 @@ backup_configs() {
 }
 
 install_configs() {
-    # 1. Backup first
-    backup_configs
+    # 1. Ask for backup
+    read -p "$(msg ask_backup_before_deploy)" choice < /dev/tty
+    if [[ "$choice" =~ ^[Yy]$ || -z "$choice" ]]; then
+        backup_configs
+    fi
 
     # 2. Deploy
     msg copying_configs
