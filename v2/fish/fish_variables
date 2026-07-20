@@ -1,7 +1,0 @@
-# This file contains fish universal variable definitions.
-# VERSION: 3.0
-SETUVAR __done_min_cmd_duration:10000
-SETUVAR __done_notification_urgency_level:low
-SETUVAR __fish_initialized:4300
-SETUVAR _fisher_upgraded_to_4_4:\x1d
-SETUVAR fish_user_paths:/home/ray/\x2elocal/bin

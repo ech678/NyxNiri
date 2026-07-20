@@ -246,6 +246,7 @@ DEPS=(
     "fzf"
     "fd"
     "bat"
+    "swaylock"
     "ttf-jetbrains-mono-nerd"
     "noto-fonts-cjk"
 )

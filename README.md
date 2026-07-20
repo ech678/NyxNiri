@@ -105,7 +105,8 @@ GSettings together, so every GTK/Libadwaita app switches in lockstep.
 | <kbd>Super</kbd> + <kbd>Return</kbd>           | Open terminal (Kitty)     |
 | <kbd>Super</kbd> + <kbd>Q</kbd>                | Close window              |
 | <kbd>Super</kbd> + <kbd>Tab</kbd>              | Overview                  |
-| <kbd>Super</kbd> + <kbd>H</kbd> / <kbd>L</kbd> | Focus column left / right |
+| <kbd>Super</kbd> + <kbd>H</kbd> / <kbd>Z</kbd> | Focus column left         |
+| <kbd>Super</kbd> + <kbd>C</kbd>                | Focus column right        |
 | <kbd>Super</kbd> + <kbd>J</kbd> / <kbd>K</kbd> | Focus window down / up    |
 
 **System & shell (Noctalia)**
@@ -117,6 +118,7 @@ GSettings together, so every GTK/Libadwaita app switches in lockstep.
 | <kbd>Super</kbd> + <kbd>X</kbd> | Session menu            |
 | <kbd>Super</kbd> + <kbd>I</kbd> | Settings panel          |
 | <kbd>Super</kbd> + <kbd>V</kbd> | Clipboard history       |
+| <kbd>Super</kbd> + <kbd>L</kbd> | Lock screen             |
 
 <br/>
 
@@ -277,7 +279,8 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>回车</kbd>             | 打开终端（Kitty） |
 | <kbd>Super</kbd> + <kbd>Q</kbd>                | 关闭窗口          |
 | <kbd>Super</kbd> + <kbd>Tab</kbd>              | 工作区总览        |
-| <kbd>Super</kbd> + <kbd>H</kbd> / <kbd>L</kbd> | 聚焦左 / 右列     |
+| <kbd>Super</kbd> + <kbd>H</kbd> / <kbd>Z</kbd> | 聚焦左列          |
+| <kbd>Super</kbd> + <kbd>C</kbd>                | 聚焦右列          |
 | <kbd>Super</kbd> + <kbd>J</kbd> / <kbd>K</kbd> | 聚焦上 / 下窗口   |
 
 **系统与桌面套件（Noctalia）**
@@ -289,6 +292,7 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>X</kbd> | 会话/电源菜单          |
 | <kbd>Super</kbd> + <kbd>I</kbd> | 桌面控制中心           |
 | <kbd>Super</kbd> + <kbd>V</kbd> | 剪贴板历史             |
+| <kbd>Super</kbd> + <kbd>L</kbd> | 锁屏                   |
 
 <br/>
 

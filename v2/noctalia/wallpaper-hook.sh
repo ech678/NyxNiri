@@ -15,7 +15,7 @@ LOG_FILE="$LOG_DIR/hook.log"
 echo "$(date) wallpaper_changed hook triggered. WP=$WP" >> "$LOG_FILE"
 
 # Only process video files to avoid infinite loops
-if [[ "$WP" == *.mp4 ]] || [[ "$WP" == *.webm ]] || [[ "$WP" == *.mkv ]]; then
+if [[ "$WP" == *.mp4 ]] || [[ "$WP" == *.webm ]] || [[ "$WP" == *.mkv ]] || [[ "$WP" == *.mov ]] || [[ "$WP" == *.gif ]]; then
     if ! command -v ffmpeg >/dev/null 2>&1; then
         echo "Error: ffmpeg is not installed." >> "$LOG_FILE"
         exit 1

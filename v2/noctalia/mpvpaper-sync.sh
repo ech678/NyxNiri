@@ -21,7 +21,7 @@ process_assignments() {
     
     if [[ -n "$VIDEO_PATH" && -f "$VIDEO_PATH" ]]; then
         # Check if it's a video
-        if [[ "$VIDEO_PATH" == *.mp4 ]] || [[ "$VIDEO_PATH" == *.webm ]] || [[ "$VIDEO_PATH" == *.mkv ]]; then
+        if [[ "$VIDEO_PATH" == *.mp4 ]] || [[ "$VIDEO_PATH" == *.webm ]] || [[ "$VIDEO_PATH" == *.mkv ]] || [[ "$VIDEO_PATH" == *.mov ]] || [[ "$VIDEO_PATH" == *.gif ]]; then
             # Generate a hash-based filename for the thumbnail to avoid re-generating for the same video
             THUMB_NAME=$(echo -n "$VIDEO_PATH" | md5sum | awk '{print $1}')
             THUMB_PATH="$HOME/.cache/noctalia/mpvpaper/${THUMB_NAME}.jpg"
