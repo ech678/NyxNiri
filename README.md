@@ -119,7 +119,7 @@ GSettings together, so every GTK/Libadwaita app switches in lockstep.
 | <kbd>Super</kbd> + <kbd>I</kbd> | Settings panel          |
 | <kbd>Super</kbd> + <kbd>V</kbd> | Clipboard history       |
 | <kbd>Super</kbd> + <kbd>W</kbd> | Static wallpaper picker |
-| <kbd>Super</kbd> + <kbd>Alt</kbd> + <kbd>W</kbd> | Live video wallpaper picker |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | Live video wallpaper picker |
 | <kbd>Super</kbd> + <kbd>L</kbd> | Lock screen             |
 
 <br/>
@@ -296,7 +296,7 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>I</kbd> | 桌面控制中心           |
 | <kbd>Super</kbd> + <kbd>V</kbd> | 剪贴板历史             |
 | <kbd>Super</kbd> + <kbd>W</kbd> | 静态壁纸选择器         |
-| <kbd>Super</kbd> + <kbd>Alt</kbd> + <kbd>W</kbd> | 动态视频壁纸选择器     |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | 动态视频壁纸选择器     |
 | <kbd>Super</kbd> + <kbd>L</kbd> | 锁屏                   |
 
 <br/>
