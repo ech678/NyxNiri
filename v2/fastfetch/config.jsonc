@@ -1,93 +1,85 @@
+// Inspired by Catnap (https://github.com/iinsertNameHere/catnap)
 {
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
     "logo": {
         "type": "small",
         "padding": {
-            "top": 1,
-            "left": 1
+            "top": 1
         }
     },
     "display": {
-        "separator": "   "
+        "separator": " "
     },
     "modules": [
         {
+            "key": "╭───────────╮",
+            "type": "custom"
+        },
+        {
+            "key": "│ {#31} user    {#keys}│",
             "type": "title",
-            "format": "    {#38;2;243;139;168} {#38;2;249;226;175}{user-name}{#38;2;205;214;244}@{#38;2;137;180;250}{host-name}"
+            "format": "{user-name}"
         },
         {
-            "type": "custom",
-            "format": "    {#38;2;203;166;247}──────────────────────────────{#}"
+            "key": "│ {#32}󰇅 hname   {#keys}│",
+            "type": "title",
+            "format": "{host-name}"
         },
         {
-            "type": "os",
-            "key": "    {#38;2;243;139;168}{#} OS       ",
-            "format": "{3} {12}"
+            "key": "│ {#33}󰅐 uptime  {#keys}│",
+            "type": "uptime"
         },
         {
-            "type": "host",
-            "key": "    {#38;2;250;179;135}󰌢{#} Host     ",
-            "format": "{2} {3}"
+            "key": "│ {#34}{icon} distro  {#keys}│",
+            "type": "os"
         },
         {
-            "type": "kernel",
-            "key": "    {#38;2;249;226;175}{#} Kernel   "
+            "key": "│ {#35} kernel  {#keys}│",
+            "type": "kernel"
         },
         {
-            "type": "uptime",
-            "key": "    {#38;2;166;227;161}󰅐{#} Uptime   "
+            "key": "│ {#36}󰇄 desktop {#keys}│",
+            "type": "de"
         },
         {
-            "type": "packages",
-            "key": "    {#38;2;148;226;213}󰏖{#} Packages "
+            "key": "│ {#31} term    {#keys}│",
+            "type": "terminal"
         },
-        "break",
         {
+            "key": "│ {#32} shell   {#keys}│",
+            "type": "shell"
+        },
+        {
+            "key": "│ {#33}󰍛 cpu     {#keys}│",
             "type": "cpu",
-            "key": "    {#38;2;137;180;250}{#} CPU      ",
-            "format": "{1}"
+            "showPeCoreCount": true
         },
         {
-            "type": "gpu",
-            "key": "    {#38;2;203;166;247}󰢮{#} GPU      ",
-            "format": "{2}"
-        },
-        {
-            "type": "memory",
-            "key": "    {#38;2;245;194;231}{#} Memory   "
-        },
-        {
+            "key": "│ {#34}󰉉 disk    {#keys}│",
             "type": "disk",
-            "key": "    {#38;2;180;190;254}{#} Disk (/) "
-            // Removed folders filter to show all disks, or we can keep folders: "/"
-        },
-        "break",
-        {
-            "type": "de",
-            "key": "    {#38;2;137;220;235}{#} DE       "
+            "folders": "/"
         },
         {
-            "type": "wm",
-            "key": "    {#38;2;137;180;250}{#} WM       "
+            "key": "│ {#35} memory  {#keys}│",
+            "type": "memory"
         },
         {
-            "type": "shell",
-            "key": "    {#38;2;166;227;161}{#} Shell    "
-        },
-        {
-            "type": "terminal",
-            "key": "    {#38;2;249;226;175}{#} Terminal "
-        },
-        {
+            "key": "│ {#36}󰩟 network {#keys}│",
             "type": "localip",
-            "key": "    {#38;2;148;226;213}󰩟{#} Local IP " ,
-            "compact": true
+            "format": "{ipv4} ({ifname})"
         },
-        "break",
         {
+            "key": "├───────────┤",
+            "type": "custom"
+        },
+        {
+            "key": "│ {#39} colors  {#keys}│",
             "type": "colors",
-            "key": "    {#38;2;203;166;247}{#} Colors   ",
             "symbol": "circle"
+        },
+        {
+            "key": "╰───────────╯",
+            "type": "custom"
         }
     ]
 }
