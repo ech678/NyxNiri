@@ -30,7 +30,12 @@ process_assignments() {
             
             # Generate thumbnail if it doesn't exist
             if [ ! -f "$THUMB_PATH" ]; then
-                ffmpeg -y -i "$VIDEO_PATH" -ss 00:00:01 -vframes 1 "$THUMB_PATH" 2>/dev/null
+                local tmp_thumb="${THUMB_PATH}.tmp.$$"
+                if ffmpeg -y -i "$VIDEO_PATH" -ss 00:00:01 -vframes 1 "$tmp_thumb" 2>/dev/null; then
+                    mv "$tmp_thumb" "$THUMB_PATH"
+                else
+                    rm -f "$tmp_thumb"
+                fi
             fi
             
             # Set it as the native Noctalia wallpaper

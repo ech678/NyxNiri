@@ -57,7 +57,7 @@ function ask_agy
 end
 
 # Added by Antigravity CLI installer
-set -gx PATH "$HOME/.local/bin" $PATH
+fish_add_path -m "$HOME/.local/bin"
 
 if status is-interactive
     # No greeting
@@ -135,7 +135,7 @@ if status is-interactive
     alias shelly_help='custom_help'
     
     if command -v eza &>/dev/null
-        alias ls 'eza --icons'
+        alias ls 'eza --icons=auto'
     end
     alias q 'qs -c ii'
 end

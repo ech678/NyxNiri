@@ -93,6 +93,16 @@ msg() {
             updating_done) echo -e "\e[1;32m✅ 更新与重载成功！正在重新启动脚本...\e[0m" ;;
             updating_failed) echo -e "\e[1;31m[-] 更新失败，请检查您的网络连接或 Git 仓库状态。\e[0m" ;;
             
+            # AUR & mpvpaper
+            aur_skip) echo -e "\e[1;33m⚠️  AUR 包 ($1) 需要 AUR helper (paru/yay)，跳过安装。\e[0m" ;;
+            aur_helper_required) echo -e "\e[1;33m   请先安装 paru 或 yay，然后重新运行依赖安装。\e[0m" ;;
+            checking_mpvpaper) echo -e "\n\e[1;34m🔍 检查 mpvpaper 版本...\e[0m" ;;
+            mpvpaper_version_ok) echo -e "\e[1;32m[ 正常 ]\e[0m mpvpaper $1 >= 1.9，无已知内存泄漏问题。" ;;
+            mpvpaper_leak_warn) echo -e "\e[1;31m[ 警告 ]\e[0m mpvpaper $1 在默认硬件解码配置下存在已知 OpenGL 内存泄漏，建议升级至 1.9+ 或安装 mpvpaper-git！\n   (参见: https://github.com/GhostNaN/mpvpaper/issues/127)" ;;
+            mpvpaper_upgrade_prompt) echo -e "是否安装 mpvpaper-git（AUR）替代当前 mpvpaper $1 以修复泄漏？[y/N]: " ;;
+            mpvpaper_upgrade_done) echo -e "\e[1;32m✅ mpvpaper-git 安装完成，内存泄漏问题已修复。\e[0m" ;;
+            mpvpaper_upgrade_skip) echo -e "如需手动升级，请运行: paru -S mpvpaper-git 或 yay -S mpvpaper-git" ;;
+            
             # Alerts / Prompts
             warn_deps_missing) echo -e "\n\e[1;33m⚠️  警告: 检测到你缺少一些运行所需的依赖组件！\e[0m" ;;
             ask_install_now) echo -e "是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
@@ -145,6 +155,16 @@ msg() {
             updating_done) echo -e "\e[1;32m✅ Update and reload successful! Restarting script...\e[0m" ;;
             updating_failed) echo -e "\e[1;31m[-] Update failed. Please check your network connection or git status.\e[0m" ;;
             
+            # AUR & mpvpaper
+            aur_skip) echo -e "\e[1;33m⚠️  AUR packages ($1) require an AUR helper (paru/yay). Skipping.\e[0m" ;;
+            aur_helper_required) echo -e "\e[1;33m   Install paru or yay first, then re-run dependency installation.\e[0m" ;;
+            checking_mpvpaper) echo -e "\n\e[1;34m🔍 Checking mpvpaper version...\e[0m" ;;
+            mpvpaper_version_ok) echo -e "\e[1;32m[  OK  ]\e[0m mpvpaper $1 >= 1.9, no known memory leak." ;;
+            mpvpaper_leak_warn) echo -e "\e[1;31m[ WARN ]\e[0m mpvpaper $1 has a known OpenGL memory leak with hwdec enabled. Upgrade to 1.9+ or install mpvpaper-git!\n   (See: https://github.com/GhostNaN/mpvpaper/issues/127)" ;;
+            mpvpaper_upgrade_prompt) echo -e "Install mpvpaper-git (AUR) to replace mpvpaper $1 and fix the leak? [y/N]: " ;;
+            mpvpaper_upgrade_done) echo -e "\e[1;32m✅ mpvpaper-git installed, memory leak fixed.\e[0m" ;;
+            mpvpaper_upgrade_skip) echo -e "To manually upgrade, run: paru -S mpvpaper-git or yay -S mpvpaper-git" ;;
+            
             # Alerts / Prompts
             warn_deps_missing) echo -e "\n\e[1;33m⚠️  Warning: Some required dependencies are missing on your system!\e[0m" ;;
             ask_install_now) echo -e "Would you like to check and install missing dependencies now? [Y/n]: " ;;
@@ -194,6 +214,21 @@ ensure_repo() {
     fi
 }
 
+show_release_notes() {
+    local changelog_file="$1"
+    if [ -f "$changelog_file" ]; then
+        echo -e "\n\e[1;35m════════════════════════════════════════════════════════════════\e[0m"
+        if [ "$LANG_MODE" = "zh" ]; then
+            echo -e " \e[1;36m📋 最新更新日志 (Release Notes / Changelog)\e[0m"
+        else
+            echo -e " \e[1;36m📋 Latest Release Notes / Changelog\e[0m"
+        fi
+        echo -e "\e[1;35m════════════════════════════════════════════════════════════════\e[0m\n"
+        awk '/^## /{count++} count==1{print} count>=2{exit}' "$changelog_file"
+        echo -e "\e[1;35m════════════════════════════════════════════════════════════════\e[0m\n"
+    fi
+}
+
 update_repo_and_script() {
     if ! command -v git >/dev/null 2>&1; then
         msg git_required
@@ -204,8 +239,9 @@ update_repo_and_script() {
     if [ "$RUN_MODE" = "repo" ]; then
         # Inside repository
         if (cd "$REPO_DIR" && git pull); then
+            show_release_notes "$REPO_DIR/CHANGELOG.md"
             msg updating_done
-            sleep 1.5
+            read -p "$(msg press_any_key)" -n 1 < /dev/tty || sleep 1.5
             exec bash "$BASH_SOURCE" "$@"
         else
             msg updating_failed
@@ -213,10 +249,11 @@ update_repo_and_script() {
     else
         # Standalone mode: Update cache first, then update self
         if (cd "$CACHE_DIR" && git pull); then
+            show_release_notes "$CACHE_DIR/CHANGELOG.md"
             if cp "$CACHE_DIR/install.sh" "$BASH_SOURCE"; then
                 chmod +x "$BASH_SOURCE"
                 msg updating_done
-                sleep 1.5
+                read -p "$(msg press_any_key)" -n 1 < /dev/tty || sleep 1.5
                 exec bash "$BASH_SOURCE" "$@"
             else
                 echo -e "\e[1;33m⚠️  Warning: Failed to copy updated script to $BASH_SOURCE (permission issue?).\e[0m"
@@ -249,6 +286,12 @@ DEPS=(
     "swaylock"
     "ttf-jetbrains-mono-nerd"
     "noto-fonts-cjk"
+)
+
+# Packages only available via AUR (not in official repos)
+AUR_DEPS=(
+    "noctalia"
+    "mpvpaper"
 )
 
 DEP_STATUS=()
@@ -341,30 +384,118 @@ run_dep_menu_loop() {
 }
 
 install_selected_deps() {
-    local to_install=()
+    local repo_install=()
+    local aur_install=()
     for i in "${!DEPS[@]}"; do
         if [ "${DEP_SELECT[$i]}" -eq 1 ]; then
-            to_install+=("${DEPS[$i]}")
+            local pkg="${DEPS[$i]}"
+            local is_aur=0
+            for aur in "${AUR_DEPS[@]}"; do
+                if [ "$pkg" = "$aur" ]; then
+                    is_aur=1
+                    break
+                fi
+            done
+            if [ "$is_aur" -eq 1 ]; then
+                aur_install+=("$pkg")
+            else
+                repo_install+=("$pkg")
+            fi
         fi
     done
     
-    if [ ${#to_install[@]} -eq 0 ]; then
+    if [ ${#repo_install[@]} -eq 0 ] && [ ${#aur_install[@]} -eq 0 ]; then
         return
     fi
     
     msg installing_selected
     local pkg_manager=""
+    local has_aur_helper=false
     if command -v paru >/dev/null 2>&1; then
         pkg_manager="paru"
+        has_aur_helper=true
     elif command -v yay >/dev/null 2>&1; then
         pkg_manager="yay"
+        has_aur_helper=true
     else
         pkg_manager="sudo pacman"
     fi
     
-    $pkg_manager -S --noconfirm "${to_install[@]}" || {
-        echo "Some package installations failed. Continuing..."
-    }
+    # Install official repo packages
+    if [ ${#repo_install[@]} -gt 0 ]; then
+        $pkg_manager -S --noconfirm "${repo_install[@]}" || {
+            echo "Some repo package installations failed. Continuing..."
+        }
+    fi
+    
+    # Install AUR packages (requires AUR helper)
+    if [ ${#aur_install[@]} -gt 0 ]; then
+        if [ "$has_aur_helper" = true ]; then
+            $pkg_manager -S --noconfirm "${aur_install[@]}" || {
+                echo "Some AUR package installations failed. Continuing..."
+            }
+        else
+            local aur_list="${aur_install[*]}"
+            msg aur_skip "$aur_list"
+            msg aur_helper_required
+        fi
+    fi
+    
+    check_mpvpaper_version
+}
+
+check_mpvpaper_version() {
+    if ! command -v mpvpaper >/dev/null 2>&1; then
+        return
+    fi
+    
+    msg checking_mpvpaper
+
+    # Check if mpvpaper-git is installed
+    if LC_ALL=C pacman -Qi mpvpaper-git >/dev/null 2>&1; then
+        local git_version=$(LC_ALL=C pacman -Qi mpvpaper-git 2>/dev/null | awk '/^Version/{print $3}')
+        msg mpvpaper_version_ok "git ($git_version)"
+        return
+    fi
+
+    local version=$(LC_ALL=C pacman -Qi mpvpaper 2>/dev/null | awk '/^Version/{print $3}')
+    
+    if [ -z "$version" ]; then
+        return
+    fi
+    
+    # Sanitize version string (remove Epoch like 1:, remove revision suffix like -1, keep digits & dots)
+    local clean_ver=$(echo "$version" | sed -E 's/^[0-9]+://; s/-.*//; s/[^0-9.]//g')
+    local major=$(echo "$clean_ver" | cut -d. -f1)
+    local minor=$(echo "$clean_ver" | cut -d. -f2)
+    
+    # Ensure major and minor are clean integers
+    major=${major//[^0-9]/}
+    minor=${minor//[^0-9]/}
+    major=${major:-0}
+    minor=${minor:-0}
+    
+    if [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 9 ]; }; then
+        msg mpvpaper_version_ok "$version"
+    else
+        msg mpvpaper_leak_warn "$version"
+        read -p "$(msg mpvpaper_upgrade_prompt)" choice < /dev/tty
+        if [[ "$choice" =~ ^[Yy]$ ]]; then
+            if command -v paru >/dev/null 2>&1; then
+                paru -S --noconfirm mpvpaper-git && msg mpvpaper_upgrade_done || {
+                    echo -e "\e[1;31m[-] Failed to install mpvpaper-git.\e[0m"
+                }
+            elif command -v yay >/dev/null 2>&1; then
+                yay -S --noconfirm mpvpaper-git && msg mpvpaper_upgrade_done || {
+                    echo -e "\e[1;31m[-] Failed to install mpvpaper-git.\e[0m"
+                }
+            else
+                msg mpvpaper_upgrade_skip
+            fi
+        else
+            msg mpvpaper_upgrade_skip
+        fi
+    fi
 }
 
 # ==============================================================================

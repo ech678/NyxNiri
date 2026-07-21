@@ -256,8 +256,7 @@ if [[ "$response" =~ ^(yes|y)$ ]]; then
             fi
             
             # Remove Pacman Orphans
-            local orphans
-            orphans=$(pacman -Qtdq)
+            orphans=$(pacman -Qtdq 2>/dev/null || true)
             if [[ -n "$orphans" ]]; then
                 log_info "发现系统孤立包，正在卸载: $orphans"
                 sudo pacman -Rns $orphans --noconfirm
