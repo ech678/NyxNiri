@@ -338,6 +338,8 @@ binds {
     Mod+X                { spawn "noctalia" "msg" "panel-toggle" "session"; }
     Mod+I                { spawn "noctalia" "msg" "settings-toggle"; }
     Mod+V                { spawn "noctalia" "msg" "panel-toggle" "clipboard"; }
+    Mod+W                { spawn "noctalia" "msg" "panel-toggle" "wallpaper"; }
+    Mod+Alt+W            { spawn "noctalia" "msg" "panel-toggle" "noctalia/mpvpaper:picker"; }
     Mod+Return           { spawn "kitty"; }
     Mod+E                { spawn "nautilus"; }
 

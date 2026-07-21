@@ -25,8 +25,8 @@ margin_ends = 14
 margin_edge = 10
 scale = 1.1
 shadow = false
-end = ["media", "tray", "wallpaper", "volume", "notifications", "session"]
-center = ["ray/echolyrics:echolyrics"]
+end = ["media", "tray", "wallpaper", "mpvpaper", "volume", "notifications", "session"]
+center = ["clock"]
 start = ["launcher", "workspaces", "active_window"]
 thickness = 36
 
@@ -171,6 +171,9 @@ fill_mode = "crop"
 
 
 
+[plugins]
+enabled = ["noctalia/mpvpaper"]
+
 [widget.active_window]
 min_length = 0
 
@@ -184,5 +187,10 @@ drawer = true
 [widget."ray/echolyrics:echolyrics"]
 capsule = false
 
+[widget.mpvpaper]
+type = "noctalia/mpvpaper:mpvpaper"
+
 [plugin_settings."noctalia/mpvpaper"]
 mpv_options = "--script=~/.config/noctalia/mpv-hook.lua"
+picker_placement = "floating"
+video_directory = "/home/ray/图片/Wallpapers/video"

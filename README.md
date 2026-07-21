@@ -118,6 +118,8 @@ GSettings together, so every GTK/Libadwaita app switches in lockstep.
 | <kbd>Super</kbd> + <kbd>X</kbd> | Session menu            |
 | <kbd>Super</kbd> + <kbd>I</kbd> | Settings panel          |
 | <kbd>Super</kbd> + <kbd>V</kbd> | Clipboard history       |
+| <kbd>Super</kbd> + <kbd>W</kbd> | Static wallpaper picker |
+| <kbd>Super</kbd> + <kbd>Alt</kbd> + <kbd>W</kbd> | Live video wallpaper picker |
 | <kbd>Super</kbd> + <kbd>L</kbd> | Lock screen             |
 
 <br/>
@@ -144,10 +146,11 @@ cd ~/NyxNiri && ./install.sh
 
 ## Stack
 
-|                    |                                  |
+| Component          | Choice / Details                 |
 | :----------------- | :------------------------------- |
 | **WM**             | Niri (scroll-tiling)             |
 | **Desktop shell**  | Noctalia V5                      |
+| **Live wallpaper** | mpvpaper                         |
 | **Terminal**       | Kitty                            |
 | **Shell / prompt** | Fish + Starship                  |
 | **Fonts**          | JetBrains Mono, Noto Sans CJK SC |
@@ -292,6 +295,8 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>X</kbd> | 会话/电源菜单          |
 | <kbd>Super</kbd> + <kbd>I</kbd> | 桌面控制中心           |
 | <kbd>Super</kbd> + <kbd>V</kbd> | 剪贴板历史             |
+| <kbd>Super</kbd> + <kbd>W</kbd> | 静态壁纸选择器         |
+| <kbd>Super</kbd> + <kbd>Alt</kbd> + <kbd>W</kbd> | 动态视频壁纸选择器     |
 | <kbd>Super</kbd> + <kbd>L</kbd> | 锁屏                   |
 
 <br/>
@@ -332,10 +337,11 @@ curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/ma
 
 ## 组件一览
 
-|                    |                                  |
+| 组件类型           | 选用软件 / 详细配置               |
 | :----------------- | :------------------------------- |
 | **窗口管理器**     | Niri（滚动平铺）                 |
 | **桌面套件**       | Noctalia V5                      |
+| **动态壁纸引擎**   | mpvpaper                         |
 | **终端**           | Kitty                            |
 | **Shell / 提示符** | Fish + Starship                  |
 | **字体**           | JetBrains Mono, Noto Sans CJK SC |

@@ -607,6 +607,12 @@ install_configs() {
         sed -i "s|/home/ray|$HOME|g" "$HOME/.config/fish/fish_variables"
     fi
     
+    # Enable Noctalia mpvpaper plugin if noctalia CLI is available
+    if command -v noctalia >/dev/null 2>&1; then
+        echo "⚙️  Enabling Noctalia mpvpaper plugin..."
+        noctalia msg plugins enable noctalia/mpvpaper 2>/dev/null || true
+    fi
+
     # Install/Update Fisher plugins if fish is available
     if command -v fish >/dev/null 2>&1; then
         echo "⚙️  Installing/Updating Fisher plugins..."
