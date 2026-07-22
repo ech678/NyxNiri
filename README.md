@@ -209,6 +209,25 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 <br/>
 
+## 💬 Community & Contact
+
+If you encounter issues, find a bug, or want to discuss Linux ricing:
+
+- 🐧 **Developer QQ**: `2040244628`
+- 💬 **Linux Ricing QQ Group**: `631425889`
+- 🐛 **Submit a Bug Report**: Run `./install.sh` and select `6) 🐛 Generate Bug Report` to export diagnostic logs, or open an [Issue](https://github.com/ech678/NyxNiri/issues) on GitHub.
+
+<br/>
+
+## 💖 Support & Sponsor
+
+Maintaining NyxNiri requires continuous testing, script optimization, and documentation updates. If this project improved your Linux experience:
+
+- ☕️ **Sponsor via Afdian**: [afdian.com/a/Echoes678](https://afdian.com/a/Echoes678)
+- ⭐️ **GitHub Star**: If you like this project, please consider leaving a Star on GitHub! Your support is my greatest motivation!
+
+<br/>
+
 ---
 
 <div align="right">
@@ -398,7 +417,7 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 <br/>
 
-## 💬 社区交流与反馈 (Community & Contact)
+## 💬 社区交流与反馈
 
 如果你在配置使用过程中遇到问题、发现 BUG，或者想交流 Linux 桌面美化（Ricing）经验：
 
@@ -408,7 +427,7 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 <br/>
 
-## 💖 赞助与支持 (Support & Sponsor)
+## 💖 赞助与支持
 
 维护 NyxNiri 项目需要持续的硬件测试、脚本优化与文档更新。如果这个项目提升了你的 Linux 使用体验：
 
