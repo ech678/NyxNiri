@@ -13,9 +13,9 @@ assignees: 'ech678'
 
 如果你在获取日志或排查问题时卡住了，欢迎直接联系开发者或加入 Linux 美化交流群，我们将实时提供帮助：
 
-- 🐧 开发者 QQ: [2040244628](https://wpa.qq.com/msgrd?v=3&uin=2040244628&site=qq&menu=yes)
+- 🐧 开发者 QQ: `2040244628`
 - ✈️ Telegram: [@Echoes678](https://t.me/Echoes678)
-- 💬 交流群 (Linux Ricing): [631425889](tencent://groupwpa/?subcmd=all&param=%7B%22groupUin%22%3A631425889%7D)
+- 💬 交流群 (Linux Ricing): `631425889`
 -->
 
 ### 🐛 问题描述 (Bug Description)

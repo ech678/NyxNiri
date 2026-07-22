@@ -218,9 +218,9 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 If you encounter issues, find a bug, or want to discuss Linux ricing:
 
-- 🐧 **Developer QQ**: [2040244628](https://wpa.qq.com/msgrd?v=3&uin=2040244628&site=qq&menu=yes)
+- 🐧 **Developer QQ**: `2040244628`
 - ✈️ **Telegram**: [@Echoes678](https://t.me/Echoes678)
-- 💬 **Linux Ricing QQ Group**: [631425889](tencent://groupwpa/?subcmd=all&param=%7B%22groupUin%22%3A631425889%7D)
+- 💬 **Linux Ricing QQ Group**: `631425889`
 - 🐛 **Submit a Bug Report**: Run `./install.sh` and select `6) 🐛 Generate Bug Report` to export diagnostic logs, or open an [Issue](https://github.com/ech678/NyxNiri/issues) on GitHub.
 
 <br/>
@@ -432,9 +432,9 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 如果你在配置使用过程中遇到问题、发现 BUG，或者想交流 Linux 桌面美化（Ricing）经验：
 
-- 🐧 **开发者 QQ**：[2040244628](https://wpa.qq.com/msgrd?v=3&uin=2040244628&site=qq&menu=yes)
+- 🐧 **开发者 QQ**：`2040244628`
 - ✈️ **Telegram**：[@Echoes678](https://t.me/Echoes678)
-- 💬 **Linux Ricing 交流群**：[631425889](tencent://groupwpa/?subcmd=all&param=%7B%22groupUin%22%3A631425889%7D)
+- 💬 **Linux Ricing 交流群**：`631425889`
 - 🐛 **提交 Bug Report**：运行 `./install.sh` 菜单中的 `6) 🐛 生成 Bug Report 报告` 导出诊断日志，或直接在 GitHub 提交 [Issue](https://github.com/ech678/NyxNiri/issues)。
 
 <br/>
