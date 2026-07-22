@@ -10,7 +10,7 @@
 - **Noctalia 配置**: 默认开启 `mpvpaper` 插件、设置视频壁纸选择器浮动窗口、配置视频壁纸目录及 Bar 右侧控件
 - **System Doctor**: 扩展组件诊断支持，涵盖 `swaylock` 锁屏、`wpctl` 音频、`ddcutil`/`brightnessctl` 亮度控制及 `xdg-desktop-portal` 服务状态
 - **GitHub 社区与赞助**: 新增 GitHub 官方赞助配置文件 `.github/FUNDING.yml`（配置爱发电与 GitHub Sponsor）与 Issue 报告模板 `.github/ISSUE_TEMPLATE/bug_report.md`
-- **README.md**: 补充社区交流群 (631425889)、开发者 QQ (2040244628) 及其赞助支持板块
+- **README.md**: 补充社区交流群、开发者 QQ、Telegram (@Echoes678) 及其赞助支持板块，并同步了最新快捷键文档
 
 ### Changed / Refactored
 
