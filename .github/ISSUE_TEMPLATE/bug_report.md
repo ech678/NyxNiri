@@ -9,9 +9,13 @@ assignees: 'ech678'
 <!-- 
 感谢提交 Bug Report！在提交前，建议先运行 `./install.sh` 中的 [6) 🐛 生成 Bug Report 报告]，并将导出的日志附在下方，以便快速定位问题。
 
-联系与交流群：
-- 🐧 开发者 QQ: 2040244628
-- 💬 Linux Ricing 交流群: 631425889
+### 💬 需要实时帮助？ (Need Live Help?)
+
+如果你在获取日志或排查问题时卡住了，欢迎直接联系开发者或加入 Linux 美化交流群，我们将实时提供帮助：
+
+- 🐧 开发者 QQ: `2040244628`
+- ✈️ Telegram: `@Echoes678`
+- 💬 交流群 (Linux Ricing): `631425889`
 -->
 
 ### 🐛 问题描述 (Bug Description)

@@ -68,7 +68,7 @@ msg() {
             invalid_opt) echo -e "\e[1;31m[-] 无效的选项，请重新选择。\e[0m" ;;
             press_any_key) echo -e "\n按任意键返回主菜单..." ;;
             generating_report) echo -e "\n\e[1;34m🐛 正在收集系统诊断数据并生成 Bug Report 报告...\e[0m" ;;
-            report_done) echo -e "\e[1;32m✅ Bug Report 报告已成功导出至:\e[0m $1\n\e[1;36m提示: 提交 Issue 时请直接附上该文件或其内容！\nQQ 交流群: 631425889 | 开发者 QQ: 2040244628\e[0m" ;;
+            report_done) echo -e "\e[1;32m✅ Bug Report 报告已成功导出至:\e[0m $1\n\e[1;36m提示: 提交 Issue 时请直接附上该文件或其内容！\nQQ 交流群: 631425889 | 开发者 QQ: 2040244628 | Telegram: @Echoes678\e[0m" ;;
             
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m📦 请选择要安装的依赖（输入数字切换，直接回车开始安装）：\e[0m" ;;
@@ -134,7 +134,7 @@ msg() {
             invalid_opt) echo -e "\e[1;31m[-] Invalid option, please try again.\e[0m" ;;
             press_any_key) echo -e "\nPress any key to return to main menu..." ;;
             generating_report) echo -e "\n\e[1;34m🐛 Collecting system diagnostic data and generating Bug Report...\e[0m" ;;
-            report_done) echo -e "\e[1;32m✅ Bug Report successfully exported to:\e[0m $1\n\e[1;36mHint: Please attach this file when opening a GitHub Issue!\nQQ Group: 631425889 | Developer QQ: 2040244628\e[0m" ;;
+            report_done) echo -e "\e[1;32m✅ Bug Report successfully exported to:\e[0m $1\n\e[1;36mHint: Please attach this file when opening a GitHub Issue!\nQQ Group: 631425889 | Developer QQ: 2040244628 | Telegram: @Echoes678\e[0m" ;;
             
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m📦 Select dependencies to install (type numbers to toggle, press Enter to confirm):\e[0m" ;;
@@ -786,7 +786,7 @@ generate_bug_report() {
         echo "# NyxNiri System Diagnostic Bug Report"
         echo "Generated at: $(date)"
         echo "Author / Maintainer: ech678"
-        echo "Contact QQ: 2040244628 | Linux Ricing QQ Group: 631425889"
+        echo "Contact QQ: 2040244628 | Telegram: @Echoes678 | Linux Ricing QQ Group: 631425889"
         echo "Repository: https://github.com/ech678/NyxNiri"
         echo ""
         echo "## 1. System Information"
