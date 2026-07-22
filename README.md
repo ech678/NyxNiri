@@ -8,7 +8,7 @@
 
 <a id="nyxniri"></a>
 
-# 𝑁𝑥𝑦𝑁𝑖𝑟𝑖
+# 𝑁𝑦𝑥𝑁𝑖𝑟𝑖
 
 _A calm, Material You desktop — Niri + Noctalia V5, for Arch / CachyOS_
 
