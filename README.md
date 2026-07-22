@@ -104,6 +104,9 @@ GSettings together, so every GTK/Libadwaita app switches in lockstep.
 | :--------------------------------------------- | :------------------------ |
 | <kbd>Super</kbd> + <kbd>Return</kbd>           | Open terminal (Kitty)     |
 | <kbd>Super</kbd> + <kbd>Q</kbd>                | Close window              |
+| <kbd>Super</kbd> + <kbd>T</kbd>                | Toggle floating window    |
+| <kbd>Super</kbd> + <kbd>F</kbd>                | Maximize column           |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | Fullscreen window         |
 | <kbd>Super</kbd> + <kbd>Tab</kbd>              | Overview                  |
 | <kbd>Super</kbd> + <kbd>H</kbd> / <kbd>Z</kbd> | Focus column left         |
 | <kbd>Super</kbd> + <kbd>C</kbd>                | Focus column right        |
@@ -121,6 +124,8 @@ GSettings together, so every GTK/Libadwaita app switches in lockstep.
 | <kbd>Super</kbd> + <kbd>W</kbd> | Static wallpaper picker |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | Live video wallpaper picker |
 | <kbd>Super</kbd> + <kbd>L</kbd> | Lock screen             |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Region screenshot       |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | Reload Niri config      |
 
 <br/>
 
@@ -213,9 +218,9 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 If you encounter issues, find a bug, or want to discuss Linux ricing:
 
-- 🐧 **Developer QQ**: `2040244628`
-- ✈️ **Telegram**: `@Echoes678`
-- 💬 **Linux Ricing QQ Group**: `631425889`
+- 🐧 **Developer QQ**: [2040244628](https://wpa.qq.com/msgrd?v=3&uin=2040244628&site=qq&menu=yes)
+- ✈️ **Telegram**: [@Echoes678](https://t.me/Echoes678)
+- 💬 **Linux Ricing QQ Group**: [631425889](tencent://groupwpa/?subcmd=all&param=%7B%22groupUin%22%3A631425889%7D)
 - 🐛 **Submit a Bug Report**: Run `./install.sh` and select `6) 🐛 Generate Bug Report` to export diagnostic logs, or open an [Issue](https://github.com/ech678/NyxNiri/issues) on GitHub.
 
 <br/>
@@ -301,6 +306,9 @@ NyxNiri
 | :--------------------------------------------- | :---------------- |
 | <kbd>Super</kbd> + <kbd>回车</kbd>             | 打开终端（Kitty） |
 | <kbd>Super</kbd> + <kbd>Q</kbd>                | 关闭窗口          |
+| <kbd>Super</kbd> + <kbd>T</kbd>                | 切换窗口浮动      |
+| <kbd>Super</kbd> + <kbd>F</kbd>                | 最大化当前列      |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | 全屏当前窗口      |
 | <kbd>Super</kbd> + <kbd>Tab</kbd>              | 工作区总览        |
 | <kbd>Super</kbd> + <kbd>H</kbd> / <kbd>Z</kbd> | 聚焦左列          |
 | <kbd>Super</kbd> + <kbd>C</kbd>                | 聚焦右列          |
@@ -318,6 +326,8 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>W</kbd> | 静态壁纸选择器         |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | 动态视频壁纸选择器     |
 | <kbd>Super</kbd> + <kbd>L</kbd> | 锁屏                   |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | 区域截图               |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | 重载 Niri 配置文件     |
 
 <br/>
 
@@ -422,9 +432,9 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 如果你在配置使用过程中遇到问题、发现 BUG，或者想交流 Linux 桌面美化（Ricing）经验：
 
-- 🐧 **开发者 QQ**：`2040244628`
-- ✈️ **Telegram**：`@Echoes678`
-- 💬 **Linux Ricing 交流群**：`631425889`
+- 🐧 **开发者 QQ**：[2040244628](https://wpa.qq.com/msgrd?v=3&uin=2040244628&site=qq&menu=yes)
+- ✈️ **Telegram**：[@Echoes678](https://t.me/Echoes678)
+- 💬 **Linux Ricing 交流群**：[631425889](tencent://groupwpa/?subcmd=all&param=%7B%22groupUin%22%3A631425889%7D)
 - 🐛 **提交 Bug Report**：运行 `./install.sh` 菜单中的 `6) 🐛 生成 Bug Report 报告` 导出诊断日志，或直接在 GitHub 提交 [Issue](https://github.com/ech678/NyxNiri/issues)。
 
 <br/>
