@@ -395,3 +395,24 @@ _解决办法：_ 对本地插件仓库执行硬重置：
 git -C ~/.local/state/noctalia/plugins/sources/community/repo reset --hard HEAD
 git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 ```
+
+<br/>
+
+## 💬 社区交流与反馈 (Community & Contact)
+
+如果你在配置使用过程中遇到问题、发现 BUG，或者想交流 Linux 桌面美化（Ricing）经验：
+
+- 🐧 **开发者 QQ**：`2040244628`
+- 💬 **Linux Ricing 交流群**：`631425889`
+- 🐛 **提交 Bug Report**：运行 `./install.sh` 菜单中的 `6) 🐛 生成 Bug Report 报告` 导出诊断日志，或直接在 GitHub 提交 [Issue](https://github.com/ech678/NyxNiri/issues)。
+
+<br/>
+
+## 💖 赞助与支持 (Support & Sponsor)
+
+维护 NyxNiri 项目需要持续的硬件测试、脚本优化与文档更新。如果这个项目提升了你的 Linux 使用体验：
+
+- ☕️ **爱发电赞助**：[afdian.com/a/Echoes678](https://afdian.com/a/Echoes678)
+- ⭐️ **GitHub Star**：如果喜欢本项目，欢迎在 GitHub 上点个 Star！你的支持是持续创作的最大动力！
+
+

@@ -1,5 +1,30 @@
 # Changelog
 
+## [v2.1.2] - 2026-07-22
+
+### Added
+
+- **install.sh**: 新增一键生成 Bug Report 诊断日志功能（主菜单选项 6），导出完整的系统环境、显示器连线、软硬件版本及系统日志切片（`~/nyxniri-bug-report-*.md`）
+- **install.sh**: 部署 `niri` 配置时新增 `monitor.kdl` 交互式保护，检测到已有配置时提示询问用户是否保留本地显示器布局
+- **install.sh**: 新增自动注册并启用 Noctalia `mpvpaper` 插件逻辑
+- **Noctalia 配置**: 默认开启 `mpvpaper` 插件、设置视频壁纸选择器浮动窗口、配置视频壁纸目录及 Bar 右侧控件
+- **System Doctor**: 扩展组件诊断支持，涵盖 `swaylock` 锁屏、`wpctl` 音频、`ddcutil`/`brightnessctl` 亮度控制及 `xdg-desktop-portal` 服务状态
+- **GitHub 社区与赞助**: 新增 GitHub 官方赞助配置文件 `.github/FUNDING.yml`（配置爱发电与 GitHub Sponsor）与 Issue 报告模板 `.github/ISSUE_TEMPLATE/bug_report.md`
+- **README.md**: 补充社区交流群 (631425889)、开发者 QQ (2040244628) 及其赞助支持板块
+
+### Changed / Refactored
+
+- **Fastfetch**: 切换界面风格为 Catnap 圆角卡片风格 (Preset 13)
+- **Niri 快捷键**: 优化动态壁纸选择器快捷键绑定为 `Mod+Shift+W` (静态壁纸维持 `Mod+W`)
+
+### Fixed
+
+- **install.sh**: 为 `fc-list` 增加 `command -v` 存在性保护，解决未安装 `fontconfig` 环境下 `set -e` 导致脚本意外中断退出
+- **install.sh**: 增加 `xdg-user-dir PICTURES` 空值保底退守逻辑，防范图片路径拼接异常
+- **install.sh**: 修正 Bug Report 导出中 `wpctl` 与 `mpvpaper` 版本信息提取，兼容非 `--version` 标志的二进制工具
+- **mpvpaper-sync.sh**: 修改 `inotifywait` 为监听所在目录 `close_write,moved_to` 事件，解决应用原子写入导致 `inotify` 监听句柄丢失退出的问题
+- **README.md**: 修复中英文组件一览表格表头缺失缺陷，补充 mpvpaper 引擎与壁纸快捷键说明
+
 ## [v2.1.1] - 2026-07-21
 
 ### Added

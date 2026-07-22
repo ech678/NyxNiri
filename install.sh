@@ -62,10 +62,13 @@ msg() {
             menu_opt3) echo -e "  \e[1;32m3)\e[0m 🩺 运行 System Doctor 诊断 (Run System Doctor)" ;;
             menu_opt4) echo -e "  \e[1;32m4)\e[0m 🛡️  仅备份当前配置 (Backup Current Configurations)" ;;
             menu_opt5) echo -e "  \e[1;32m5)\e[0m 🔄 更新配置与脚本 (Update Config & Script)" ;;
-            menu_opt6) echo -e "  \e[1;31m6)\e[0m ❌ 退出 (Exit)" ;;
-            menu_prompt) echo -e "请选择操作 [1-6]: " ;;
+            menu_opt6) echo -e "  \e[1;32m6)\e[0m 🐛 生成 Bug Report 报告 (Generate Bug Report)" ;;
+            menu_opt7) echo -e "  \e[1;31m7)\e[0m ❌ 退出 (Exit)" ;;
+            menu_prompt) echo -e "请选择操作 [1-7]: " ;;
             invalid_opt) echo -e "\e[1;31m[-] 无效的选项，请重新选择。\e[0m" ;;
             press_any_key) echo -e "\n按任意键返回主菜单..." ;;
+            generating_report) echo -e "\n\e[1;34m🐛 正在收集系统诊断数据并生成 Bug Report 报告...\e[0m" ;;
+            report_done) echo -e "\e[1;32m✅ Bug Report 报告已成功导出至:\e[0m $1\n\e[1;36m提示: 提交 Issue 时请直接附上该文件或其内容！\nQQ 交流群: 631425889 | 开发者 QQ: 2040244628\e[0m" ;;
             
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m📦 请选择要安装的依赖（输入数字切换，直接回车开始安装）：\e[0m" ;;
@@ -108,6 +111,7 @@ msg() {
             ask_install_now) echo -e "是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
             ask_backup_again) echo -e "检测到今天已备份过配置，是否重新备份？[y/N]: " ;;
             ask_backup_before_deploy) echo -e "是否在部署前备份当前配置？[Y/n]: " ;;
+            ask_keep_monitor) echo -e "检测到已存在显示器配置文件 ~/.config/niri/monitor.kdl，是否保留当前显示器配置？[Y/n]: " ;;
         esac
     else
         case "$key" in
@@ -124,10 +128,13 @@ msg() {
             menu_opt3) echo -e "  \e[1;32m3)\e[0m 🩺 Run System Doctor Diagnostics" ;;
             menu_opt4) echo -e "  \e[1;32m4)\e[0m 🛡️  Backup Current Configurations Only" ;;
             menu_opt5) echo -e "  \e[1;32m5)\e[0m 🔄 Update Config & Script" ;;
-            menu_opt6) echo -e "  \e[1;31m6)\e[0m ❌ Exit" ;;
-            menu_prompt) echo -e "Please select an option [1-6]: " ;;
+            menu_opt6) echo -e "  \e[1;32m6)\e[0m 🐛 Generate Bug Report" ;;
+            menu_opt7) echo -e "  \e[1;31m7)\e[0m ❌ Exit" ;;
+            menu_prompt) echo -e "Please select an option [1-7]: " ;;
             invalid_opt) echo -e "\e[1;31m[-] Invalid option, please try again.\e[0m" ;;
             press_any_key) echo -e "\nPress any key to return to main menu..." ;;
+            generating_report) echo -e "\n\e[1;34m🐛 Collecting system diagnostic data and generating Bug Report...\e[0m" ;;
+            report_done) echo -e "\e[1;32m✅ Bug Report successfully exported to:\e[0m $1\n\e[1;36mHint: Please attach this file when opening a GitHub Issue!\nQQ Group: 631425889 | Developer QQ: 2040244628\e[0m" ;;
             
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m📦 Select dependencies to install (type numbers to toggle, press Enter to confirm):\e[0m" ;;
@@ -170,6 +177,7 @@ msg() {
             ask_install_now) echo -e "Would you like to check and install missing dependencies now? [Y/n]: " ;;
             ask_backup_again) echo -e "A backup has already been made today. Do you want to back up again? [y/N]: " ;;
             ask_backup_before_deploy) echo -e "Do you want to back up current configs before deploying? [Y/n]: " ;;
+            ask_keep_monitor) echo -e "Existing monitor config ~/.config/niri/monitor.kdl detected. Preserve current monitor settings? [Y/n]: " ;;
         esac
     fi
 }
@@ -307,11 +315,11 @@ check_all_deps() {
         fi
         
         if [ "$cmd" = "ttf-jetbrains-mono-nerd" ]; then
-            if fc-list : family 2>/dev/null | grep -qi "JetBrainsMono"; then
+            if command -v fc-list >/dev/null 2>&1 && fc-list : family 2>/dev/null | grep -qi "JetBrainsMono"; then
                 is_installed=1
             fi
         elif [ "$cmd" = "noto-fonts-cjk" ]; then
-            if fc-list : family 2>/dev/null | grep -qi "Noto Sans CJK"; then
+            if command -v fc-list >/dev/null 2>&1 && fc-list : family 2>/dev/null | grep -qi "Noto Sans CJK"; then
                 is_installed=1
             fi
         else
@@ -571,13 +579,30 @@ install_configs() {
         local dest="$HOME/.config/$item"
         
         if [ -e "$src" ]; then
+            local temp_monitor=""
+            if [ "$item" = "niri" ] && [ -f "$dest/monitor.kdl" ]; then
+                read -p "$(msg ask_keep_monitor)" mon_choice < /dev/tty
+                if [[ "$mon_choice" =~ ^[Yy]$ || -z "$mon_choice" ]]; then
+                    temp_monitor=$(mktemp)
+                    cp "$dest/monitor.kdl" "$temp_monitor"
+                fi
+            fi
+            
             rm -rf "$dest"
             cp -a "$src" "$dest"
+            
+            if [ -n "$temp_monitor" ] && [ -f "$temp_monitor" ]; then
+                cp "$temp_monitor" "$dest/monitor.kdl"
+                rm -f "$temp_monitor"
+                echo "  Preserved existing: ~/.config/niri/monitor.kdl"
+            fi
+            
             echo "  Deployed: ~/.config/$item"
         fi
     done
     
-    local pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/图片")
+    local pics_dir=$(xdg-user-dir PICTURES 2>/dev/null)
+    [ -z "$pics_dir" ] && pics_dir="$HOME/Pictures"
     local wp_src="$REPO_DIR/Wallpapers"
     local wp_dest="$pics_dir/Wallpapers"
     if [ -d "$wp_src" ]; then
@@ -722,9 +747,117 @@ run_doctor() {
     else
         msg doctor_warn "Shell: Current shell is '$SHELL', not Fish. (Change: chsh -s \$(which fish))"
     fi
+
+    # Keybinding Dependencies Check
+    if command -v swaylock >/dev/null 2>&1; then
+        msg doctor_ok "Screen Locker: swaylock is available."
+    else
+        msg doctor_warn "Screen Locker: swaylock is missing. (Mod+L screen lock will not work)"
+    fi
+
+    if command -v wpctl >/dev/null 2>&1; then
+        msg doctor_ok "Audio Control: wpctl (WirePlumber) is available."
+    else
+        msg doctor_warn "Audio Control: wpctl is missing. (Volume control keys will not work)"
+    fi
+
+    if command -v ddcutil >/dev/null 2>&1 || command -v brightnessctl >/dev/null 2>&1; then
+        msg doctor_ok "Brightness Control: ddcutil / brightnessctl is available."
+    else
+        msg doctor_warn "Brightness Control: ddcutil and brightnessctl are missing."
+    fi
+
+    if systemctl --user is-active xdg-desktop-portal >/dev/null 2>&1 || pgrep -f "xdg-desktop-portal" >/dev/null 2>&1; then
+        msg doctor_ok "Desktop Portal: xdg-desktop-portal is active."
+    else
+        msg doctor_warn "Desktop Portal: xdg-desktop-portal is not active."
+    fi
     
     msg all_done
     msg reboot_hint
+}
+
+generate_bug_report() {
+    msg generating_report
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local report_file="$HOME/nyxniri-bug-report-${timestamp}.md"
+    
+    {
+        echo "# NyxNiri System Diagnostic Bug Report"
+        echo "Generated at: $(date)"
+        echo "Author / Maintainer: ech678"
+        echo "Contact QQ: 2040244628 | Linux Ricing QQ Group: 631425889"
+        echo "Repository: https://github.com/ech678/NyxNiri"
+        echo ""
+        echo "## 1. System Information"
+        echo '```text'
+        echo "OS: $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || echo 'Unknown')"
+        echo "Kernel: $(uname -r)"
+        echo "Architecture: $(uname -m)"
+        echo "Desktop: $XDG_CURRENT_DESKTOP ($XDG_SESSION_TYPE)"
+        echo "Shell: $SHELL"
+        echo '```'
+        echo ""
+        echo "## 2. Hardware / Graphics"
+        echo '```text'
+        lspci -k 2>/dev/null | grep -A 2 -E "VGA|3D" || echo "lspci not available"
+        echo '```'
+        echo ""
+        echo "## 3. Connected Displays (Niri)"
+        echo '```text'
+        if command -v niri >/dev/null 2>&1; then
+            niri msg outputs 2>/dev/null || echo "niri msg outputs failed (is Niri running?)"
+        else
+            echo "niri is not installed"
+        fi
+        echo '```'
+        echo ""
+        echo "## 4. Installed Tool Versions"
+        echo '```text'
+        for cmd in niri noctalia fish starship kitty mpvpaper swaylock wpctl ddcutil brightnessctl; do
+            if command -v "$cmd" >/dev/null 2>&1; then
+                local ver=""
+                if [ "$cmd" = "wpctl" ]; then
+                    ver=$(wireplumber --version 2>&1 | grep -i "libwireplumber" | head -n 1)
+                    [ -z "$ver" ] && ver=$(pacman -Q wireplumber 2>/dev/null)
+                elif [ "$cmd" = "mpvpaper" ]; then
+                    ver=$(pacman -Q mpvpaper mpvpaper-git 2>/dev/null | head -n 1)
+                else
+                    ver=$($cmd --version 2>&1 | head -n 1)
+                fi
+                echo "$cmd: ${ver:-installed}"
+            else
+                echo "$cmd: NOT INSTALLED"
+            fi
+        done
+        echo '```'
+        echo ""
+        echo "## 5. Daemon & Service Status"
+        echo '```text'
+        echo "--- Noctalia status ---"
+        noctalia msg status 2>/dev/null || echo "Noctalia daemon not responding"
+        echo ""
+        echo "--- Desktop portal status ---"
+        systemctl --user status xdg-desktop-portal 2>/dev/null | head -n 10 || echo "xdg-desktop-portal service check failed"
+        echo '```'
+        echo ""
+        echo "## 6. Noctalia Hook Log (Last 20 Lines)"
+        echo '```text'
+        local hook_log="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia/hook.log"
+        if [ -f "$hook_log" ]; then
+            tail -n 20 "$hook_log"
+        else
+            echo "No hook.log found at $hook_log"
+        fi
+        echo '```'
+        echo ""
+        echo "## 7. Systemd User Journal Logs (Last 30 Lines)"
+        echo '```text'
+        journalctl --user -n 30 --no-pager 2>/dev/null || echo "journalctl log access unavailable"
+        echo '```'
+    } > "$report_file"
+    
+    msg report_done "$report_file"
 }
 
 # ==============================================================================
@@ -742,6 +875,7 @@ main_menu() {
         msg menu_opt4
         msg menu_opt5
         msg menu_opt6
+        msg menu_opt7
         echo ""
         read -p "$(msg menu_prompt)" opt < /dev/tty
         
@@ -767,6 +901,10 @@ main_menu() {
                 read -p "$(msg press_any_key)" -n 1 < /dev/tty
                 ;;
             6)
+                generate_bug_report
+                read -p "$(msg press_any_key)" -n 1 < /dev/tty
+                ;;
+            7)
                 exit 0
                 ;;
             *)

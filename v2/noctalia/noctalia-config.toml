@@ -25,7 +25,15 @@ margin_ends = 14
 margin_edge = 10
 scale = 1.1
 shadow = false
-end = ["media", "tray", "wallpaper", "mpvpaper", "volume", "notifications", "session"]
+end = [
+    "media",
+    "tray",
+    "wallpaper",
+    "mpvpaper",
+    "volume",
+    "notifications",
+    "session",
+]
 center = ["clock"]
 start = ["launcher", "workspaces", "active_window"]
 thickness = 36
@@ -58,11 +66,13 @@ background = false
 visualization_mode = "wave_rings"
 
 [dock]
-auto_hide = true
+auto_hide = false
 enabled = true
+margin_edge = 10
 radius = 20
 reserve_space = false
 show_dots = true
+smart_auto_hide = true
 
 [hooks]
 theme_mode_changed = ["~/.config/noctalia/theme-sync.sh"]
@@ -80,7 +90,6 @@ widget_order = []
 cell_size = 16
 major_interval = 4
 visible = true
-
 
 
 [nightlight]
@@ -168,7 +177,6 @@ community_ids = []
 [wallpaper]
 directory = "/home/ray/图片/Wallpapers"
 fill_mode = "crop"
-
 
 
 [plugins]

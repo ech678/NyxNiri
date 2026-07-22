@@ -53,7 +53,7 @@ touch "$ASSIGNMENTS_FILE"
 
 process_assignments
 
-# Watch for changes
-while inotifywait -q -e close_write "$ASSIGNMENTS_FILE"; do
+# Watch directory instead of single file for atomic write safety
+while inotifywait -q -e close_write,moved_to "$(dirname "$ASSIGNMENTS_FILE")"; do
     process_assignments
 done
