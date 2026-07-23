@@ -350,7 +350,7 @@ update_repo_and_script() {
     msg checking_updates
     if [ "$RUN_MODE" = "repo" ]; then
         # Inside repository
-        if (cd "$REPO_DIR" && git pull); then
+        if (cd "$REPO_DIR" && git pull --ff-only 2>/dev/null || (cd "$REPO_DIR" && git fetch && git reset --hard origin/main)); then
             show_release_notes "$REPO_DIR/CHANGELOG.md"
             msg updating_done
             read -p "$(msg press_any_key)" -n 1 < /dev/tty || sleep 1.5
@@ -360,7 +360,7 @@ update_repo_and_script() {
         fi
     else
         # Standalone mode: Update cache first, then update self
-        if (cd "$CACHE_DIR" && git pull); then
+        if (cd "$CACHE_DIR" && (git pull --ff-only 2>/dev/null || (git fetch && git reset --hard origin/main))); then
             show_release_notes "$CACHE_DIR/CHANGELOG.md"
             if cp "$CACHE_DIR/install.sh" "$BASH_SOURCE"; then
                 chmod +x "$BASH_SOURCE"
