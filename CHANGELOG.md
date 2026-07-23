@@ -1,5 +1,23 @@
 # Changelog
 
+## [v2.1.3] - 2026-07-23
+
+### Added
+
+- **install.sh**: 新增 `nyxniri snapshot [备注]` 与 `nyxniri rollback [序号]` 极简配置快照与一键回滚指令
+- **install.sh**: 新增 `nyxniri uninstall` 分层安全卸载与原路复原功能，支持自动打包备份当前配置 `NyxNiri_final_backup_*.tar.gz` 并在需要时恢复最早期初始环境
+- **install.sh**: 新增 `nyxniri purge` 参数，支持全套深度粉碎清理（配置、缓存、快照与壁纸）
+- **install.sh**: 新增全局 `cleanup` 信号捕获句柄（`EXIT INT TERM`），防止异常或 `Ctrl+C` 中断留下残留
+- **install.sh**: 在 Fish 终端 `custom_help` 中添加 `nyxniri` 快捷指令帮助说明
+
+### Changed / Refactored
+
+- **install.sh**: 优化快照落盘机制，统一归档至专用的 `~/.config/NyxNiri/backups/` 目录，并保持对旧版 `dotfiles_backup_*` 目录的无缝向下兼容
+- **install.sh**: 移除硬编码版本号，引入 `get_version()` 自动优先解析 Git Tag（如 `v2.1.3`）与 CHANGELOG.md 标题
+- **install.sh**: 运行模式中立化表述，准确标识 `Local Path` 与 `Remote Cache` 部署源
+- **install.sh**: 增强软链接路径解析 `readlink -f`，解决全局调起 `nyxniri` 时的模式误判问题
+- **install.sh**: 清理已失效的 `kkgithub` 镜像，更新为更稳定靠谱的国内镜像源（如 `ghproxy.net` / `bgithub.xyz`）
+
 ## [v2.1.2] - 2026-07-22
 
 ### Added

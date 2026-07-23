@@ -8,25 +8,60 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# Cleanup trap handler for unexpected signals or interruptions
+cleanup() {
+    local exit_code=$?
+    if [ -n "$TEMP_WORKDIR" ] && [ -d "$TEMP_WORKDIR" ]; then
+        rm -rf "$TEMP_WORKDIR"
+    fi
+    if [ $exit_code -ne 0 ] && [ $exit_code -ne 130 ]; then
+        echo -e "\n\e[1;31m[-] Action interrupted or terminated unexpectedly. (Exit Code: $exit_code)\e[0m"
+    fi
+}
+trap cleanup EXIT INT TERM
+
 # ==============================================================================
-# 1. Global Settings & Mode Detection
+# 1. Global Settings, Version & Mode Detection
 # ==============================================================================
 LANG_MODE="en"
 PROJECT_NAME="NyxNiri"
 REPO_URL="https://github.com/ech678/NyxNiri.git"
 CACHE_DIR="$HOME/.cache/NyxNiri"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEMP_WORKDIR=""
 
-# Detect running mode
-# - "repo": Running inside a local cloned repository
-# - "standalone": Running as a single script file (e.g. downloaded via curl)
+if [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+    REAL_SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")"
+    SCRIPT_DIR="$(cd "$(dirname "$REAL_SCRIPT_PATH")" 2>/dev/null && pwd)"
+else
+    REAL_SCRIPT_PATH=""
+    SCRIPT_DIR=""
+fi
+
+# Dynamic Version Extractor (Git Tag -> CHANGELOG.md -> Fallback)
+get_version() {
+    local target_dir="$1"
+    local version=""
+    if [ -d "$target_dir/.git" ] && command -v git >/dev/null 2>&1; then
+        version=$(cd "$target_dir" && git describe --tags --abbrev=0 2>/dev/null)
+    fi
+    if [ -z "$version" ] && [ -f "$target_dir/CHANGELOG.md" ]; then
+        version=$(grep -m1 '^## \[' "$target_dir/CHANGELOG.md" | sed -E 's/## \[([^\]]+)\].*/\1/')
+    fi
+    echo "${version:-v2.x}"
+}
+
+# Detect running mode & resolve source repo
 if [ -d "$SCRIPT_DIR/v2" ] && [ -d "$SCRIPT_DIR/Wallpapers" ]; then
     RUN_MODE="repo"
+    MODE_LABEL="Local Path"
     REPO_DIR="$SCRIPT_DIR"
 else
     RUN_MODE="standalone"
+    MODE_LABEL="Remote Cache"
     REPO_DIR="$CACHE_DIR"
 fi
+
+CURRENT_VERSION=$(get_version "$REPO_DIR")
 
 # ==============================================================================
 # 2. Translations & Internationalization (I18n)
@@ -40,8 +75,9 @@ show_logo() {
     echo " ██║ ╚████║   ██║   ██╔╝ ██╗    ██║ ╚████║██║██║  ██║██║"
     echo " ╚═╝  ╚═══╝   ╚═╝   ╚═╝  ╚═╝    ╚═╝  ╚═══╝╚═╝╚═╝  ╚═╝╚═╝"
     echo -e "\e[0m"
-    echo -e "       \e[1;36mNoctalia V5 & Niri Desktop Environment Setup\e[0m"
-    echo -e "       \e[1;30m--------------------------------------------\e[0m"
+    echo -e "       \e[1;36mNoctalia V5 & Niri Desktop Environment Setup $CURRENT_VERSION\e[0m"
+    echo -e "       \e[1;30m----------------------------------------------------\e[0m"
+    echo -e "       \e[1;33mMode: $MODE_LABEL ($REPO_DIR)\e[0m\n"
 }
 
 msg() {
@@ -60,15 +96,39 @@ msg() {
             menu_opt1) echo -e "  \e[1;32m1)\e[0m 🚀 部署配置文件 (Deploy Configurations)" ;;
             menu_opt2) echo -e "  \e[1;32m2)\e[0m 📦 检查并安装依赖项 (Check & Install Dependencies)" ;;
             menu_opt3) echo -e "  \e[1;32m3)\e[0m 🩺 运行 System Doctor 诊断 (Run System Doctor)" ;;
-            menu_opt4) echo -e "  \e[1;32m4)\e[0m 🛡️  仅备份当前配置 (Backup Current Configurations)" ;;
-            menu_opt5) echo -e "  \e[1;32m5)\e[0m 🔄 更新配置与脚本 (Update Config & Script)" ;;
-            menu_opt6) echo -e "  \e[1;32m6)\e[0m 🐛 生成 Bug Report 报告 (Generate Bug Report)" ;;
-            menu_opt7) echo -e "  \e[1;31m7)\e[0m ❌ 退出 (Exit)" ;;
-            menu_prompt) echo -e "请选择操作 [1-7]: " ;;
+            menu_opt4) echo -e "  \e[1;32m4)\e[0m 🛡️  手动打快照 (Snapshot Configurations)" ;;
+            menu_opt5) echo -e "  \e[1;32m5)\e[0m ⏪ 一键回滚配置 (Rollback Snapshot)" ;;
+            menu_opt6) echo -e "  \e[1;32m6)\e[0m 🔄 更新配置与脚本 (Update Config & Script)" ;;
+            menu_opt7) echo -e "  \e[1;32m7)\e[0m 🐛 生成 Bug Report 报告 (Generate Bug Report)" ;;
+            menu_opt8) echo -e "  \e[1;31m8)\e[0m 🗑️  卸载与复原环境 (Uninstall NyxNiri)" ;;
+            menu_opt9) echo -e "  \e[1;31m9)\e[0m ❌ 退出 (Exit)" ;;
+            menu_prompt) echo -e "请选择操作 [1-9]: " ;;
             invalid_opt) echo -e "\e[1;31m[-] 无效的选项，请重新选择。\e[0m" ;;
             press_any_key) echo -e "\n按任意键返回主菜单..." ;;
             generating_report) echo -e "\n\e[1;34m🐛 正在收集系统诊断数据并生成 Bug Report 报告...\e[0m" ;;
             report_done) echo -e "\e[1;32m✅ Bug Report 报告已成功导出至:\e[0m $1\n\e[1;36m提示: 提交 Issue 时请直接附上该文件或其内容！\nQQ 交流群: 631425889 | 开发者 QQ: 2040244628 | Telegram: @Echoes678\e[0m" ;;
+            
+            # Uninstall Strings
+            uninstall_title) echo -e "\n\e[1;31m════════════════════════════════════════════════════════════════\e[0m\n \e[1;31m🗑️ NyxNiri 卸载与复原工具 (Uninstall & Environment Restoration)\e[0m\n\e[1;31m════════════════════════════════════════════════════════════════\e[0m" ;;
+            uninstall_opt1) echo -e "  \e[1;32m1)\e[0m 🛡️  标准安全卸载 (推荐 - 打包备份当前配置，移除配置与CLI)" ;;
+            uninstall_opt2) echo -e "  \e[1;36m2)\e[0m ⏪ 原路复原 (一键恢复安装 NyxNiri 之前的最早期初始配置)" ;;
+            uninstall_opt3) echo -e "  \e[1;31m3)\e[0m 💥 彻底粉碎模式 (清除所有配置、快照、缓存与壁纸)" ;;
+            uninstall_opt4) echo -e "  \e[1;30m4)\e[0m ❌ 取消返回" ;;
+            uninstall_prompt) echo -e "请选择卸载模式 [1-4]: " ;;
+            uninstall_archived) echo -e "\e[1;32m✅ 已将当前配置成功归档保存至:\e[0m $1" ;;
+            uninstall_done) echo -e "\e[1;32m🎉 NyxNiri 卸载完成！感谢您的使用。\e[0m" ;;
+            purge_done) echo -e "\e[1;32m💥 深度清理完毕，所有 NyxNiri 相关配置与缓存已完全粉碎。\e[0m" ;;
+            restore_origin_done) echo -e "\e[1;32m✅ 已成功将您的电脑环境原路复原至安装前状态！\e[0m" ;;
+            
+            # Rollback Strings
+            no_backups_found) echo -e "\e[1;33m⚠️  未找到任何可用的配置快照！\e[0m" ;;
+            available_backups) echo -e "\n\e[1;36m=== 可用的 NyxNiri 配置快照列表 ===\e[0m" ;;
+            select_rollback_target) echo -e "请选择要回滚恢复的快照序号 (或按 Ctrl+C 取消): " ;;
+            rollback_invalid_num) echo -e "\e[1;31m[-] 无效的序号，取消回滚操作。\e[0m" ;;
+            rolling_back) echo -e "\n\e[1;34m⏪ 正在从快照 [$1] 恢复配置...\e[0m" ;;
+            pre_rollback_backup) echo -e "\e[1;30m[安全防护] 回滚前已自动为当前配置创建安全快照: $1\e[0m" ;;
+            rollback_done) echo -e "\e[1;32m✅ 配置回滚成功！已恢复至快照: $1\e[0m" ;;
+            snapshot_note_prompt) echo -e "请输入快照备注 (直接回车跳过): " ;;
             
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m📦 请选择要安装的依赖（输入数字切换，直接回车开始安装）：\e[0m" ;;
@@ -76,8 +136,8 @@ msg() {
             installing_selected) echo -e "\n\e[1;34m🚀 正在通过包管理器安装选中的依赖...\e[0m" ;;
             
             # Deployment & Backup
-            backing_up) echo -e "\n\e[1;34m🛡️  安装前正在自动备份当前配置...\e[0m" ;;
-            backup_done) echo -e "\e[1;32m✅ 备份完成！备份路径为: $1\e[0m" ;;
+            backing_up) echo -e "\n\e[1;34m🛡️  正在创建配置快照...\e[0m" ;;
+            backup_done) echo -e "\e[1;32m✅ 快照创建成功！保存路径: $1\e[0m" ;;
             copying_configs) echo -e "\n\e[1;34m⚙️  正在部署 dotfiles 配置文件...\e[0m" ;;
             copy_done) echo -e "\e[1;32m✅ 配置文件部署与复制成功！\e[0m" ;;
             
@@ -126,15 +186,39 @@ msg() {
             menu_opt1) echo -e "  \e[1;32m1)\e[0m 🚀 Deploy Configurations" ;;
             menu_opt2) echo -e "  \e[1;32m2)\e[0m 📦 Check & Install Dependencies" ;;
             menu_opt3) echo -e "  \e[1;32m3)\e[0m 🩺 Run System Doctor Diagnostics" ;;
-            menu_opt4) echo -e "  \e[1;32m4)\e[0m 🛡️  Backup Current Configurations Only" ;;
-            menu_opt5) echo -e "  \e[1;32m5)\e[0m 🔄 Update Config & Script" ;;
-            menu_opt6) echo -e "  \e[1;32m6)\e[0m 🐛 Generate Bug Report" ;;
-            menu_opt7) echo -e "  \e[1;31m7)\e[0m ❌ Exit" ;;
-            menu_prompt) echo -e "Please select an option [1-7]: " ;;
+            menu_opt4) echo -e "  \e[1;32m4)\e[0m 🛡️  Snapshot Configurations" ;;
+            menu_opt5) echo -e "  \e[1;32m5)\e[0m ⏪ Rollback Configurations" ;;
+            menu_opt6) echo -e "  \e[1;32m6)\e[0m 🔄 Update Config & Script" ;;
+            menu_opt7) echo -e "  \e[1;32m7)\e[0m 🐛 Generate Bug Report" ;;
+            menu_opt8) echo -e "  \e[1;31m8)\e[0m 🗑️  Uninstall NyxNiri" ;;
+            menu_opt9) echo -e "  \e[1;31m9)\e[0m ❌ Exit" ;;
+            menu_prompt) echo -e "Please select an option [1-9]: " ;;
             invalid_opt) echo -e "\e[1;31m[-] Invalid option, please try again.\e[0m" ;;
             press_any_key) echo -e "\nPress any key to return to main menu..." ;;
             generating_report) echo -e "\n\e[1;34m🐛 Collecting system diagnostic data and generating Bug Report...\e[0m" ;;
             report_done) echo -e "\e[1;32m✅ Bug Report successfully exported to:\e[0m $1\n\e[1;36mHint: Please attach this file when opening a GitHub Issue!\nQQ Group: 631425889 | Developer QQ: 2040244628 | Telegram: @Echoes678\e[0m" ;;
+            
+            # Uninstall Strings
+            uninstall_title) echo -e "\n\e[1;31m════════════════════════════════════════════════════════════════\e[0m\n \e[1;31m🗑️ NyxNiri Uninstall & Environment Restoration Tool\e[0m\n\e[1;31m════════════════════════════════════════════════════════════════\e[0m" ;;
+            uninstall_opt1) echo -e "  \e[1;32m1)\e[0m 🛡️  Standard Safe Uninstall (Archive current configs, remove CLI)" ;;
+            uninstall_opt2) echo -e "  \e[1;36m2)\e[0m ⏪ Restore to Original State (Restore earliest pre-install backup)" ;;
+            uninstall_opt3) echo -e "  \e[1;31m3)\e[0m 💥 Purge Everything (Remove all configs, snapshots, cache & wallpapers)" ;;
+            uninstall_opt4) echo -e "  \e[1;30m4)\e[0m ❌ Cancel & Return" ;;
+            uninstall_prompt) echo -e "Select uninstall mode [1-4]: " ;;
+            uninstall_archived) echo -e "\e[1;32m✅ Archived current configs to:\e[0m $1" ;;
+            uninstall_done) echo -e "\e[1;32m🎉 NyxNiri uninstalled successfully! Thank you for using.\e[0m" ;;
+            purge_done) echo -e "\e[1;32m💥 Deep purge complete. All NyxNiri configs and caches purged.\e[0m" ;;
+            restore_origin_done) echo -e "\e[1;32m✅ Successfully restored your system to its original pre-install state!\e[0m" ;;
+            
+            # Rollback Strings
+            no_backups_found) echo -e "\e[1;33m⚠️  No configuration snapshots found!\e[0m" ;;
+            available_backups) echo -e "\n\e[1;36m=== Available NyxNiri Snapshots ===\e[0m" ;;
+            select_rollback_target) echo -e "Select snapshot number to restore (or press Ctrl+C to cancel): " ;;
+            rollback_invalid_num) echo -e "\e[1;31m[-] Invalid selection, rollback cancelled.\e[0m" ;;
+            rolling_back) echo -e "\n\e[1;34m⏪ Restoring configuration from snapshot [$1]...\e[0m" ;;
+            pre_rollback_backup) echo -e "\e[1;30m[Safety] Auto-saved pre-rollback snapshot of current configs: $1\e[0m" ;;
+            rollback_done) echo -e "\e[1;32m✅ Rollback complete! Restored to snapshot: $1\e[0m" ;;
+            snapshot_note_prompt) echo -e "Enter snapshot note (press Enter to skip): " ;;
             
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m📦 Select dependencies to install (type numbers to toggle, press Enter to confirm):\e[0m" ;;
@@ -142,8 +226,8 @@ msg() {
             installing_selected) echo -e "\n\e[1;34m🚀 Installing selected dependencies via package manager...\e[0m" ;;
             
             # Deployment & Backup
-            backing_up) echo -e "\n\e[1;34m🛡️  Automatically backing up current configs before installation...\e[0m" ;;
-            backup_done) echo -e "\e[1;32m✅ Backup completed! Path: $1\e[0m" ;;
+            backing_up) echo -e "\n\e[1;34m🛡️  Creating configuration snapshot...\e[0m" ;;
+            backup_done) echo -e "\e[1;32m✅ Snapshot created! Saved to: $1\e[0m" ;;
             copying_configs) echo -e "\n\e[1;34m⚙️  Deploying dotfiles configuration files...\e[0m" ;;
             copy_done) echo -e "\e[1;32m✅ Configurations deployed and copied successfully!\e[0m" ;;
             
@@ -182,6 +266,26 @@ msg() {
     fi
 }
 
+# Ensure symlink ~/.local/bin/nyxniri exists
+ensure_nyxniri_symlink() {
+    mkdir -p "$HOME/.local/bin"
+    local target_bin="$HOME/.local/bin/nyxniri"
+    local current_script="$REAL_SCRIPT_PATH"
+    
+    if [ -z "$current_script" ] || [ ! -f "$current_script" ]; then
+        if [ -f "$CACHE_DIR/install.sh" ]; then
+            current_script="$CACHE_DIR/install.sh"
+        else
+            return 0
+        fi
+    fi
+
+    if [ ! -L "$target_bin" ] || [ "$(readlink -f "$target_bin" 2>/dev/null)" != "$current_script" ]; then
+        ln -sf "$current_script" "$target_bin"
+        [ -f "$target_bin" ] && chmod +x "$target_bin" 2>/dev/null || true
+    fi
+}
+
 select_language() {
     clear 2>/dev/null || true
     show_logo
@@ -213,8 +317,8 @@ ensure_repo() {
             local active_repo_url="$REPO_URL"
             echo "Testing connection to github.com..."
             if ! curl -I -s --connect-timeout 3 https://github.com >/dev/null 2>&1; then
-                echo "⚠️ Connection to github.com failed. Switching to domestic mirror (KKGitHub)..."
-                active_repo_url="https://kkgithub.com/ech678/NyxNiri.git"
+                echo "⚠️ Connection to github.com failed. Switching to domestic mirror (bgithub)..."
+                active_repo_url="https://bgithub.xyz/ech678/NyxNiri.git"
             fi
             
             git clone "$active_repo_url" "$CACHE_DIR"
@@ -507,30 +611,20 @@ check_mpvpaper_version() {
 }
 
 # ==============================================================================
-# 5. Configuration Backup & Deployment
+# 5. Configuration Backup, Snapshot & Rollback
 # ==============================================================================
+BACKUP_BASE_DIR="$HOME/.config/NyxNiri/backups"
+
 backup_configs() {
-    local today=$(date +%Y%m%d)
-    local existing_backups=($HOME/.config/dotfiles_backup_${today}_*)
-    local has_today_backup=false
-    
-    for d in "${existing_backups[@]}"; do
-        if [ -d "$d" ]; then
-            has_today_backup=true
-            break
-        fi
-    done
-    
-    if [ "$has_today_backup" = true ]; then
-        read -p "$(msg ask_backup_again)" choice < /dev/tty
-        if [[ ! "$choice" =~ ^[Yy]$ ]]; then
-            return 0
-        fi
+    local note="$1"
+    local interactive_mode=true
+    if [ -n "$2" ] || [ ! -t 0 ]; then
+        interactive_mode=false
     fi
 
     msg backing_up
     local timestamp=$(date +%Y%m%d_%H%M%S)
-    local backup_dir="$HOME/.config/dotfiles_backup_$timestamp"
+    local backup_dir="$BACKUP_BASE_DIR/snapshot_$timestamp"
     mkdir -p "$backup_dir"
     
     local configs=(
@@ -548,8 +642,199 @@ backup_configs() {
             echo "  Backed up: ~/.config/$item"
         fi
     done
+
+    if [ -n "$note" ]; then
+        echo "$note" > "$backup_dir/note.txt"
+    fi
     
     msg backup_done "$backup_dir"
+}
+
+get_all_backups() {
+    local list=()
+    # Check new dedicated backup dir
+    if [ -d "$BACKUP_BASE_DIR" ]; then
+        for d in "$BACKUP_BASE_DIR"/*; do
+            if [ -d "$d" ]; then
+                list+=("$d")
+            fi
+        done
+    fi
+    # Check legacy backup dirs for backward compatibility
+    for d in "$HOME/.config"/dotfiles_backup_*; do
+        if [ -d "$d" ]; then
+            list+=("$d")
+        fi
+    done
+    echo "${list[@]}"
+}
+
+list_backups() {
+    read -r -a backups <<< "$(get_all_backups)"
+    if [ -z "${backups[0]}" ] || [ ! -d "${backups[0]}" ]; then
+        msg no_backups_found
+        return 1
+    fi
+
+    msg available_backups
+    local idx=1
+    for b in "${backups[@]}"; do
+        if [ -d "$b" ]; then
+            local bname=$(basename "$b")
+            local note=""
+            if [ -f "$b/note.txt" ]; then
+                note=" ($(cat "$b/note.txt"))"
+            fi
+            echo -e "  \e[1;32m[$idx]\e[0m $bname$note"
+            ((idx++))
+        fi
+    done
+    return 0
+}
+
+rollback_configs() {
+    local target_idx="$1"
+    read -r -a backups <<< "$(get_all_backups)"
+    if [ -z "${backups[0]}" ] || [ ! -d "${backups[0]}" ]; then
+        msg no_backups_found
+        return 1
+    fi
+
+    local valid_backups=()
+    for b in "${backups[@]}"; do
+        if [ -d "$b" ]; then
+            valid_backups+=("$b")
+        fi
+    done
+
+    if [ -z "$target_idx" ]; then
+        list_backups
+        echo ""
+        read -p "$(msg select_rollback_target)" target_idx < /dev/tty
+    fi
+
+    if [[ ! "$target_idx" =~ ^[0-9]+$ ]] || [ "$target_idx" -lt 1 ] || [ "$target_idx" -gt "${#valid_backups[@]}" ]; then
+        msg rollback_invalid_num
+        return 1
+    fi
+
+    local selected_backup="${valid_backups[$((target_idx-1))]}"
+    local selected_bname=$(basename "$selected_backup")
+
+    # Safety auto-backup before rollback
+    local pre_ts=$(date +%Y%m%d_%H%M%S)
+    local pre_dir="$HOME/.config/dotfiles_backup_pre_rollback_$pre_ts"
+    mkdir -p "$pre_dir"
+    local configs=(
+        "fish"
+        "noctalia"
+        "niri"
+        "kitty"
+        "fastfetch"
+        "starship.toml"
+    )
+    for item in "${configs[@]}"; do
+        if [ -e "$HOME/.config/$item" ]; then
+            cp -rP "$HOME/.config/$item" "$pre_dir/"
+        fi
+    done
+    echo "pre-rollback safety snapshot" > "$pre_dir/note.txt"
+    msg pre_rollback_backup "$pre_dir"
+
+    msg rolling_back "$selected_bname"
+    for item in "${configs[@]}"; do
+        if [ -e "$selected_backup/$item" ]; then
+            rm -rf "$HOME/.config/$item"
+            cp -rP "$selected_backup/$item" "$HOME/.config/$item"
+            echo "  Restored: ~/.config/$item"
+        fi
+    done
+
+    msg rollback_done "$selected_bname"
+}
+
+uninstall_nyxniri() {
+    msg uninstall_title
+    msg uninstall_opt1
+    msg uninstall_opt2
+    msg uninstall_opt3
+    msg uninstall_opt4
+    echo ""
+    local mode="$1"
+    if [ -z "$mode" ]; then
+        read -p "$(msg uninstall_prompt)" mode < /dev/tty
+    fi
+
+    local configs=(
+        "fish"
+        "noctalia"
+        "niri"
+        "kitty"
+        "fastfetch"
+        "starship.toml"
+    )
+
+    case "$mode" in
+        1|safe|--safe)
+            # Standard Safe Uninstall: archive current config to tar.gz, remove active configs & CLI
+            local ts=$(date +%Y%m%d_%H%M%S)
+            local archive_file="$HOME/.config/NyxNiri_final_backup_$ts.tar.gz"
+            local temp_stage=$(mktemp -d)
+            for item in "${configs[@]}"; do
+                if [ -e "$HOME/.config/$item" ]; then
+                    cp -rP "$HOME/.config/$item" "$temp_stage/"
+                fi
+            done
+            tar -czf "$archive_file" -C "$temp_stage" . 2>/dev/null || true
+            rm -rf "$temp_stage"
+            msg uninstall_archived "$archive_file"
+
+            for item in "${configs[@]}"; do
+                if [ -e "$HOME/.config/$item" ]; then
+                    rm -rf "$HOME/.config/$item"
+                    echo "  Removed: ~/.config/$item"
+                fi
+            done
+            [ -L "$HOME/.local/bin/nyxniri" ] && rm -f "$HOME/.local/bin/nyxniri"
+            msg uninstall_done
+            ;;
+        2|restore|--restore)
+            # Restore to earliest original backup if exists
+            read -r -a backups <<< "$(get_all_backups)"
+            if [ -n "${backups[0]}" ] && [ -d "${backups[0]}" ]; then
+                local earliest="${backups[0]}"
+                local earliest_name=$(basename "$earliest")
+                echo "Restoring earliest pre-install configuration from: $earliest_name"
+                for item in "${configs[@]}"; do
+                    if [ -e "$earliest/$item" ]; then
+                        rm -rf "$HOME/.config/$item"
+                        cp -rP "$earliest/$item" "$HOME/.config/$item"
+                        echo "  Restored: ~/.config/$item"
+                    fi
+                done
+                [ -L "$HOME/.local/bin/nyxniri" ] && rm -f "$HOME/.local/bin/nyxniri"
+                msg restore_origin_done
+            else
+                msg no_backups_found
+            fi
+            ;;
+        3|purge|--purge)
+            # Purge Everything: remove configs, CLI, cache, wallpapers & backups
+            for item in "${configs[@]}"; do
+                rm -rf "$HOME/.config/$item"
+            done
+            [ -L "$HOME/.local/bin/nyxniri" ] && rm -f "$HOME/.local/bin/nyxniri"
+            [ -d "$HOME/.cache/NyxNiri" ] && rm -rf "$HOME/.cache/NyxNiri"
+            [ -d "$HOME/.config/NyxNiri" ] && rm -rf "$HOME/.config/NyxNiri"
+            local pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")
+            [ -d "$pics_dir/Wallpapers" ] && rm -rf "$pics_dir/Wallpapers"
+            msg purge_done
+            ;;
+        *)
+            echo "Uninstall cancelled."
+            return 0
+            ;;
+    esac
 }
 
 install_configs() {
@@ -876,6 +1161,8 @@ main_menu() {
         msg menu_opt5
         msg menu_opt6
         msg menu_opt7
+        msg menu_opt8
+        msg menu_opt9
         echo ""
         read -p "$(msg menu_prompt)" opt < /dev/tty
         
@@ -893,18 +1180,27 @@ main_menu() {
                 read -p "$(msg press_any_key)" -n 1 < /dev/tty
                 ;;
             4)
-                backup_configs
+                read -p "$(msg snapshot_note_prompt)" note_in < /dev/tty
+                backup_configs "$note_in"
                 read -p "$(msg press_any_key)" -n 1 < /dev/tty
                 ;;
             5)
-                update_repo_and_script
+                rollback_configs
                 read -p "$(msg press_any_key)" -n 1 < /dev/tty
                 ;;
             6)
-                generate_bug_report
+                update_repo_and_script
                 read -p "$(msg press_any_key)" -n 1 < /dev/tty
                 ;;
             7)
+                generate_bug_report
+                read -p "$(msg press_any_key)" -n 1 < /dev/tty
+                ;;
+            8)
+                uninstall_nyxniri
+                read -p "$(msg press_any_key)" -n 1 < /dev/tty
+                ;;
+            9)
                 exit 0
                 ;;
             *)
@@ -916,6 +1212,60 @@ main_menu() {
 }
 
 main() {
+    ensure_nyxniri_symlink
+    
+    if [ $# -gt 0 ]; then
+        case "$1" in
+            snapshot|backup)
+                shift
+                backup_configs "$*" "non_interactive"
+                exit 0
+                ;;
+            rollback|restore)
+                shift
+                rollback_configs "$1"
+                exit 0
+                ;;
+            list)
+                list_backups
+                exit 0
+                ;;
+            uninstall|remove)
+                shift
+                uninstall_nyxniri "$1"
+                exit 0
+                ;;
+            purge)
+                uninstall_nyxniri "purge"
+                exit 0
+                ;;
+            doctor)
+                run_doctor
+                exit 0
+                ;;
+            update)
+                update_repo_and_script
+                exit 0
+                ;;
+            help|-h|--help)
+                echo "NyxNiri Dotfiles Management Tool (nyxniri)"
+                echo "Usage: nyxniri [command] [args]"
+                echo ""
+                echo "Commands:"
+                echo "  snapshot [note]    Create a snapshot of current dotfiles config"
+                echo "  rollback [index]   Rollback configuration to a historical snapshot"
+                echo "  list               List all available configuration snapshots"
+                echo "  uninstall          Safely uninstall NyxNiri (with auto config archive)"
+                echo "  purge              Deep purge all NyxNiri configs, cache & wallpapers"
+                echo "  doctor             Run System Doctor diagnostics"
+                echo "  update             Update NyxNiri repository and script"
+                echo "  help               Show this help message"
+                echo "  (no arguments)     Open interactive control panel menu"
+                exit 0
+                ;;
+        esac
+    fi
+
     select_language
     ensure_repo
     main_menu

@@ -14,9 +14,7 @@ _A calm, Material You desktop — Niri + Noctalia V5, for Arch / CachyOS_
 
 <img src="https://img.shields.io/badge/License-GPLv3-89B4FA?style=flat-square" alt="license" />
 <img src="https://img.shields.io/github/stars/ech678/NyxNiri?style=flat-square&color=F5C2E7&label=stars" alt="stars" />
-<!-- Reddit badge slot — drop your subreddit/post link in and uncomment:
-<img src="https://img.shields.io/badge/Reddit-discuss-FF4500?style=flat-square&logo=reddit&logoColor=white" alt="Reddit" />
--->
+<img src="https://img.shields.io/badge/CLI-nyxniri-A6E3A1?style=flat-square&logo=gnu-bash&logoColor=black" alt="CLI" />
 <img src="https://img.shields.io/badge/OS-Arch%20%7C%20CachyOS-1793D1?style=flat-square&logo=arch-linux&logoColor=white" alt="OS" />
 <img src="https://img.shields.io/badge/WM-Niri-89B4FA?style=flat-square&logo=wayland&logoColor=white" alt="WM" />
 <img src="https://img.shields.io/badge/Shell-Fish%20%2B%20Starship-F9E2AF?style=flat-square&logo=fish&logoColor=black" alt="Shell" />
@@ -43,106 +41,45 @@ handful of terminal quality-of-life improvements.
 
 <br/>
 
-## Repository Structure
+## 🛠️ NyxNiri Management CLI (`nyxniri`)
 
-```text
-NyxNiri
-├── install.sh                  # Interactive bilingual installer (backups, hooks, dependencies)
-├── Wallpapers/                 # Wallpaper collection (deployed to ~/Pictures/Wallpapers)
-└── v2/                         # ✅ [Active] Current Noctalia V5 configs
-    ├── niri/                   # Niri config — bindings, layout, window rules
-    ├── noctalia/                # Desktop widgets, daemon settings, automation hooks
-    ├── kitty/                  # Kitty terminal config — custom shortcuts, cursor trail
-    ├── fish/                   # Fish shell — proxy helpers, aliases, cache cleaner
-    ├── fastfetch/               # Minimal system info fetch
-    └── starship.toml           # Starship prompt theme
-```
+NyxNiri comes with a built-in lightweight management tool `nyxniri` for snapshots, rollbacks, and diagnostics:
 
-> [!NOTE]
-> Existing configs are backed up automatically before deployment. Wallpapers are
-> copied into your Pictures folder — nothing is overwritten silently.
-
-> [!WARNING]
-> The legacy DMS (Dank Material Shell) configs have been archived to the
-> **[`archive/v1-dms`](../../tree/archive/v1-dms)** branch. `main` now holds
-> only the active V2 setup, kept deliberately clean and minimal.
-
-<br/>
-
-## Key Features
-
-**Live wallpapers & color sync** — `mpvpaper` drives the live wallpaper. A Lua
-hook (`mpv-hook.lua`) grabs a keyframe on load and feeds it to Noctalia's
-Material You engine, so terminal and desktop colors track the wallpaper in real
-time.
-
-**Light/dark sync** — `theme-sync.sh` writes GTK 3.0/4.0 `settings.ini` and
-GSettings together, so every GTK/Libadwaita app switches in lockstep.
-
-**Fish shell**
-
-- `proxy_on` / `proxy_off` / `proxy_status` — proxy toggle with a public IP
-  check
-- `shelly` aliases (`up`, `in`, `un`, `se`) wrapping pacman/paru for CachyOS +
-  AUR
-- `clean` / `clean-cache` — tiered cache cleaner (logs, package leftovers,
-  runtime caches, trash)
-
-**Kitty**
-
-- GPU-accelerated cursor trail (`cursor_trail`)
-- Windows-style shortcuts: `Ctrl+C` smart copy-or-interrupt, `Ctrl+V` paste,
-  `Ctrl+Backspace` / `Ctrl+Delete` word delete, `Ctrl+A` copy full buffer
-
-<br/>
-
-## Quick Bindings
-
-**Windows & layout**
-
-| Keys                                           | Action                    |
-| :--------------------------------------------- | :------------------------ |
-| <kbd>Super</kbd> + <kbd>Return</kbd>           | Open terminal (Kitty)     |
-| <kbd>Super</kbd> + <kbd>Q</kbd>                | Close window              |
-| <kbd>Super</kbd> + <kbd>T</kbd>                | Toggle floating window    |
-| <kbd>Super</kbd> + <kbd>F</kbd>                | Maximize column           |
-| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | Fullscreen window         |
-| <kbd>Super</kbd> + <kbd>Tab</kbd>              | Overview                  |
-| <kbd>Super</kbd> + <kbd>H</kbd> / <kbd>Z</kbd> | Focus column left         |
-| <kbd>Super</kbd> + <kbd>C</kbd>                | Focus column right        |
-| <kbd>Super</kbd> + <kbd>J</kbd> / <kbd>K</kbd> | Focus window down / up    |
-
-**System & shell (Noctalia)**
-
-| Keys                            | Action                  |
-| :------------------------------ | :---------------------- |
-| <kbd>Super</kbd> + <kbd>R</kbd> | App launcher            |
-| <kbd>Super</kbd> + <kbd>E</kbd> | File manager (Nautilus) |
-| <kbd>Super</kbd> + <kbd>X</kbd> | Session menu            |
-| <kbd>Super</kbd> + <kbd>I</kbd> | Settings panel          |
-| <kbd>Super</kbd> + <kbd>V</kbd> | Clipboard history       |
-| <kbd>Super</kbd> + <kbd>W</kbd> | Static wallpaper picker |
-| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | Live video wallpaper picker |
-| <kbd>Super</kbd> + <kbd>L</kbd> | Lock screen             |
-| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Region screenshot       |
-| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | Reload Niri config      |
+| Command | Action / Purpose | Notes |
+| :--- | :--- | :--- |
+| `nyxniri` | Open interactive TUI control panel | Fast menu-driven access |
+| `nyxniri snapshot [note]` | Create a manual configuration snapshot | Saved to `~/.config/NyxNiri/backups/` |
+| `nyxniri rollback [index]` | Rollback configuration to a historical snapshot | Auto-saves pre-rollback safety snapshot |
+| `nyxniri list` | List all available configuration snapshots | Displays timestamp & note |
+| `nyxniri uninstall` | Safely uninstall NyxNiri (with auto archive) | Supports `--safe` or `--restore` |
+| `nyxniri purge` | Deep purge all NyxNiri configs, cache & wallpapers | Complete cleanup |
+| `nyxniri doctor` | Run System Doctor diagnostics | Health check for desktop components |
 
 <br/>
 
 ## Installation
 
-One-liner — the script clones itself into `~/.cache/NyxNiri`:
+### ⚡ Quick One-liner Install (Curl Pipe)
 
 ```bash
 curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
-<details>
-<summary>Manual installation</summary>
+### 📦 Recommended Method (Git Repository)
+
+Clone the repository to your local machine for full git history and offline control:
 
 ```bash
 git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
+```
+
+<details>
+<summary>🌐 Domestic Mirror (For users in China)</summary>
+
+```bash
+# Via GHProxy Mirror
+curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
 </details>
@@ -331,33 +268,44 @@ NyxNiri
 
 <br/>
 
+## 🛠️ NyxNiri 管理命令行工具 (`nyxniri`)
+
+NyxNiri 内置了极简管理工具 `nyxniri`，方便随时手动打快照、回滚配置与诊断：
+
+| 指令 | 作用描述 | 备注 |
+| :--- | :--- | :--- |
+| `nyxniri` | 打开交互式桌面控制面板主菜单 | 快捷控制台菜单 |
+| `nyxniri snapshot [备注]` | 手动创建当前配置快照 | 保存至 `~/.config/NyxNiri/backups/` |
+| `nyxniri rollback [序号]` | 恢复指定的历史配置快照 | 恢复前自动生成预保护快照 |
+| `nyxniri list` | 列出所有可用的配置快照 | 查看时间与快照备注 |
+| `nyxniri uninstall` | 安全卸载并复原系统配置环境 | 支持归档备份与原路复原 |
+| `nyxniri purge` | 彻底深度清理所有配置、缓存与壁纸 | 强迫症专属粉碎 |
+| `nyxniri doctor` | 运行 System Doctor 系统诊断 | 诊断桌面与系统依赖健康状态 |
+
+<br/>
+
 ## 部署
 
-一行命令安装，脚本会自动克隆到 `~/.cache/NyxNiri`（内置网络检测，GitHub
-不可达时自动切换国内镜像）：
+### ⚡ 一行命令极速安装 (Curl 管道)
 
 ```bash
 curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
-<details>
-<summary>手动安装</summary>
+### 📦 推荐安装方式（Git 仓库部署）
+
+将项目克隆到本地后运行安装脚本，方便随时修改配置与离线管理：
 
 ```bash
 git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
 ```
 
-</details>
-
 <details>
-<summary>国内镜像</summary>
+<summary>🌐 国内网络加速</summary>
 
 ```bash
-# KKGitHub
-curl -sL https://raw.kkgithub.com/ech678/NyxNiri/main/install.sh | bash
-
-# GHProxy.net
+# 通过 GHProxy 镜像节点
 curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
