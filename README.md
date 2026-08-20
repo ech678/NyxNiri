@@ -270,6 +270,7 @@ rm -f ~/.config/gtk-4.0/gtk.css ~/.config/gtk-4.0/noctalia.css ~/.config/gtk-3.0
 **Contact & Community:**
 
 - Telegram: [@Echoes678](https://t.me/Echoes678)
+- Telegram Channel: [@linux_ricing](https://t.me/linux_ricing)
 - QQ: `2040244628`
 - Linux Ricing Group: `631425889`
 - Sponsor: [Afdian](https://afdian.com/a/Echoes678)
