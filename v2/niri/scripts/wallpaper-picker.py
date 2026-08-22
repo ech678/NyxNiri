@@ -41,6 +41,7 @@ def main():
     try:
         Gtk.main()
     finally:
+        win.scanner.shutdown()
         release_instance_lock(lock_fd, PID_FILE_PATH)
 
 

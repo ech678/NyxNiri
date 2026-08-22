@@ -58,6 +58,7 @@ class WallpaperScanner:
         self.categories = ["All", "Static", "Live"]
         self.category_items = {"All": [], "Static": [], "Live": []}
         self.executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="wp_thumb")
+        self._shutting_down = False
         os.makedirs(CACHE_DIR, exist_ok=True)
 
     def scan(self) -> list:
@@ -193,6 +194,8 @@ class WallpaperScanner:
             self.executor.submit(self._generate_thumbnail_worker, item)
 
     def _generate_thumbnail_worker(self, item: WallpaperItem):
+        if self._shutting_down:
+            return
         item.is_loading = True
         try:
             if item.is_video:
@@ -216,6 +219,8 @@ class WallpaperScanner:
                 elif os.path.isfile(tmp_thumb):
                     os.remove(tmp_thumb)
             else:
+                if not os.path.isfile(item.path):
+                    return
                 pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(item.path, 480, 270, True)
                 pix.savev(item.thumb_path, "jpeg", ["quality"], ["85"])
 

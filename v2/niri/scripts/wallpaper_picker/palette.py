@@ -53,7 +53,7 @@ def load_material_palette() -> dict:
                             palette["surface"] = rgb
                         elif k in ("crust", "mantle"):
                             palette["surface_dim"] = rgb
-                        elif k in ("surface2", "overlay0"):
+                        elif k in ("surface2", "overlay1"):
                             palette["surface_bright"] = rgb
                         elif k in ("text", "white"):
                             palette["on_surface"] = rgb

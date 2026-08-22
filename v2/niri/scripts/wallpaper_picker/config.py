@@ -100,6 +100,15 @@ def get_wallpaper_search_roots() -> list:
                 if wp_dir:
                     candidates.append(os.path.expanduser(wp_dir))
                 video_dir = data.get("plugin_settings", {}).get("noctalia/mpvpaper", {}).get("video_directory")
+                if not video_dir:
+                    plugin_cfg = data.get("plugins", {})
+                    if isinstance(plugin_cfg, dict):
+                        video_dir = plugin_cfg.get("noctalia/mpvpaper", {}).get("video_directory")
+                    if not video_dir:
+                        for key, val in plugin_cfg.items() if isinstance(plugin_cfg, dict) else {}:
+                            if isinstance(val, dict) and "video_directory" in val:
+                                video_dir = val.get("video_directory")
+                                break
                 if video_dir:
                     candidates.append(os.path.expanduser(video_dir))
         except Exception as e:
