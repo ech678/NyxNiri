@@ -10,7 +10,6 @@
 
 set -euo pipefail
 
-GREETER_PKG="noctalia-greeter"
 GREETER_SESSION_BIN="noctalia-greeter-session"
 GREETER_ETC_CFG="/etc/greetd/config.toml"
 GREETER_STATE_DIR="/var/lib/$GREETER_PKG"

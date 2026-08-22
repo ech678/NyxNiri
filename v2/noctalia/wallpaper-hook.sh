@@ -1,4 +1,5 @@
 #!/bin/bash
+set -uo pipefail
 
 # Ensure noctalia is available
 if ! command -v noctalia >/dev/null 2>&1; then
@@ -31,7 +32,7 @@ if [[ -n "$WP" && -f "$WP" && "$WP" =~ \.(mp4|webm|mkv|mov|gif)$ ]]; then
     # Generate thumbnail
     if ffmpeg -y -i "$WP" -ss 00:00:01 -vframes 1 "$THUMB_PATH" 2>/dev/null; then
         # Set the thumbnail as wallpaper to extract colors and provide a static background
-        noctalia msg wallpaper-set "$THUMB_PATH" 2>/dev/null
+        noctalia msg wallpaper-set "$THUMB_PATH" 2>/dev/null || true
     else
         echo "Error: ffmpeg failed to extract thumbnail from $WP" >> "$LOG_FILE"
     fi

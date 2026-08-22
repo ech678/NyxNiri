@@ -1,20 +1,14 @@
-"""
-NyxNiri Wallpaper Picker Backend Engine
-Executes wallpaper switching for static images and live video wallpapers, synchronized with Noctalia & mpvpaper plugin state.
-"""
-
 import os
 import sys
 import json
 import random
 import subprocess
+import time
 
 STATE_DIR = os.path.expanduser("~/.local/state/noctalia/mpvpaper")
 ASSIGNMENTS_FILE = os.path.join(STATE_DIR, "assignments.json")
 
-
 def _write_mpvpaper_assignments(assignments: dict):
-    """Write mpvpaper assignments atomically to synchronize with Noctalia's mpvpaper service."""
     try:
         os.makedirs(STATE_DIR, exist_ok=True)
         tmp_file = f"{ASSIGNMENTS_FILE}.tmp.{os.getpid()}"
@@ -28,52 +22,56 @@ def _write_mpvpaper_assignments(assignments: dict):
     except Exception as e:
         print(f"Warning: Failed to update mpvpaper assignments: {e}", file=sys.stderr)
 
+def _wait_for_process_exit(name: str, timeout: float = 3.0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            result = subprocess.run(
+                ["pgrep", "-x", name],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1
+            )
+            if result.returncode != 0:
+                return True
+        except Exception:
+            return True
+        time.sleep(0.05)
+    return False
+
+def _clear_mpvpaper():
+    try:
+        subprocess.run(
+            ["noctalia", "msg", "plugin", "noctalia/mpvpaper:service", "all", "clear-all"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2
+        )
+    except Exception:
+        pass
+    _write_mpvpaper_assignments({})
+    subprocess.run(["pkill", "-x", "mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _wait_for_process_exit("mpvpaper", timeout=2.0)
 
 def apply_static_wallpaper(path: str) -> bool:
-    """Apply static wallpaper, clear mpvpaper video assignments, and restore host wallpaper rendering."""
     try:
-        # 1. Notify Noctalia's mpvpaper service to clear assignments and re-enable static wallpaper layer
-        try:
-            subprocess.run(
-                ["noctalia", "msg", "plugin", "noctalia/mpvpaper:service", "all", "clear-all"],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2
-            )
-        except Exception:
-            pass
-
-        # 2. Clear mpvpaper assignments file directly as fallback
-        _write_mpvpaper_assignments({})
-
-        # 3. Terminate any running mpvpaper instances
-        subprocess.run(["pkill", "-x", "mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-        # 4. Apply static wallpaper via Noctalia IPC to trigger full-system theme extraction and layer restore
+        _clear_mpvpaper()
         subprocess.Popen(["noctalia", "msg", "wallpaper-set", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
     except Exception as e:
         print(f"Error applying static wallpaper: {e}", file=sys.stderr)
         return False
 
-
 def apply_dynamic_wallpaper(video_path: str, thumb_path: str = None) -> bool:
-    """Apply dynamic video wallpaper via mpvpaper and synchronize Noctalia Material You palette."""
     try:
-        # 1. Terminate existing mpvpaper instances
-        subprocess.run(["pkill", "-x", "mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-        # 2. Update assignments so Noctalia's plugin and hooks recognize the active video
+        _clear_mpvpaper()
         _write_mpvpaper_assignments({"*": video_path})
-
-        # 3. If thumbnail is available, set it as Noctalia wallpaper for instant theme sync
         if thumb_path and os.path.isfile(thumb_path):
-            subprocess.run(["noctalia", "msg", "wallpaper-set", thumb_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-        # 4. Launch mpvpaper with Noctalia lua sync hook and auto-pause
+            subprocess.run(
+                ["noctalia", "msg", "wallpaper-set", thumb_path],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2
+            )
+        time.sleep(0.15)
         hook_script = os.path.expanduser("~/.config/noctalia/mpv-hook.lua")
         mpv_opts = "loop-file=inf panscan=1.0 no-audio hwdec=auto"
         if os.path.isfile(hook_script):
             mpv_opts += f" --script={hook_script}"
-
         cmd = ["mpvpaper", "--auto-pause", "-o", mpv_opts, "*", video_path]
         subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
@@ -81,17 +79,13 @@ def apply_dynamic_wallpaper(video_path: str, thumb_path: str = None) -> bool:
         print(f"Error applying live wallpaper: {e}", file=sys.stderr)
         return False
 
-
 def apply_wallpaper(item) -> bool:
-    """Polymorphic wallpaper application dispatcher."""
     if item.is_video:
         return apply_dynamic_wallpaper(item.path, item.thumb_path)
     else:
         return apply_static_wallpaper(item.path)
 
-
 def apply_random_wallpaper(items: list):
-    """Pick and apply a random wallpaper from the provided item collection."""
     if not items:
         return None
     target = random.choice(items)

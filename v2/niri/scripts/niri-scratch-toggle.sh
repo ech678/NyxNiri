@@ -103,8 +103,6 @@ case "$TARGET_APP" in
     wallpaper|wallpapers|"wallpaper-picker"|WallpaperPicker|*wallpaper-picker.py)
         if [ -f "$HOME/.config/niri/scripts/wallpaper-picker.py" ]; then
             niri msg action spawn -- "$HOME/.config/niri/scripts/wallpaper-picker.py"
-        elif [ -f "${BASH_SOURCE%/*}/wallpaper-picker.py" ]; then
-            niri msg action spawn -- "${BASH_SOURCE%/*}/wallpaper-picker.py"
         else
             niri msg action spawn -- wallpaper-picker.py
         fi

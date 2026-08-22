@@ -98,7 +98,7 @@ list_backups() {
             bname=$(basename "$b")
             local note=""
             if [ -f "$b/note.txt" ]; then
-                note=" ($(cat "$b/note.txt"))"
+                note=" ($(head -n1 "$b/note.txt" 2>/dev/null || echo ""))"
             fi
             echo -e "  \e[1;32m[$idx]\e[0m $bname$note"
             idx=$((idx + 1))

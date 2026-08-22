@@ -36,7 +36,7 @@ clone_repo_bootstrap() {
         
         local _t_depth
         _t_depth=$(printf '%s' "$target_dir" | tr -cd '/' | wc -c)
-        if [ -n "$target_dir" ] && [ "$_t_depth" -ge 3 ] && [[ "$target_dir" == *".cache/NyxNiri" ]]; then
+        if [ -n "$target_dir" ] && [ "$_t_depth" -ge 3 ] && [[ "$target_dir" == *".cache/NyxNiri" ]] && [[ "$target_dir" == "$HOME"* ]]; then
             rm -rf "$target_dir" 2>/dev/null || true
         fi
 

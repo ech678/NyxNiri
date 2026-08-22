@@ -1,4 +1,5 @@
 #!/bin/bash
+set -uo pipefail
 # Hook to synchronize mpvpaper's video wallpaper with Noctalia's native wallpaper and theme.
 
 # Check dependencies
@@ -12,7 +13,7 @@ done
 ASSIGNMENTS_FILE="$HOME/.local/state/noctalia/mpvpaper/assignments.json"
 
 # Signal trap for clean termination
-trap 'exit 0' INT TERM EXIT
+trap 'exit 0' INT TERM
 
 process_assignments() {
     local VIDEO_PATH THUMB_NAME THUMB_PATH CURRENT_WP

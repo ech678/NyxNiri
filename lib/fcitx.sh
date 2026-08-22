@@ -9,7 +9,6 @@
 
 set -euo pipefail
 
-FCITX_THEME="nyxmellow"
 FCITX_THEMES_DIR="$HOME/.local/share/fcitx5/themes"
 FCITX_THEME_DIR="$FCITX_THEMES_DIR/$FCITX_THEME"
 FCITX_TEMPLATE_DIR="$FCITX_THEME_DIR/templates"

@@ -139,12 +139,12 @@ _phase_render_templates() {
     esc_home=$(printf '%s\n' "$HOME" | sed 's/[|&]/\\&/g')
     esc_wp_dest=$(printf '%s\n' "$wp_dest" | sed 's/[|&]/\\&/g')
 
-    if [ -f "$HOME/.config/$THEME_ENGINE/noctalia-config.toml" ]; then
+    if [ -f "$HOME/.config/$THEME_ENGINE/${THEME_ENGINE}-config.toml" ]; then
         local esc_wp_video_dest
         esc_wp_video_dest=$(printf '%s\n' "$wp_dest/video" | sed 's/[|&]/\\&/g')
-        sed -i "s|^directory = \".*\"|directory = \"${esc_wp_dest}\"|" "$HOME/.config/$THEME_ENGINE/noctalia-config.toml"
-        sed -i "s|^video_directory = \".*\"|video_directory = \"${esc_wp_video_dest}\"|" "$HOME/.config/$THEME_ENGINE/noctalia-config.toml"
-        sed -i -E "s|/home/[^/]+|${esc_home}|g" "$HOME/.config/$THEME_ENGINE/noctalia-config.toml"
+        sed -i "s|^directory = \".*\"|directory = \"${esc_wp_dest}\"|" "$HOME/.config/$THEME_ENGINE/${THEME_ENGINE}-config.toml"
+        sed -i "s|^video_directory = \".*\"|video_directory = \"${esc_wp_video_dest}\"|" "$HOME/.config/$THEME_ENGINE/${THEME_ENGINE}-config.toml"
+        sed -i -E "s|/home/[^/]+|${esc_home}|g" "$HOME/.config/$THEME_ENGINE/${THEME_ENGINE}-config.toml"
     fi
     if [ -f "$HOME/.config/$MAIN_WM/config.kdl" ]; then
         sed -i -E "s|/home/[^/]+|${esc_home}|g" "$HOME/.config/$MAIN_WM/config.kdl"
@@ -236,7 +236,8 @@ deploy_selected_configs() {
 
     local _custom_log
     _custom_log=$(mktemp) || _custom_log=""
-    export NYXNIRI_CUSTOM_LOG="$_custom_log"
+    NYXNIRI_CUSTOM_LOG="$_custom_log"
+    export NYXNIRI_CUSTOM_LOG
     register_temp_path "$NYXNIRI_CUSTOM_LOG"
 
     _phase_atomic_deployment "${items_to_deploy[@]}"
