@@ -41,6 +41,7 @@ class WallpaperPickerWindow(Gtk.Window):
         self.cursor_time = 0.0
         self.is_dismissing = False
         self._suppress_hover = False
+        self._hover_settled = False
         self.chip_boxes = []
         self.card_boxes = []
         self.search_box = None
@@ -110,6 +111,7 @@ class WallpaperPickerWindow(Gtk.Window):
         self.palette = load_material_palette()
         self.is_dismissing = False
         self._suppress_hover = False
+        self._hover_settled = False
         self.entry_spring.omega = 16.0
         self.entry_spring.zeta = 0.76
         self.entry_spring.current = 0.0
@@ -128,6 +130,7 @@ class WallpaperPickerWindow(Gtk.Window):
         if self.is_dismissing:
             return
         self.is_dismissing = True
+        self._suppress_hover = True
         if self.cursor_timer_id is not None:
             GLib.source_remove(self.cursor_timer_id)
             self.cursor_timer_id = None
@@ -213,6 +216,12 @@ class WallpaperPickerWindow(Gtk.Window):
         max_scroll = self.get_max_scroll_y()
         self.target_scroll_y = max(0.0, min(max_scroll, self.target_scroll_y))
         self._request_frame()
+
+    def _hit_test_card(self, mx, my):
+        for idx, (bx, by, bw, bh) in enumerate(self.card_boxes):
+            if by - 8.0 <= my <= by + bh + 8.0 and bx <= mx <= bx + bw:
+                return idx
+        return None
 
     def on_draw(self, widget, cr):
         entry_val = max(0.0, min(1.0, self.entry_spring.current))
@@ -320,12 +329,7 @@ class WallpaperPickerWindow(Gtk.Window):
         if new_hover_cat != self.hover_cat_idx:
             self.hover_cat_idx = new_hover_cat
             self._request_frame()
-        new_hover_card = None
-        items = self.get_current_items()
-        for idx, (bx, by, bw, bh) in enumerate(self.card_boxes):
-            if idx < len(items) and bx <= mx <= bx + bw and by <= my <= by + bh:
-                new_hover_card = idx
-                break
+        new_hover_card = self._hit_test_card(mx, my)
         if new_hover_card != self.hovered_card_idx:
             self.hovered_card_idx = new_hover_card
             if new_hover_card is not None:
@@ -373,10 +377,10 @@ class WallpaperPickerWindow(Gtk.Window):
                     self._request_frame()
                     return True
             items = self.get_current_items()
-            for idx, (bx, by, bw, bh) in enumerate(self.card_boxes):
-                if idx < len(items) and bx <= mx <= bx + bw and by <= my <= by + bh:
-                    self.select_and_apply(items[idx])
-                    return True
+            hit_idx = self._hit_test_card(mx, my)
+            if hit_idx is not None and hit_idx < len(items):
+                self.select_and_apply(items[hit_idx])
+                return True
             win_w = self.get_allocated_width() or 1920
             win_h = self.get_allocated_height() or 1080
             dialog_w = min(WIN_WIDTH, win_w - 40.0)
