@@ -180,6 +180,7 @@ class WallpaperPickerWindow(Gtk.Window):
         if self.cursor_timer_id is not None:
             GLib.source_remove(self.cursor_timer_id)
             self.cursor_timer_id = None
+        self.scanner.shutdown()
         release_instance_lock(self.lock_fd, self.pid_path)
         self.lock_fd = None
         self.hide()

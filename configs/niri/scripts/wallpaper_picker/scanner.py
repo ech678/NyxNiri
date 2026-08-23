@@ -195,6 +195,9 @@ class WallpaperScanner:
     def _generate_thumbnail_worker(self, item: WallpaperItem):
         item.is_loading = True
         try:
+            if not os.path.isfile(item.path):
+                item.is_loading = False
+                return
             if item.is_video:
                 import uuid
                 tmp_thumb = f"{item.thumb_path}.tmp.{os.getpid()}.{uuid.uuid4().hex[:6]}.jpg"
@@ -237,3 +240,10 @@ class WallpaperScanner:
         except Exception:
             pass
         return ""
+
+    def shutdown(self):
+        """Gracefully shut down the thumbnail thread pool."""
+        try:
+            self.executor.shutdown(wait=False, cancel_futures=True)
+        except Exception:
+            pass

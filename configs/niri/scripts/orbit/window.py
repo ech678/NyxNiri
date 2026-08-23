@@ -103,6 +103,7 @@ class OrbitLauncher(Gtk.Window):
         # GdkFrameClock VBLANK synchronization callback
         self.tick_callback_id = None
         self.last_frame_time = 0
+        self.cursor_timer_id = None
 
         # Layer Shell Setup
         GtkLayerShell.init_for_window(self)
@@ -289,6 +290,9 @@ class OrbitLauncher(Gtk.Window):
             return
         self.is_dismissing = True
         self.im_context.focus_out()
+        if self.cursor_timer_id is not None:
+            GLib.source_remove(self.cursor_timer_id)
+            self.cursor_timer_id = None
         self.entry_spring.target = 0.0
         self._request_frame()
 
@@ -393,6 +397,14 @@ class OrbitLauncher(Gtk.Window):
             self.last_frame_time = 0
             self.tick_callback_id = self.add_tick_callback(self.on_frame_tick)
 
+    def _on_cursor_blink(self):
+        if self.is_dismissing:
+            self.cursor_timer_id = None
+            return GLib.SOURCE_REMOVE
+        self.cursor_time += 0.5
+        self.queue_draw()
+        return GLib.SOURCE_CONTINUE
+
     def on_frame_tick(self, widget, frame_clock):
         frame_time = frame_clock.get_frame_time()
         dt = 0.016 if self.last_frame_time == 0 else (frame_time - self.last_frame_time) / 1_000_000.0
@@ -418,9 +430,13 @@ class OrbitLauncher(Gtk.Window):
         if self.engine_switch_spring.update(dt):
             still_animating = True
 
-        # Keep smooth animation for breathing neon cursor while search is active
         if self.search_spring.current > 0.01 and not self.is_dismissing and len(self.menu_stack) == 0:
-            still_animating = True
+            if self.cursor_timer_id is None:
+                self.cursor_timer_id = GLib.timeout_add(500, self._on_cursor_blink)
+        else:
+            if self.cursor_timer_id is not None:
+                GLib.source_remove(self.cursor_timer_id)
+                self.cursor_timer_id = None
 
         active_idx = self.keyboard_selected if self.keyboard_selected is not None else self.hovered_index
         for i in range(self.num_items):

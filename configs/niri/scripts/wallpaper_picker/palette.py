@@ -59,7 +59,7 @@ def load_material_palette() -> dict:
                             palette["on_surface"] = rgb
                         elif k in ("subtext0", "subtext1", "overlay2"):
                             palette["on_surface_var"] = rgb
-                        elif k in ("overlay0", "overlay1"):
+                        elif k in ("overlay1",):
                             palette["outline"] = rgb
         except Exception:
             pass
