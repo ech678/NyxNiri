@@ -239,20 +239,6 @@ if status is-interactive
     # No greeting
     set fish_greeting
 
-    # Tab 智能自动补全：优先采纳灰色历史建议，无建议时触发 Tab 列表补全
-    function custom_tab_complete
-        if commandline -f accept-autosuggestion
-            # 成功采纳自动提示建议
-        else
-            commandline -f complete
-        end
-    end
-
-    function fish_user_key_bindings
-        # 绑定 Tab 键
-        bind \t custom_tab_complete
-    end
-
     # Use starship prompt (Disable in pure TTY to avoid Nerd Font square boxes)
     if test "$TERM" != "linux"; and command -v starship &>/dev/null
         starship init fish | source
