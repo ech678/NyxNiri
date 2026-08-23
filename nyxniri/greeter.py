@@ -122,10 +122,11 @@ def greeter_install() -> bool:
 
     write_cmd = f"cat << 'EOF' > {GREETER_ETC_CFG}\n{toml_content}\nEOF"
     res_w = subprocess.run(["sudo", "sh", "-c", write_cmd], check=False)
-    if res_w.returncode == 0:
+    if res_w.returncode == 0 and GREETER_ETC_CFG.is_file():
         print(msg("greeter_config_written", str(GREETER_ETC_CFG)))
     else:
         print(msg("greeter_config_failed", str(GREETER_ETC_CFG)))
+        return False
 
     state_cmd = (
         f"mkdir -p /var/lib/{GREETER_PKG} && "
@@ -139,7 +140,7 @@ def greeter_install() -> bool:
     # Polkit rule
     polkit_rule = (
         'polkit.addRule(function(action, subject) {\n'
-        f'    if (action.id == "org.{THEME_ENGINE}.greeter.apply-appearance") {{\n'
+        f'    if (action.id == "org.{THEME_ENGINE}.greeter.apply-appearance" && subject.isInGroup("wheel")) {{\n'
         '        return polkit.Result.YES;\n'
         '    }\n'
         '});\n'
@@ -198,9 +199,12 @@ def greeter_uninstall() -> bool:
 
     bak = Path(f"{GREETER_ETC_CFG}.nyxniri.bak")
     if bak.is_file():
-        restore_cmd = f"mv {bak} {GREETER_ETC_CFG}"
+        restore_cmd = f"cp {bak} {GREETER_ETC_CFG} 2>/dev/null; rm -f {bak}"
         subprocess.run(["sudo", "sh", "-c", restore_cmd], check=False)
-        print(msg("greeter_uninstall_restored", str(GREETER_ETC_CFG)))
+        if GREETER_ETC_CFG.is_file():
+            print(msg("greeter_uninstall_restored", str(GREETER_ETC_CFG)))
+        else:
+            print(msg("greeter_uninstall_nobackup"))
     else:
         print(msg("greeter_uninstall_nobackup"))
 

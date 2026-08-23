@@ -137,7 +137,11 @@ def fcitx_restart() -> None:
         res = subprocess.run(["pgrep", "-x", "fcitx5"], capture_output=True, check=False)
         if res.returncode == 0:
             subprocess.run(["pkill", "-x", "fcitx5"], check=False)
-            time.sleep(1)
+            for _ in range(20):
+                chk = subprocess.run(["pgrep", "-x", "fcitx5"], capture_output=True, check=False)
+                if chk.returncode != 0:
+                    break
+                time.sleep(0.05)
             subprocess.Popen(["fcitx5", "-d"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(msg("fcitx_restarted"))
 
@@ -181,8 +185,6 @@ def fcitx_register_templates() -> bool:
                 clean_lines.append(line)
 
         template_block = f"""
-# NyxMellow 动态 fcitx5 皮肤（mellow 形状 + Material You 自动取色）
-# 路径中的 /home/user 为占位符，由 nyxniri.deploy 在部署时替换为实际 $HOME
 [theme.templates.user.{FCITX_THEME}_theme]
 index = 0
 input_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/templates/theme.conf"

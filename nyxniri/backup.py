@@ -247,7 +247,14 @@ def delete_backup(target_arg: str = "") -> bool:
         if chosen_keys is None:
             print(msg("delete_cancelled"))
             return False
-        selected = [backups[int(key) - 1] for key in chosen_keys]
+        selected = []
+        for key in chosen_keys:
+            try:
+                idx = int(key) - 1
+                if 0 <= idx < len(backups):
+                    selected.append(backups[idx])
+            except (ValueError, IndexError):
+                continue
     else:
         print(msg("delete_invalid_num"))
         return False
@@ -289,11 +296,14 @@ def delete_backup(target_arg: str = "") -> bool:
 def uninstall_nyxniri(mode: str = "") -> bool:
     """Safely uninstall NyxNiri or deep purge configurations and cache."""
     from nyxniri.deploy import discover_config_items
-    from nyxniri.fcitx import fcitx_uninstall
     from nyxniri.greeter import greeter_uninstall
 
     env = get_env()
     items = discover_config_items()
+
+    if not mode and not sys.stdin.isatty():
+        print(msg("uninstall_interactive_required"))
+        return False
 
     if not mode and sys.stdin.isatty():
         print(msg("uninstall_title"))
@@ -358,6 +368,8 @@ def uninstall_nyxniri(mode: str = "") -> bool:
         origin = backups[0]
         print(msg("log_restoring_origin_config", origin.name))
         rollback_configs(str(origin))
+        from nyxniri.deploy import deploy_selected_configs
+        deploy_selected_configs(do_backup=False)
         print(msg("restore_origin_done"))
         return True
 
@@ -376,6 +388,12 @@ def uninstall_nyxniri(mode: str = "") -> bool:
 
     target_bin = env.home / ".local/bin" / CLI_CMD
     target_bin.unlink(missing_ok=True)
+
+    from nyxniri.fcitx import fcitx_uninstall as _fcitx_cleanup
+    try:
+        _fcitx_cleanup()
+    except Exception:
+        pass
 
     print(msg("uninstall_archived", str(archive_dir)))
     print(msg("uninstall_done"))

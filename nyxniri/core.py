@@ -135,7 +135,10 @@ def acquire_lock() -> None:
     """Acquire single-instance PID lock, auto-healing stale/dead locks."""
     global _LOCK_FILE
     env = get_env()
-    env.state_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        env.state_dir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
     _LOCK_FILE = env.state_dir / f"{CLI_CMD}.lock"
 
     if _LOCK_FILE.is_file():

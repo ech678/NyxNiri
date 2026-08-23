@@ -25,6 +25,7 @@ def load_material_palette() -> dict:
         "tertiary": (1.00, 0.75, 0.35),
         "surface": (0.12, 0.13, 0.18),
         "surface_dim": (0.05, 0.06, 0.09),
+        "surface_bright": (0.18, 0.20, 0.26),
         "on_surface": (0.95, 0.96, 0.99),
         "on_surface_var": (0.68, 0.72, 0.78),
         "outline": (0.80, 0.84, 0.90),
@@ -56,7 +57,7 @@ def load_material_palette() -> dict:
                             palette["on_surface"] = rgb
                         elif k in ("subtext0", "subtext1", "overlay2"):
                             palette["on_surface_var"] = rgb
-                        elif k in ("overlay0", "overlay1"):
+                        elif k in ("overlay1",):
                             palette["outline"] = rgb
         except Exception:
             pass
