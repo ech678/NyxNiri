@@ -127,8 +127,22 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
 
         if dest.exists() or dest.is_symlink():
             old_dest = dest.with_name(f"{dest.name}.old.{pid}")
-            dest.rename(old_dest)
-            tmp_new.rename(dest)
+            try:
+                dest.rename(old_dest)
+            except Exception as rename_err:
+                log_msg("ERROR", f"Failed to move existing dest to backup during atomic replace: {rename_err}")
+                _remove_path(tmp_new)
+                return False
+            try:
+                tmp_new.rename(dest)
+            except Exception as swap_err:
+                log_msg("ERROR", f"Failed to swap new content into place: {swap_err}")
+                try:
+                    old_dest.rename(dest)
+                except Exception:
+                    pass
+                _remove_path(tmp_new)
+                return False
             _remove_path(old_dest)
         else:
             tmp_new.rename(dest)
@@ -345,6 +359,16 @@ def _wallpaper_pack_present_at(root: Path) -> bool:
     except OSError:
         return False
 
+def _copy_tree_skip_existing(src: Path, dest: Path) -> None:
+    """Recursively copy a directory tree, skipping files that already exist at the destination."""
+    dest.mkdir(parents=True, exist_ok=True)
+    for item in src.iterdir():
+        target = dest / item.name
+        if item.is_dir():
+            _copy_tree_skip_existing(item, target)
+        elif not target.exists():
+            shutil.copy2(item, target)
+
 
 def wallpapers_pack_present() -> bool:
     """Check whether the external wallpaper pack is deployed."""
@@ -382,11 +406,10 @@ def deploy_wallpapers(do_download: bool = False) -> WallpaperDeployResult:
                 shutil.rmtree(tmp_clone / ".git", ignore_errors=True)
                 (tmp_clone / "preview.webp").unlink(missing_ok=True)
                 (tmp_clone / "README.md").unlink(missing_ok=True)
-                # Copy into wp_dest
                 for item in tmp_clone.iterdir():
                     target = wp_dest / item.name
                     if item.is_dir():
-                        shutil.copytree(item, target, dirs_exist_ok=True)
+                        _copy_tree_skip_existing(item, target)
                     elif not target.exists():
                         shutil.copy2(item, target)
                 downloaded = True

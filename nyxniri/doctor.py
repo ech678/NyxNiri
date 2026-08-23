@@ -154,6 +154,53 @@ def run_doctor() -> bool:
     else:
         print(msg("doctor_warn", _text("Fisher: 缺少 ~/.config/fish/fish_plugins", "Fisher: ~/.config/fish/fish_plugins is missing")))
 
+    audio_ok = False
+    if shutil.which("pactl") or shutil.which("pwpctl"):
+        audio_ok = True
+    elif shutil.which("systemctl"):
+        for svc in ("pipewire", "pulseaudio"):
+            res = subprocess.run(["systemctl", "--user", "is-active", svc], capture_output=True, check=False)
+            if res.returncode == 0:
+                audio_ok = True
+                break
+    if audio_ok:
+        print(msg("doctor_ok", _text("音频服务: 运行中", "Audio Service: running")))
+    else:
+        print(msg("doctor_warn", _text("音频服务: 未检测到 PipeWire 或 PulseAudio", "Audio Service: no PipeWire or PulseAudio detected")))
+
+    brightness_ok = False
+    if shutil.which("brightnessctl") or shutil.which("light"):
+        brightness_ok = True
+    elif shutil.which("ddcutil"):
+        brightness_ok = True
+    if brightness_ok:
+        print(msg("doctor_ok", _text("亮度控制: 工具可用", "Brightness Control: tool available")))
+    else:
+        print(msg("doctor_warn", _text("亮度控制: 未找到 brightnessctl/light/ddcutil", "Brightness Control: brightnessctl/light/ddcutil not found")))
+
+    portal_ok = False
+    if shutil.which("xdg-desktop-portal"):
+        portal_ok = True
+        if shutil.which("systemctl"):
+            res = subprocess.run(["systemctl", "--user", "is-active", "xdg-desktop-portal"], capture_output=True, check=False)
+            if res.returncode != 0:
+                print(msg("doctor_warn", _text("XDG 门户: 已安装但服务未运行", "XDG Portal: installed but service not running")))
+            else:
+                print(msg("doctor_ok", _text("XDG 门户: 服务运行中", "XDG Portal: service running")))
+    else:
+        print(msg("doctor_warn", _text("XDG 门户: xdg-desktop-portal 未安装", "XDG Portal: xdg-desktop-portal not installed")))
+
+    try:
+        stat = os.statvfs(str(home))
+        free_gb = (stat.f_bavail * stat.f_frsize) / (1024 ** 3)
+        if free_gb < 1.0:
+            print(msg("doctor_err", _text(f"磁盘空间: 仅剩 {free_gb:.1f} GB", f"Disk Space: only {free_gb:.1f} GB free")))
+            all_ok = False
+        else:
+            print(msg("doctor_ok", _text(f"磁盘空间: 可用 {free_gb:.1f} GB", f"Disk Space: {free_gb:.1f} GB free")))
+    except Exception:
+        pass
+
     print(msg("all_done"))
     print(msg("reboot_hint"))
     log_msg("INFO", f"System Doctor executed: {'All checks passed' if all_ok else 'Warnings detected'}")
@@ -190,6 +237,51 @@ def generate_bug_report() -> Optional[Path]:
     except Exception:
         pass
 
+    display_info = "Unknown"
+    try:
+        if shutil.which("niri"):
+            res = subprocess.run(["niri", "msg", "-j", "outputs"], capture_output=True, text=True, check=False)
+            if res.returncode == 0 and res.stdout.strip():
+                import json
+                outputs = json.loads(res.stdout)
+                display_lines = []
+                for out in outputs:
+                    name = out.get("name", "?")
+                    w = out.get("logical", {}).get("width", "?")
+                    h = out.get("logical", {}).get("height", "?")
+                    scale = out.get("logical", {}).get("scale", "?")
+                    display_lines.append(f"  {name}: {w}x{h} @ {scale}x")
+                display_info = "\n".join(display_lines) if display_lines else "No outputs"
+    except Exception:
+        pass
+
+    tool_versions = []
+    for tool in (MAIN_WM, THEME_ENGINE, "fish", "starship", "kitty", "fastfetch", "mpvpaper", "ffmpeg"):
+        if shutil.which(tool):
+            try:
+                res = subprocess.run([tool, "--version"], capture_output=True, text=True, check=False, timeout=5)
+                ver_line = (res.stdout or res.stderr).splitlines()[0] if (res.stdout or res.stderr) else "unknown"
+                tool_versions.append(f"  {tool}: {ver_line}")
+            except Exception:
+                tool_versions.append(f"  {tool}: (version check failed)")
+    tool_info = "\n".join(tool_versions) if tool_versions else "None found"
+
+    daemon_lines = []
+    if shutil.which("systemctl"):
+        for svc in (THEME_ENGINE, "greetd", "pipewire", "xdg-desktop-portal"):
+            res = subprocess.run(["systemctl", "--user", "is-active", svc], capture_output=True, text=True, check=False)
+            state = res.stdout.strip() if res.stdout.strip() else "unknown"
+            daemon_lines.append(f"  {svc}: {state}")
+    daemon_status = "\n".join(daemon_lines) if daemon_lines else "systemctl not available"
+
+    journal_lines = "No journal available."
+    try:
+        res = subprocess.run(["journalctl", "--user", "-n", "15", "--no-pager", "-q"], capture_output=True, text=True, check=False, timeout=5)
+        if res.returncode == 0 and res.stdout.strip():
+            journal_lines = res.stdout.strip()
+    except Exception:
+        pass
+
     # Recent install log (last 30 lines)
     recent_log = "No log found."
     log_path = env.state_dir / "install.log"
@@ -213,7 +305,15 @@ def generate_bug_report() -> Optional[Path]:
         f"- **Shell**: {shell}\n\n"
         f"## Hardware & GPU\n\n"
         f"```text\n{gpu_info}\n```\n\n"
-        f"## Recent Log Entries (Last 30 lines)\n\n"
+        f"## Display Outputs\n\n"
+        f"```text\n{display_info}\n```\n\n"
+        f"## Tool Versions\n\n"
+        f"```text\n{tool_info}\n```\n\n"
+        f"## Daemon Status\n\n"
+        f"```text\n{daemon_status}\n```\n\n"
+        f"## System Journal (Last 15 lines)\n\n"
+        f"```text\n{journal_lines}\n```\n\n"
+        f"## Recent Install Log (Last 30 lines)\n\n"
         f"```text\n{recent_log}\n```\n"
     )
 

@@ -183,6 +183,30 @@ if [ -d "/usr/share/Kvantum/$KVANTUM_THEME" ] || [ -d "$HOME/.config/Kvantum/$KV
     atomic_update_ini "$HOME/.config/Kvantum/kvantum.kvconfig" "theme" "$KVANTUM_THEME"
 fi
 
+if command -v noctalia >/dev/null 2>&1; then
+    GTK3_COLORS_DIR="$HOME/.config/gtk-3.0"
+    GTK4_COLORS_DIR="$HOME/.config/gtk-4.0"
+    PALETTE_CSS="noctalia-material-you.css"
+    PALETTE_TMP="${XDG_RUNTIME_DIR:-/tmp}/noctalia-gtk-palette.css"
+
+    noctalia msg palette-export --format gtk-css > "$PALETTE_TMP" 2>/dev/null || true
+
+    if [ -s "$PALETTE_TMP" ]; then
+        for css_dir in "$GTK3_COLORS_DIR" "$GTK4_COLORS_DIR"; do
+            mkdir -p "$css_dir" 2>/dev/null || true
+            cp -f "$PALETTE_TMP" "$css_dir/$PALETTE_CSS" 2>/dev/null || true
+            if [ -f "$css_dir/gtk.css" ]; then
+                if ! grep -q "$PALETTE_CSS" "$css_dir/gtk.css" 2>/dev/null; then
+                    printf '\n@import url("%s");\n' "$PALETTE_CSS" >> "$css_dir/gtk.css"
+                fi
+            else
+                printf '@import url("%s");\n' "$PALETTE_CSS" > "$css_dir/gtk.css"
+            fi
+        done
+    fi
+    rm -f "$PALETTE_TMP" 2>/dev/null || true
+fi
+
 # 9. Feedback for Interactive CLI Invocations
 if [ -t 1 ] && [ -n "$ACTION" ]; then
     echo "Theme synced to: $TARGET_MODE (Scheme: $SCHEME_VAL, GTK: $GTK_THEME)"

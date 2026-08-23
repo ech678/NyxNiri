@@ -63,12 +63,16 @@ CORE_DEPS = [
 
 AUR_DEPS = [
     "mpvpaper",
+    "fcitx5-rime",
+    "fcitx5",
+    "fcitx5-configtool",
 ]
 
 OPTIONAL_APPS = [
     "nautilus",
-    "missioncenter",
+    "mission-center",
     "fcitx5-rime",
+    "fcitx5",
 ]
 
 # --- ANSI Styling Palette (NyxNiri Native) ---

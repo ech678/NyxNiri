@@ -254,11 +254,14 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         env=env,
     )
     if res_status.stdout.strip():
-        # Dirty tree
         print(msg("dirty_tree_warn", str(target_dir)))
         if run_mode == "repo":
             print(msg("update_skipped_dev_repo", str(target_dir)))
             log_msg("WARN", f"Skipped update for dirty local repo: {target_dir}")
+            return None
+        if not sys.stdin.isatty():
+            log_msg("WARN", f"Non-interactive update aborted: dirty tree in {target_dir}")
+            print(msg("update_skipped_dev_repo", str(target_dir)))
             return None
         if not prompt_confirm("dirty_tree_confirm", "n"):
             print(msg("update_cancelled_dirty"))
