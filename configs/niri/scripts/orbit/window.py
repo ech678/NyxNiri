@@ -401,7 +401,7 @@ class OrbitLauncher(Gtk.Window):
         if self.is_dismissing:
             self.cursor_timer_id = None
             return GLib.SOURCE_REMOVE
-        self.cursor_time += 0.5
+        self.cursor_time += 0.03
         self.queue_draw()
         return GLib.SOURCE_CONTINUE
 
@@ -432,7 +432,8 @@ class OrbitLauncher(Gtk.Window):
 
         if self.search_spring.current > 0.01 and not self.is_dismissing and len(self.menu_stack) == 0:
             if self.cursor_timer_id is None:
-                self.cursor_timer_id = GLib.timeout_add(500, self._on_cursor_blink)
+                self.cursor_timer_id = GLib.timeout_add(30, self._on_cursor_blink)
+            still_animating = True
         else:
             if self.cursor_timer_id is not None:
                 GLib.source_remove(self.cursor_timer_id)
