@@ -180,6 +180,7 @@ class WallpaperPickerWindow(Gtk.Window):
         if self.cursor_timer_id is not None:
             GLib.source_remove(self.cursor_timer_id)
             self.cursor_timer_id = None
+        self.scanner.shutdown()
         release_instance_lock(self.lock_fd, self.pid_path)
         self.lock_fd = None
         self.hide()
@@ -241,6 +242,9 @@ class WallpaperPickerWindow(Gtk.Window):
 
     def select_and_apply(self, item):
         """Apply selected wallpaper in background thread and dismiss immediately."""
+        self._suppress_hover = True
+        self.hovered_card_idx = None
+        self.hover_cat_idx = None
         self.dismiss_window()
         threading.Thread(target=apply_wallpaper, args=(item,), daemon=False).start()
 
@@ -501,7 +505,7 @@ class WallpaperPickerWindow(Gtk.Window):
             # 4. Clicked card
             items = self.get_current_items()
             for idx, (bx, by, bw, bh) in enumerate(self.card_boxes):
-                if idx < len(items) and bx <= mx <= bx + bw and by <= my <= by + bh:
+                if idx < len(items) and self._hit_test_card(mx, my, bx, by, bw, bh):
                     self.select_and_apply(items[idx])
                     return True
 
@@ -597,6 +601,19 @@ class WallpaperPickerWindow(Gtk.Window):
                 self.keyboard_selected_idx = 0
                 self._request_frame()
                 return True
+            elif keyval in (Gdk.KEY_a, Gdk.KEY_A):
+                self.cursor_idx = 0
+                self._request_frame()
+                return True
+            elif keyval in (Gdk.KEY_e, Gdk.KEY_E):
+                self.cursor_idx = len(self.search_query)
+                self._request_frame()
+                return True
+            elif keyval in (Gdk.KEY_l, Gdk.KEY_L):
+                self.cursor_idx = 0
+                self.target_scroll_y = 0.0
+                self._request_frame()
+                return True
             elif keyval in (Gdk.KEY_w, Gdk.KEY_W):
                 before = self.search_query[:self.cursor_idx]
                 after = self.search_query[self.cursor_idx:]
@@ -682,6 +699,17 @@ class WallpaperPickerWindow(Gtk.Window):
 
         # 5. Backspace & Delete at Cursor Index
         if keyval == Gdk.KEY_BackSpace:
+            if ctrl:
+                before = self.search_query[:self.cursor_idx]
+                after = self.search_query[self.cursor_idx:]
+                words = before.rstrip().rsplit(None, 1)
+                new_before = words[0] if len(words) > 1 else ""
+                self.cursor_idx = len(new_before)
+                self.search_query = new_before + after
+                self.target_scroll_y = 0.0
+                self.keyboard_selected_idx = 0
+                self._request_frame()
+                return True
             if self.cursor_idx > 0:
                 self.cursor_time = 0.0
                 self.search_query = self.search_query[:self.cursor_idx - 1] + self.search_query[self.cursor_idx:]
@@ -740,6 +768,26 @@ class WallpaperPickerWindow(Gtk.Window):
             self._request_frame()
             return True
 
+        if keyval == Gdk.KEY_Page_Up:
+            if num_items == 0:
+                return True
+            visible_rows = max(1, int(GRID_VIEWPORT_H // (CARD_HEIGHT + GAP_Y)))
+            if self.keyboard_selected_idx is None:
+                self.keyboard_selected_idx = 0
+            self.keyboard_selected_idx = max(0, self.keyboard_selected_idx - visible_rows * GRID_COLS)
+            self.scroll_to_make_visible(self.keyboard_selected_idx)
+            self._request_frame()
+            return True
+        elif keyval == Gdk.KEY_Page_Down:
+            if num_items == 0:
+                return True
+            visible_rows = max(1, int(GRID_VIEWPORT_H // (CARD_HEIGHT + GAP_Y)))
+            if self.keyboard_selected_idx is None:
+                self.keyboard_selected_idx = 0
+            self.keyboard_selected_idx = min(num_items - 1, self.keyboard_selected_idx + visible_rows * GRID_COLS)
+            self.scroll_to_make_visible(self.keyboard_selected_idx)
+            self._request_frame()
+            return True
         # 8. Enter -> Apply selected wallpaper
         if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
             if self.keyboard_selected_idx is not None and 0 <= self.keyboard_selected_idx < num_items:

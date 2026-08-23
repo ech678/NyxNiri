@@ -195,6 +195,8 @@ class WallpaperScanner:
     def _generate_thumbnail_worker(self, item: WallpaperItem):
         item.is_loading = True
         try:
+            if not os.path.isfile(item.path):
+                return
             if item.is_video:
                 import uuid
                 tmp_thumb = f"{item.thumb_path}.tmp.{os.getpid()}.{uuid.uuid4().hex[:6]}.jpg"
@@ -227,6 +229,12 @@ class WallpaperScanner:
         finally:
             item.is_loading = False
 
+    def shutdown(self):
+        """Gracefully shut down the thumbnail thread pool."""
+        try:
+            self.executor.shutdown(wait=False, cancel_futures=True)
+        except Exception:
+            pass
     def get_current_wallpaper(self) -> str:
         """Query Noctalia IPC for the currently active wallpaper path."""
         try:
