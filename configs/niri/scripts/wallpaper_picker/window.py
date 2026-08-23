@@ -338,6 +338,15 @@ class WallpaperPickerWindow(Gtk.Window):
         items = self.get_current_items()
         max_scroll_y = self.get_max_scroll_y()
 
+        first_visible_row = max(0, int(scroll_y // (CARD_HEIGHT + GAP_Y)))
+        last_visible_row = int((scroll_y + GRID_VIEWPORT_H) // (CARD_HEIGHT + GAP_Y)) + 1
+        first_visible_idx = first_visible_row * GRID_COLS
+        last_visible_idx = last_visible_row * GRID_COLS + GRID_COLS
+        self.scanner.load_visible_thumbnails(
+            self.scanner.items.index(items[first_visible_idx]) if first_visible_idx < len(items) and items else 0,
+            self.scanner.items.index(items[min(last_visible_idx, len(items) - 1)]) + 1 if last_visible_idx < len(items) and items else len(self.scanner.items),
+        ) if items else None
+
         # Viewport clipping with safe padding
         cr.save()
         cr.rectangle(dialog_x + 16.0, grid_y, dialog_w - 32.0, grid_h)

@@ -123,9 +123,21 @@ class WallpaperScanner:
         return self.items
 
     def load_thumbnails_async(self):
-        """Submit background tasks for missing thumbnails and load existing ones."""
-        for item in self.items:
+        """Submit background tasks for missing thumbnails and load existing ones (batched)."""
+        batch_size = 24
+        for item in self.items[:batch_size]:
             if item.surface is not None:
+                continue
+            if os.path.isfile(item.thumb_path):
+                self._load_cached_pixbuf(item)
+            else:
+                self.executor.submit(self._generate_thumbnail_worker, item)
+
+    def load_visible_thumbnails(self, start_idx: int, end_idx: int):
+        """Load thumbnails for a visible range of items (lazy loading on scroll)."""
+        for i in range(max(0, start_idx), min(len(self.items), end_idx)):
+            item = self.items[i]
+            if item.surface is not None or item.is_loading:
                 continue
             if os.path.isfile(item.thumb_path):
                 self._load_cached_pixbuf(item)
@@ -151,7 +163,6 @@ class WallpaperScanner:
             surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, target_w, target_h)
             cr = cairo.Context(surf)
 
-            # Top rounded clip path
             cr.new_path()
             cr.arc(r, r, r, 3.14159, 3.0 * 3.14159 / 2.0)
             cr.arc(target_w - r, r, r, 3.0 * 3.14159 / 2.0, 2.0 * 3.14159)
@@ -174,7 +185,7 @@ class WallpaperScanner:
             cr.paint()
 
             item.surface = surf
-            item.pixbuf = pixbuf
+            item.pixbuf = None
         except Exception as e:
             print(f"Error pre-rendering surface for {item.filename}: {e}", file=sys.stderr)
 
@@ -242,8 +253,11 @@ class WallpaperScanner:
         return ""
 
     def shutdown(self):
-        """Gracefully shut down the thumbnail thread pool."""
+        """Gracefully shut down the thumbnail thread pool and release all cached surfaces."""
         try:
             self.executor.shutdown(wait=False, cancel_futures=True)
         except Exception:
             pass
+        for item in self.items:
+            item.surface = None
+            item.pixbuf = None

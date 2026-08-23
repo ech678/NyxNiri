@@ -313,8 +313,7 @@ def draw_search_hub(cr, cx: float, cy: float, search_prog: float, entry_val: flo
 
             # Breathing Neon Caret
             cursor_x = min(draw_qx + qw + 2.0, sx + sw - 22.0)
-            sin_val = (math.sin(cursor_time * 5.5) + 1.0) / 2.0
-            cursor_alpha = (0.35 + 0.65 * sin_val) * tag_fade
+            cursor_alpha = (0.85 if int(cursor_time * 2.0) % 2 == 0 else 0.2) * tag_fade
             cr.save()
             cr.new_path()
             cr.move_to(cursor_x, cy - 12.0)
@@ -334,8 +333,8 @@ def draw_search_hub(cr, cx: float, cy: float, search_prog: float, entry_val: flo
             PangoCairo.show_layout(cr, layout_placeholder)
             cr.restore()
 
-            sin_val = (math.sin(cursor_time * 5.5) + 1.0) / 2.0
-            cursor_alpha = (0.35 + 0.65 * sin_val) * tag_fade
+            sin_val = 1.0 if int(cursor_time * 2.0) % 2 == 0 else 0.25
+            cursor_alpha = sin_val * tag_fade
             cr.save()
             cr.new_path()
             cr.move_to(text_start_x, cy - 12.0)
