@@ -11,11 +11,11 @@ from concurrent.futures import ThreadPoolExecutor
 import gi
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import GLib, Gdk, GdkPixbuf
+from gi.repository import GLib, GdkPixbuf
 
 from .config import (
     STATIC_EXTENSIONS, VIDEO_EXTENSIONS, ALL_SUPPORTED_EXTENSIONS,
-    CARD_WIDTH, THUMB_HEIGHT, CARD_RADIUS,
+    CARD_WIDTH, THUMB_HEIGHT,
     CACHE_DIR, get_wallpaper_search_roots
 )
 

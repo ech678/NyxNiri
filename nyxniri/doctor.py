@@ -163,6 +163,10 @@ def run_doctor() -> bool:
             if res.returncode == 0:
                 audio_ok = True
                 break
+        if not audio_ok:
+            res = subprocess.run(["systemctl", "is-active", svc], capture_output=True, check=False)
+            if res.returncode == 0:
+                audio_ok = True
     if audio_ok:
         print(msg("doctor_ok", _text("音频服务: 运行中", "Audio Service: running")))
     else:

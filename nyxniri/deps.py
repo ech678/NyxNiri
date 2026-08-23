@@ -28,6 +28,8 @@ def is_dep_installed(cmd: str) -> bool:
     # 2. Specific runtime / font / tool checks
     if cmd == "inotify-tools":
         return shutil.which("inotifywait") is not None
+    elif cmd == "mission-center":
+        return shutil.which("missioncenter") is not None
     elif cmd == "python-gobject":
         res = subprocess.run([sys.executable, "-c", "import gi"], capture_output=True, check=False)
         return res.returncode == 0

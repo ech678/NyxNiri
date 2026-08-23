@@ -5,7 +5,6 @@ GTK Widget-based Wayland Layer-Shell dialog with CSS styling.
 
 import sys
 import os
-import math
 import random
 import threading
 import gi
@@ -13,17 +12,17 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("GtkLayerShell", "0.1")
 gi.require_version("Gdk", "3.0")
 gi.require_version("Pango", "1.0")
-from gi.repository import Gtk, Gdk, GtkLayerShell, GLib, Pango, GdkPixbuf
+from gi.repository import Gtk, Gdk, GtkLayerShell, GLib, Pango
 
 from .palette import load_material_palette
 from .lock import release_instance_lock
 from .config import (
     WIN_WIDTH, WIN_HEIGHT, WIN_RADIUS,
     GRID_COLS, CARD_WIDTH, CARD_HEIGHT, THUMB_HEIGHT,
-    GAP_X, GAP_Y, GRID_VIEWPORT_Y, GRID_VIEWPORT_H
+    GAP_X, GAP_Y
 )
 from .scanner import WallpaperScanner
-from .backend import apply_wallpaper, apply_random_wallpaper
+from .backend import apply_wallpaper
 
 
 _CSS_TEMPLATE = """
@@ -348,13 +347,10 @@ class WallpaperPickerWindow(Gtk.Window):
     def _on_card_activated(self, flowbox, child):
         if self.is_dismissing:
             return
-        card = child.get_child()
-        for path, widget in self.card_widgets.items():
-            if widget == card:
-                for item in self.scanner.items:
-                    if item.path == path:
-                        self.select_and_apply(item)
-                        return
+        idx = child.get_index()
+        items = self._get_filtered_items()
+        if 0 <= idx < len(items):
+            self.select_and_apply(items[idx])
 
     def select_and_apply(self, item):
         self.dismiss_window()

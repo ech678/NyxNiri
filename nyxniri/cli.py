@@ -288,6 +288,10 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
             return False
         wallpaper_result = deploy_wallpapers(do_download=False)
         if fcitx_enabled(): fcitx_install()
+        from nyxniri.deps import get_missing_deps
+        missing = get_missing_deps()
+        if missing:
+            print(msg("new_deps_after_update", ", ".join(missing)))
         render_completion_screen("update", wallpaper_result=wallpaper_result)
         return True
 
@@ -475,7 +479,7 @@ def main_menu_loop() -> None:
             if update_result is True:
                 offer_overwrite_upgrade()
                 print(msg("update_restarting"))
-                os.execv(sys.executable, [sys.executable, "-m", "nyxniri"])
+                os.execv(sys.executable, [sys.executable, "-m", "nyxniri"] + sys.argv[1:])
             elif update_result is False:
                 print(msg("updating_failed"), file=sys.stderr)
             from nyxniri.deps import get_missing_deps

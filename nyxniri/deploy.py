@@ -63,8 +63,20 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
             shutil.copy2(src, tmp_file)
             if dest.exists() or dest.is_symlink():
                 old_dest = dest.with_name(f"{dest.name}.old.{pid}")
-                dest.rename(old_dest)
-                tmp_file.rename(dest)
+                try:
+                    dest.rename(old_dest)
+                except Exception:
+                    _remove_path(tmp_file)
+                    return False
+                try:
+                    tmp_file.rename(dest)
+                except Exception:
+                    try:
+                        old_dest.rename(dest)
+                    except Exception:
+                        pass
+                    _remove_path(tmp_file)
+                    return False
                 _remove_path(old_dest)
             else:
                 tmp_file.rename(dest)
@@ -316,7 +328,7 @@ def _phase_post_install_services() -> None:
         print(msg("log_enable_mpvpaper"))
         subprocess.run([THEME_ENGINE, "msg", "plugins", "enable", "noctalia/mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
 
-    if shutil.which("fish"):
+    if shutil.which("fish") and sys.stdin.isatty():
         print(msg("log_check_fisher"))
         log_msg("INFO", "Checking Fisher plugin manager installation")
         tfd, tname = tempfile.mkstemp(suffix=".fish")
@@ -366,6 +378,9 @@ def _copy_tree_skip_existing(src: Path, dest: Path) -> None:
         target = dest / item.name
         if item.is_dir():
             _copy_tree_skip_existing(item, target)
+        elif item.is_symlink():
+            if not target.exists():
+                target.symlink_to(os.readlink(item))
         elif not target.exists():
             shutil.copy2(item, target)
 

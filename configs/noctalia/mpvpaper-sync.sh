@@ -15,25 +15,25 @@ ASSIGNMENTS_FILE="$HOME/.local/state/noctalia/mpvpaper/assignments.json"
 # Signal trap for clean termination
 trap 'exit 0' INT TERM
 
+PROCESSING_LOCK="${XDG_RUNTIME_DIR:-/tmp}/nyxniri-mpvpaper-sync.lock"
+exec 8>"$PROCESSING_LOCK"
+flock -n 8 || exit 0
+
 process_assignments() {
     local VIDEO_PATH THUMB_NAME THUMB_PATH CURRENT_WP
-    # Extract the first video path using jq
     if [ ! -f "$ASSIGNMENTS_FILE" ]; then
         return
     fi
-    
+
     VIDEO_PATH=$(jq -r 'to_entries | .[0].value // empty' "$ASSIGNMENTS_FILE" 2>/dev/null || true)
-    
+
     if [[ -n "$VIDEO_PATH" && -f "$VIDEO_PATH" ]]; then
-        # Check if it's a video
         if [[ "$VIDEO_PATH" =~ \.(mp4|webm|mkv|mov|gif)$ ]]; then
-            # Generate a hash-based filename for the thumbnail to avoid re-generating for the same video
             THUMB_NAME=$(printf '%s' "$VIDEO_PATH" | md5sum | awk '{print $1}')
             THUMB_PATH="$HOME/.cache/noctalia/mpvpaper/${THUMB_NAME}.jpg"
-            
+
             mkdir -p "$(dirname "$THUMB_PATH")"
-            
-            # Generate thumbnail if it doesn't exist
+
             if [ ! -f "$THUMB_PATH" ]; then
                 local tmp_thumb="${THUMB_PATH}.tmp.$$"
                 if ffmpeg -y -i "$VIDEO_PATH" -ss 00:00:01 -vframes 1 "$tmp_thumb" 2>/dev/null; then
@@ -42,8 +42,7 @@ process_assignments() {
                     rm -f "$tmp_thumb"
                 fi
             fi
-            
-            # Set it as the native Noctalia wallpaper
+
             CURRENT_WP=$(noctalia msg wallpaper-get 2>/dev/null || true)
             if [ "$CURRENT_WP" != "$THUMB_PATH" ]; then
                 noctalia msg wallpaper-set "$THUMB_PATH" 2>/dev/null || true

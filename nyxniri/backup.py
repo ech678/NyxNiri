@@ -247,7 +247,14 @@ def delete_backup(target_arg: str = "") -> bool:
         if chosen_keys is None:
             print(msg("delete_cancelled"))
             return False
-        selected = [backups[int(key) - 1] for key in chosen_keys]
+        selected = []
+        for key in chosen_keys:
+            try:
+                idx = int(key) - 1
+                if 0 <= idx < len(backups):
+                    selected.append(backups[idx])
+            except (ValueError, IndexError):
+                continue
     else:
         print(msg("delete_invalid_num"))
         return False
@@ -361,6 +368,8 @@ def uninstall_nyxniri(mode: str = "") -> bool:
         origin = backups[0]
         print(msg("log_restoring_origin_config", origin.name))
         rollback_configs(str(origin))
+        from nyxniri.deploy import deploy_selected_configs
+        deploy_selected_configs(do_backup=False)
         print(msg("restore_origin_done"))
         return True
 

@@ -36,17 +36,17 @@ atomic_update_ini() {
 
     local key_found=0
     local has_settings_header=0
+    local escaped_key
+    escaped_key=$(printf '%s' "$key" | sed 's/[][\.^$*+?(){}|/]/\\&/g')
 
     if [ -f "$file" ]; then
         while IFS= read -r line || [ -n "$line" ]; do
-            # Check for section header
             if [[ "$line" =~ ^\[Settings\] ]]; then
                 has_settings_header=1
                 echo "$line" >> "$tmp_file"
                 continue
             fi
-            # Match target key with optional whitespace around '='
-            if [[ "$line" =~ ^[[:space:]]*${key}[[:space:]]*= ]]; then
+            if [[ "$line" =~ ^[[:space:]]*${escaped_key}[[:space:]]*= ]]; then
                 echo "${key}=${val}" >> "$tmp_file"
                 key_found=1
             else
@@ -55,7 +55,6 @@ atomic_update_ini() {
         done < "$file"
     fi
 
-    # If key was not present in the original file, append it cleanly under [Settings]
     if [ "$key_found" -eq 0 ]; then
         if [ "$has_settings_header" -eq 0 ] && [ ! -s "$tmp_file" ]; then
             echo "[Settings]" > "$tmp_file"
@@ -102,9 +101,12 @@ fi
 if [ "$ACTION" = "toggle" ]; then
     if command -v noctalia >/dev/null 2>&1 && noctalia msg status >/dev/null 2>&1; then
         noctalia msg theme-mode-toggle 2>/dev/null || true
-        exit 0
+        sleep 0.3
+        TARGET_MODE=$(noctalia msg theme-mode-get 2>/dev/null || echo "")
+        if [ "$TARGET_MODE" = "auto" ] || [ -z "$TARGET_MODE" ]; then
+            TARGET_MODE="$DEFAULT_FALLBACK_MODE"
+        fi
     else
-        # Standalone fallback toggle without Noctalia daemon
         curr_scheme="prefer-dark"
         if command -v gsettings >/dev/null 2>&1; then
             curr_scheme=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | tr -d "'" || echo "prefer-dark")
@@ -119,6 +121,7 @@ elif [ "$ACTION" = "dark" ] || [ "$ACTION" = "light" ]; then
     TARGET_MODE="$ACTION"
     if command -v noctalia >/dev/null 2>&1 && noctalia msg status >/dev/null 2>&1; then
         noctalia msg theme-mode-set "$ACTION" 2>/dev/null || true
+        sleep 0.2
     fi
 else
     # Derived from hook environment, Noctalia IPC, or system query
@@ -131,6 +134,8 @@ else
             curr_scheme=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | tr -d "'" || echo "")
             if [ "$curr_scheme" = "prefer-light" ] || [ "$curr_scheme" = "default" ]; then
                 TARGET_MODE="light"
+            elif [ -n "$curr_scheme" ]; then
+                TARGET_MODE="dark"
             else
                 TARGET_MODE="$DEFAULT_FALLBACK_MODE"
             fi
@@ -167,15 +172,16 @@ for css_dir in "$HOME/.config/gtk-4.0" "$HOME/.config/gtk-3.0"; do
     if [ -f "$css_dir/noctalia.css" ]; then
         rm -f "$css_dir/noctalia.css" 2>/dev/null || true
     fi
-    if [ -f "$css_dir/gtk.css" ] && grep -E -q "libadwaita\.css|noctalia\.css|iNiR theming" "$css_dir/gtk.css" 2>/dev/null; then
-        rm -f "$css_dir/gtk.css" 2>/dev/null || true
+    if [ -f "$css_dir/gtk.css" ] && grep -E -q "libadwaita\.css|noctalia\.css" "$css_dir/gtk.css" 2>/dev/null; then
+        grep -v "libadwaita\.css\|noctalia\.css" "$css_dir/gtk.css" > "$css_dir/gtk.css.tmp" 2>/dev/null || true
+        mv -f "$css_dir/gtk.css.tmp" "$css_dir/gtk.css" 2>/dev/null || true
     fi
 done
 
 # 8. Hot-Reload Running Applications Live
 # Kitty terminal hot reload
 if command -v pkill >/dev/null 2>&1; then
-    pkill -SIGUSR1 -x kitty 2>/dev/null || true
+    pkill -SIGUSR1 -f "kitty" 2>/dev/null || true
 fi
 
 # Kvantum Qt theme synchronization (silent INI update only if theme directory exists)

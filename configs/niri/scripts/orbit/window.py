@@ -297,6 +297,9 @@ class OrbitLauncher(Gtk.Window):
         self._request_frame()
 
     def _finish_dismiss(self):
+        if self.cursor_timer_id is not None:
+            GLib.source_remove(self.cursor_timer_id)
+            self.cursor_timer_id = None
         release_instance_lock(self.lock_fd, self.pid_path)
         self.lock_fd = None
         self.hide()
@@ -632,13 +635,9 @@ class OrbitLauncher(Gtk.Window):
         self._request_frame()
 
     def on_key_release(self, widget, event):
-        if self.search_active and len(self.menu_stack) == 0 and self.im_context.filter_keypress(event):
-            return True
-
         if self.is_dismissing:
             return False
 
-        # Hotkey flick release: releasing Super / A / S while hovering over a capsule
         keyval = event.keyval
         if keyval in (
             Gdk.KEY_Super_L, Gdk.KEY_Super_R, Gdk.KEY_Meta_L, Gdk.KEY_Meta_R,

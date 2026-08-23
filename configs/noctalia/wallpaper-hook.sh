@@ -13,6 +13,10 @@ LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/hook.log"
 
+if [ -f "$LOG_FILE" ] && [ "$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 524288 ]; then
+    tail -c 262144 "$LOG_FILE" > "$LOG_FILE.tmp" 2>/dev/null && mv -f "$LOG_FILE.tmp" "$LOG_FILE" 2>/dev/null || true
+fi
+
 echo "$(date) wallpaper_changed hook triggered. WP=$WP" >> "$LOG_FILE"
 
 # Only process video files to avoid infinite loops

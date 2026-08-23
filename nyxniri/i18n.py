@@ -1352,7 +1352,9 @@ def msg(key: str, *args: Any) -> str:
     lang = get_lang()
     entry = TRANSLATIONS.get(key)
     if not entry:
-        return key if not args else f"{key} ({', '.join(str(a) for a in args)})"
+        if args:
+            return f"{key} ({', '.join(str(a) for a in args)})"
+        return key
 
     template = entry.get(lang) or entry.get("en") or key
     if args:

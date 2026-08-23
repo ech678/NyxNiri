@@ -85,16 +85,16 @@ apply_effects() {
 if [ "${1:-}" = "--sync" ]; then
     link_target="$(readlink "$EFFECTS_LINK" 2>/dev/null || true)"
     if [ "$link_target" != "$EYECARE_EFFECTS" ] && [ "$link_target" != "$NORMAL_EFFECTS" ]; then
-        # effects.kdl missing/broken (manual deletion): recreate as Normal.
         ln -sfn "$NORMAL_EFFECTS" "$EFFECTS_LINK"
         CURRENTLY_ON=false
         echo "$(date '+%F %T') [eyecare] healed broken effects.kdl -> Normal" >> "$LOG_FILE"
-        if command -v niri >/dev/null 2>&1; then
-            niri msg action load-config-file >>"$LOG_FILE" 2>&1 || true
-        fi
     fi
-    # 阻塞等待 1 秒，确保 Wayland 和 Noctalia IPC 完全启动
-    sleep 1
+    for _ in $(seq 1 20); do
+        if command -v niri >/dev/null 2>&1 && niri msg version >/dev/null 2>&1; then
+            break
+        fi
+        sleep 0.1
+    done
     if [ "$HAS_NOCTALIA" = "true" ]; then
         noctalia msg nightlight-disable 2>/dev/null || true
     fi

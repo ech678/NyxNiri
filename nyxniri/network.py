@@ -42,7 +42,12 @@ def _run_cancellable_process(
             text=True,
             **kwargs,
         )
-        stdout, _ = process.communicate()
+        try:
+            stdout, _ = process.communicate(timeout=120)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+            return _ProcessAttempt(-1, "")
         return _ProcessAttempt(process.returncode, stdout or "")
 
     process = subprocess.Popen(
