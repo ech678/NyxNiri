@@ -5,6 +5,7 @@ Ensures atomic single-instance execution. If another instance is running, sends 
 
 import os
 import sys
+import time
 import signal
 import fcntl
 
@@ -20,6 +21,12 @@ def acquire_instance_lock(lock_path: str, pid_path: str) -> int:
                 with open(pid_path, "r") as pf:
                     old_pid = int(pf.read().strip())
                 os.kill(old_pid, signal.SIGTERM)
+                for _ in range(50):
+                    time.sleep(0.01)
+                    try:
+                        os.kill(old_pid, 0)
+                    except OSError:
+                        break
             except Exception:
                 pass
         sys.exit(0)

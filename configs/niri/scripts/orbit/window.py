@@ -675,7 +675,7 @@ class OrbitLauncher(Gtk.Window):
                     self.search_spring.target = 0.0
                     self._request_frame()
                     return True
-                elif keyval in (Gdk.KEY_BackSpace, Gdk.KEY_w, Gdk.KEY_W):
+                elif keyval in (Gdk.KEY_w, Gdk.KEY_W):
                     words = self.search_query.rstrip().rsplit(None, 1)
                     self.search_query = words[0] if len(words) > 1 else ""
                     if not self.search_query:
@@ -692,9 +692,12 @@ class OrbitLauncher(Gtk.Window):
                 self._request_frame()
                 return True
 
-            # Backspace -> delete character (collapse when empty)
             if keyval == Gdk.KEY_BackSpace:
-                self.search_query = self.search_query[:-1]
+                if ctrl:
+                    words = self.search_query.rstrip().rsplit(None, 1)
+                    self.search_query = words[0] if len(words) > 1 else ""
+                else:
+                    self.search_query = self.search_query[:-1]
                 if not self.search_query:
                     self.search_active = False
                     self.search_spring.target = 0.0
@@ -712,9 +715,15 @@ class OrbitLauncher(Gtk.Window):
                     self._request_frame()
                     return True
 
-            # Return / Enter -> execute web search
             if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
                 if self.search_query.strip():
+                    q = self.search_query.strip().lower()
+                    for app in self.apps:
+                        name = str(app.get("name", "")).lower()
+                        cmd = str(app.get("cmd", app.get("id", ""))).lower()
+                        if q == name or q == cmd or name.startswith(q):
+                            self.trigger_app(app)
+                            return True
                     self.trigger_search()
                 return True
 

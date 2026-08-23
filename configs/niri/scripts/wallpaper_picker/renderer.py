@@ -256,8 +256,7 @@ def draw_card(cr, x: float, y: float, w: float, h: float, item,
     out_rgb = palette["outline"]
     surf_bright = palette.get("surface_bright", (0.16, 0.18, 0.24))
 
-    # Subtle elevation on hover
-    card_y = y - hover_val * 4.0
+    card_y = y
     r = CARD_RADIUS
 
     # 1. Hover Glow / Shadow
