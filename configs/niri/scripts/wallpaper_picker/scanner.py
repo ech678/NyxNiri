@@ -1,6 +1,6 @@
 """
 NyxNiri Wallpaper Picker Scanner Engine
-Recursive directory traversal, asynchronous thumbnail generation, pre-rendered Cairo surface caching, and active wallpaper detection.
+Recursive directory traversal, asynchronous thumbnail generation, and active wallpaper detection.
 """
 
 import os
@@ -8,7 +8,6 @@ import sys
 import hashlib
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
-import cairo
 import gi
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
@@ -22,7 +21,6 @@ from .config import (
 
 
 class WallpaperItem:
-    """Represents a single static or live wallpaper item."""
 
     def __init__(self, path: str, category: str = "Wallpapers"):
         self.path = os.path.realpath(path)
@@ -40,17 +38,14 @@ class WallpaperItem:
             self.mtime = 0.0
             self.size = 0
 
-        # Unique cache key derived from path + mtime + size
         raw_key = f"{self.path}:{self.mtime}:{self.size}".encode("utf-8")
         self.hash_id = hashlib.md5(raw_key).hexdigest()
         self.thumb_path = os.path.join(CACHE_DIR, f"{self.hash_id}.jpg")
         self.pixbuf = None
-        self.surface = None
         self.is_loading = False
 
 
 class WallpaperScanner:
-    """Manages wallpaper discovery, category grouping, and thumbnail background extraction with Cairo surface caching."""
 
     def __init__(self, on_thumb_ready_cb=None):
         self.on_thumb_ready_cb = on_thumb_ready_cb
@@ -61,7 +56,6 @@ class WallpaperScanner:
         os.makedirs(CACHE_DIR, exist_ok=True)
 
     def scan(self) -> list:
-        """Scan all resolved search roots and subdirectories."""
         roots = get_wallpaper_search_roots()
         seen_paths = set()
         discovered_items = []
@@ -71,7 +65,6 @@ class WallpaperScanner:
             if not os.path.isdir(root):
                 continue
             for dirpath, dirnames, filenames in os.walk(root):
-                # Skip hidden directories
                 dirnames[:] = [d for d in dirnames if not d.startswith(".")]
 
                 rel_dir = os.path.relpath(dirpath, root)
@@ -91,18 +84,15 @@ class WallpaperScanner:
                             seen_paths.add(real_path)
                             item = WallpaperItem(real_path, category=cat_name)
                             discovered_items.append(item)
-                            # Ignore format/system folder names that map to primary tabs
                             if cat_name.lower() not in (
                                 "all", "static", "live", "wallpapers", "pictures", "图片",
                                 "video", "videos", "mpvpaper", "livewallpaper", "livewallpapers"
                             ):
                                 custom_subfolders.add(cat_name)
 
-        # Sort naturally by title
         discovered_items.sort(key=lambda x: x.title.lower())
         self.items = discovered_items
 
-        # Build categories list: primary tabs + actual custom user subfolders
         sorted_subfolders = sorted(list(custom_subfolders), key=lambda x: x.lower())
         self.categories = ["All", "Static", "Live"] + sorted_subfolders
         self.category_items = {cat: [] for cat in self.categories}
@@ -116,17 +106,15 @@ class WallpaperScanner:
             if item.category in self.category_items and item.category not in ("All", "Static", "Live"):
                 self.category_items[item.category].append(item)
 
-        # Pre-warm first 6 items
         for it in self.items[:6]:
             self._ensure_thumbnail(it)
 
         return self.items
 
     def load_thumbnails_async(self):
-        """Submit background tasks for missing thumbnails and load existing ones (batched)."""
         batch_size = 24
         for item in self.items[:batch_size]:
-            if item.surface is not None:
+            if item.pixbuf is not None:
                 continue
             if os.path.isfile(item.thumb_path):
                 self._load_cached_pixbuf(item)
@@ -134,9 +122,8 @@ class WallpaperScanner:
                 self.executor.submit(self._generate_thumbnail_worker, item)
 
     def load_visible_thumbnails(self, items_slice: list):
-        """Load thumbnails for a visible range of items (lazy loading on scroll)."""
         for item in items_slice:
-            if item.surface is not None or item.is_loading:
+            if item.pixbuf is not None or item.is_loading:
                 continue
             if os.path.isfile(item.thumb_path):
                 self._load_cached_pixbuf(item)
@@ -144,56 +131,12 @@ class WallpaperScanner:
                 self.executor.submit(self._generate_thumbnail_worker, item)
 
     def _ensure_thumbnail(self, item: WallpaperItem):
-        """Ensure thumbnail is generated and pre-rendered into Cairo surface."""
-        if item.surface is not None:
+        if item.pixbuf is not None:
             return
         if os.path.isfile(item.thumb_path):
             self._load_cached_pixbuf(item)
         else:
             self._generate_thumbnail_worker(item)
-
-    def _create_cairo_surface(self, item: WallpaperItem, pixbuf: GdkPixbuf.Pixbuf):
-        """Pre-render and clip 16:9 thumbnail onto an offscreen Cairo ImageSurface for zero-cost blitting."""
-        try:
-            target_w = int(CARD_WIDTH)
-            target_h = int(THUMB_HEIGHT)
-            r = CARD_RADIUS
-
-            surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, target_w, target_h)
-            cr = cairo.Context(surf)
-
-            cr.new_path()
-            cr.arc(r, r, r, 3.14159, 3.0 * 3.14159 / 2.0)
-            cr.arc(target_w - r, r, r, 3.0 * 3.14159 / 2.0, 2.0 * 3.14159)
-            cr.line_to(target_w, target_h)
-            cr.line_to(0, target_h)
-            cr.close_path()
-            cr.clip()
-
-            pw = pixbuf.get_width()
-            ph = pixbuf.get_height()
-            scale = max(target_w / pw, target_h / ph)
-            dw = pw * scale
-            dh = ph * scale
-            dx = (target_w - dw) / 2.0
-            dy = (target_h - dh) / 2.0
-
-            cr.translate(dx, dy)
-            cr.scale(scale, scale)
-            Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0)
-            cr.paint()
-
-            item.surface = surf
-            item.pixbuf = None
-        except Exception as e:
-            print(f"Error pre-rendering surface for {item.filename}: {e}", file=sys.stderr)
-
-    def _attach_thumbnail_on_main(self, item: WallpaperItem, pixbuf: GdkPixbuf.Pixbuf):
-        """Main thread hook: Build Cairo surface safely and trigger UI refresh."""
-        self._create_cairo_surface(item, pixbuf)
-        if self.on_thumb_ready_cb and item.surface is not None:
-            self.on_thumb_ready_cb(item)
-        return GLib.SOURCE_REMOVE
 
     def _load_cached_pixbuf(self, item: WallpaperItem):
         try:
@@ -201,6 +144,12 @@ class WallpaperScanner:
             self._attach_thumbnail_on_main(item, pixbuf)
         except Exception:
             self.executor.submit(self._generate_thumbnail_worker, item)
+
+    def _attach_thumbnail_on_main(self, item: WallpaperItem, pixbuf: GdkPixbuf.Pixbuf):
+        item.pixbuf = pixbuf
+        if self.on_thumb_ready_cb and item.pixbuf is not None:
+            self.on_thumb_ready_cb(item)
+        return GLib.SOURCE_REMOVE
 
     def _generate_thumbnail_worker(self, item: WallpaperItem):
         item.is_loading = True
@@ -217,7 +166,6 @@ class WallpaperScanner:
                 ]
                 res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=4)
                 if res.returncode != 0 or not os.path.isfile(tmp_thumb):
-                    # Fallback for very short videos
                     cmd = [
                         "ffmpeg", "-y", "-ss", "00:00:00.1", "-i", item.path,
                         "-vframes", "1", "-vf", "scale=480:-2", tmp_thumb
@@ -241,7 +189,6 @@ class WallpaperScanner:
             item.is_loading = False
 
     def get_current_wallpaper(self) -> str:
-        """Query Noctalia IPC for the currently active wallpaper path."""
         try:
             res = subprocess.run(["noctalia", "msg", "wallpaper-get"], capture_output=True, text=True, timeout=1)
             wp = res.stdout.strip()
@@ -252,11 +199,9 @@ class WallpaperScanner:
         return ""
 
     def shutdown(self):
-        """Gracefully shut down the thumbnail thread pool and release all cached surfaces."""
         try:
             self.executor.shutdown(wait=False, cancel_futures=True)
         except Exception:
             pass
         for item in self.items:
-            item.surface = None
             item.pixbuf = None
