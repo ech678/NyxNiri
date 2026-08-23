@@ -49,9 +49,21 @@ apply_effects() {
         target="$NORMAL_EFFECTS"
     fi
 
+    if [ ! -f "$target" ]; then
+        if [ "$1" = "on" ]; then
+            ln -sfn "$NORMAL_EFFECTS" "$EFFECTS_LINK"
+        else
+            ln -sfn "$NORMAL_EFFECTS" "$EFFECTS_LINK"
+        fi
+        echo "$(date '+%F %T') [eyecare] target missing ($target), fell back to Normal" >> "$LOG_FILE"
+        return
+    fi
+
     ln -sfn "$target" "$EFFECTS_LINK"
     if [ "$(readlink "$EFFECTS_LINK" 2>/dev/null)" != "$target" ]; then
-        echo "$(date '+%F %T') [eyecare] symlink swap failed (target=$target)" >> "$LOG_FILE"
+        rm -f "$EFFECTS_LINK" 2>/dev/null || true
+        ln -s "$target" "$EFFECTS_LINK"
+        echo "$(date '+%F %T') [eyecare] symlink was stale, recreated -> $target" >> "$LOG_FILE"
     fi
 
     if command -v niri >/dev/null 2>&1; then

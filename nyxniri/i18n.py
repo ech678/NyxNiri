@@ -669,9 +669,17 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "zh": "Nautilus (文件管理器)",
         "en": "Nautilus (File Manager)",
     },
+    "app_mission-center": {
+        "zh": "Mission Center (系统监视器)",
+        "en": "Mission Center (System Monitor)",
+    },
     "app_missioncenter": {
         "zh": "Mission Center (系统监视器)",
         "en": "Mission Center (System Monitor)",
+    },
+    "app_fcitx5": {
+        "zh": "Fcitx5 (输入法框架)",
+        "en": "Fcitx5 (Input Method Framework)",
     },
     "app_fcitx5_rime": {
         "zh": "Fcitx5 + 雾凇拼音 (输入法)",
@@ -1292,6 +1300,50 @@ Commands:
     "update_skipped_dev_repo": {
         "zh": f"\n{Colors.BOLD_YELLOW}[!] 本地仓库 ({{0}}) 有未提交的改动或分支偏离。{Colors.RESET}\n{Colors.BOLD_CYAN}已跳过更新，源码和现有配置均未改动。{Colors.RESET}\n",
         "en": f"\n{Colors.BOLD_YELLOW}[!] Local repo ({{0}}) has uncommitted changes or has diverged.{Colors.RESET}\n{Colors.BOLD_CYAN}Update skipped; source and installed configs were left unchanged.{Colors.RESET}\n",
+    },
+    "uninstall_interactive_required": {
+        "zh": f"{Colors.BOLD_RED}[!] 非交互式环境下需要指定卸载模式 (standard|restore|purge)。{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] Non-interactive mode requires an explicit uninstall mode (standard|restore|purge).{Colors.RESET}",
+    },
+    "mpvpaper_leak_upgrade_prompt": {
+        "zh": f"\n{Colors.BOLD_YELLOW}[!] 检测到 mpvpaper 存在内存泄漏 (版本 < 1.9)。是否升级到修复版 mpvpaper-git？[y/N]: {Colors.RESET}",
+        "en": f"\n{Colors.BOLD_YELLOW}[!] mpvpaper memory leak detected (version < 1.9). Upgrade to mpvpaper-git? [y/N]: {Colors.RESET}",
+    },
+    "mpvpaper_upgrading": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: 正在安装 mpvpaper-git…{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: Installing mpvpaper-git…{Colors.RESET}",
+    },
+    "new_deps_after_update": {
+        "zh": f"\n{Colors.BOLD_YELLOW}[!] 更新后检测到新增缺失依赖: {{0}}{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_YELLOW}[!] New missing dependencies detected after update: {{0}}{Colors.RESET}",
+    },
+    "update_restarting": {
+        "zh": f"\n{Colors.BOLD_CYAN}:: 更新完成，正在重新加载…{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_CYAN}:: Update complete, reloading…{Colors.RESET}",
+    },
+    "doctor_audio": {
+        "zh": "音频服务",
+        "en": "Audio Service",
+    },
+    "doctor_brightness": {
+        "zh": "亮度控制",
+        "en": "Brightness Control",
+    },
+    "doctor_portal": {
+        "zh": "XDG 门户",
+        "en": "XDG Portal",
+    },
+    "doctor_disk_space": {
+        "zh": "磁盘空间",
+        "en": "Disk Space",
+    },
+    "doctor_display_info": {
+        "zh": "显示器信息",
+        "en": "Display Info",
+    },
+    "fcitx_auto_deploy_after_install": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: fcitx5 已安装，自动部署 NyxMellow 皮肤…{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: fcitx5 installed; auto-deploying NyxMellow skin…{Colors.RESET}",
     },
 }
 

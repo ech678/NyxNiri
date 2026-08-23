@@ -187,6 +187,8 @@ def install_configs_workflow(mode: str = "full") -> bool:
         do_fcitx = mode == "full" and fcitx_enabled()
         do_greeter = False
         do_backup = False
+        if mode == "config":
+            do_wallpapers = not wallpapers_pack_present()
 
     _phase_preflight_check(mode, chosen_configs, do_fcitx, do_greeter, do_wallpapers, do_backup)
 
@@ -194,6 +196,8 @@ def install_configs_workflow(mode: str = "full") -> bool:
     steps = 1
     if mode == "full":
         steps += 2
+    if mode == "config" and do_wallpapers:
+        steps += 1
     if do_fcitx:
         steps += 1
     if do_greeter:
@@ -225,7 +229,7 @@ def install_configs_workflow(mode: str = "full") -> bool:
 
     # 3. Wallpapers
     wallpaper_result = None
-    if mode == "full":
+    if mode == "full" or do_wallpapers:
         cur_step += 1
         print(msg("install_step_wallpapers", f"{cur_step}/{steps}"))
         wallpaper_result = deploy_wallpapers(do_download=do_wallpapers)
@@ -261,9 +265,18 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
         if failed_items:
             render_completion_screen("update", failed_items=failed_items)
             return False
+        wallpaper_result = deploy_wallpapers(do_download=True)
+        from nyxniri.greeter import greeter_installed
+        if greeter_installed():
+            from nyxniri.greeter import greeter_install
+            greeter_install()
         if fcitx_enabled():
             fcitx_install()
-        render_completion_screen("update")
+        from nyxniri.deps import get_missing_deps
+        missing = get_missing_deps()
+        if missing:
+            print(msg("new_deps_after_update", ", ".join(missing)))
+        render_completion_screen("update", wallpaper_result=wallpaper_result)
         return True
     elif flag == "--no-deploy":
         return True
@@ -461,8 +474,14 @@ def main_menu_loop() -> None:
             update_result = safe_git_pull(env.repo_dir)
             if update_result is True:
                 offer_overwrite_upgrade()
+                print(msg("update_restarting"))
+                os.execv(sys.executable, [sys.executable, "-m", "nyxniri"])
             elif update_result is False:
                 print(msg("updating_failed"), file=sys.stderr)
+            from nyxniri.deps import get_missing_deps
+            missing = get_missing_deps()
+            if missing:
+                print(msg("new_deps_after_update", ", ".join(missing)))
             press_any_key()
         elif choice == 4:
             run_doctor()
@@ -581,22 +600,24 @@ def main() -> None:
                 exit_usage(f"{CLI_CMD} greeter [install|status|uninstall]")
             if sub in ("install", "setup"):
                 greeter_install()
+                sys.exit(0)
             elif sub in ("uninstall", "remove"):
                 greeter_uninstall()
+                sys.exit(0)
             else:
                 greeter_status()
-            sys.exit(0)
+                sys.exit(0)
         elif cmd == "fcitx":
             sub = sub_args[0].lower() if sub_args else ""
             if len(sub_args) > 1 or sub not in ("", "install", "setup", "status", "uninstall", "remove"):
                 exit_usage(f"{CLI_CMD} fcitx [install|status|uninstall]")
             if sub in ("install", "setup"):
-                fcitx_install()
+                sys.exit(0 if fcitx_install() else 1)
             elif sub in ("uninstall", "remove"):
-                fcitx_uninstall()
+                sys.exit(0 if fcitx_uninstall() else 1)
             else:
                 fcitx_status()
-            sys.exit(0)
+                sys.exit(0)
         elif cmd == "theme":
             sub = sub_args[0] if sub_args else "toggle"
             if len(sub_args) > 1 or sub not in ("toggle", "dark", "light", "sync", "status"):
@@ -617,6 +638,10 @@ def main() -> None:
                 exit_usage(f"{CLI_CMD} update [--force|--no-deploy]")
             update_result = safe_git_pull(env.repo_dir)
             if update_result is True:
+                from nyxniri.deps import get_missing_deps
+                missing = get_missing_deps()
+                if missing:
+                    print(msg("new_deps_after_update", ", ".join(missing)))
                 sys.exit(0 if offer_overwrite_upgrade(flag) else 1)
             if update_result is False:
                 print(msg("updating_failed"), file=sys.stderr)

@@ -133,7 +133,7 @@ def ensure_aur_helper() -> Optional[str]:
     return None
 
 def check_mpvpaper_leak() -> None:
-    """Check mpvpaper version for the OpenGL memory leak bug (< 1.9)."""
+    """Check mpvpaper version for the OpenGL memory leak bug (< 1.9) and offer upgrade."""
     if not shutil.which("mpvpaper"):
         return
     try:
@@ -146,7 +146,23 @@ def check_mpvpaper_leak() -> None:
                 parts = tuple(int(p) for p in ver_str.split("."))
                 if parts < (1, 9):
                     print(msg("mpvpaper_leak_warn", ver_str))
-                    print(msg("mpvpaper_upgrade_skip"))
+                    if sys.stdin.isatty():
+                        from nyxniri.tui import prompt_confirm
+                        if prompt_confirm("mpvpaper_leak_upgrade_prompt", "n"):
+                            print(msg("mpvpaper_upgrading"))
+                            helper = aur_helper_usable()
+                            if helper:
+                                subprocess.run([helper, "-S", "--needed", "--noconfirm", "mpvpaper-git"], check=False)
+                            else:
+                                helper = ensure_aur_helper()
+                                if helper:
+                                    subprocess.run([helper, "-S", "--needed", "--noconfirm", "mpvpaper-git"], check=False)
+                                else:
+                                    print(msg("mpvpaper_upgrade_skip"))
+                        else:
+                            print(msg("mpvpaper_upgrade_skip"))
+                    else:
+                        print(msg("mpvpaper_upgrade_skip"))
                 else:
                     print(msg("mpvpaper_version_ok", ver_str))
             except ValueError:
@@ -224,6 +240,10 @@ def run_optional_apps_menu_loop() -> None:
     if chosen:
         print(msg("installing_selected_apps"))
         install_selected_deps(chosen)
+        from nyxniri.fcitx import fcitx5_installed, fcitx_install
+        if "fcitx5-rime" in chosen and fcitx5_installed():
+            print(msg("fcitx_auto_deploy_after_install"))
+            fcitx_install()
         print(msg("opt_apps_install_done"))
     else:
         print(msg("opt_apps_none_selected"))
