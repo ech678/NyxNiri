@@ -360,17 +360,17 @@ class WallpaperPickerWindow(Gtk.Window):
         cr.rectangle(dialog_x + 16.0, grid_y, dialog_w - 32.0, grid_h)
         cr.clip()
 
-        self.card_boxes = []
+        self.card_boxes = [(0, 0, 0, 0)] * len(items)
 
-        for idx, item in enumerate(items):
+        for idx in range(first_visible_idx, min(last_visible_idx, len(items))):
+            item = items[idx]
             row = idx // GRID_COLS
             col = idx % GRID_COLS
             cx = grid_x + col * (CARD_WIDTH + GAP_X)
             cy = grid_y + 8.0 + row * (CARD_HEIGHT + GAP_Y) - scroll_y
 
-            self.card_boxes.append((cx, cy, CARD_WIDTH, CARD_HEIGHT))
+            self.card_boxes[idx] = (cx, cy, CARD_WIDTH, CARD_HEIGHT)
 
-            # Render visible cards
             if cy + CARD_HEIGHT >= grid_y - 20.0 and cy <= grid_y + grid_h + 20.0:
                 is_cur = (item.path == self.current_wp_path)
                 is_active = (self.keyboard_selected_idx == idx)

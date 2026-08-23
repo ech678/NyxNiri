@@ -25,6 +25,24 @@ FONT_CLEAR_ICON = Pango.FontDescription("JetBrainsMono Nerd Font 10")
 FONT_CHIP = Pango.FontDescription("Noto Sans CJK SC, Inter Medium 9.5")
 FONT_CARD_TITLE = Pango.FontDescription("Noto Sans CJK SC, Inter SemiBold 9.5")
 
+_LAYOUT_CACHE = {}
+
+
+def _get_cached_layout(create_fn, text, font_desc, width=None, ellipsize=False):
+    key = (text, str(font_desc), width, ellipsize)
+    if key in _LAYOUT_CACHE:
+        return _LAYOUT_CACHE[key]
+    layout = create_fn(text)
+    layout.set_font_description(font_desc)
+    if width is not None:
+        layout.set_width(width)
+    if ellipsize:
+        layout.set_ellipsize(Pango.EllipsizeMode.END)
+    if len(_LAYOUT_CACHE) > 64:
+        _LAYOUT_CACHE.clear()
+    _LAYOUT_CACHE[key] = layout
+    return layout
+
 
 def draw_rounded_rect(cr, x: float, y: float, w: float, h: float, r: float):
     """Draw a smooth continuous rounded rectangle path."""
@@ -49,30 +67,25 @@ def draw_top_rounded_rect(cr, x: float, y: float, w: float, h: float, r: float):
 
 
 def draw_dialog_container(cr, x: float, y: float, w: float, h: float, r: float, palette: dict):
-    """Draw the central floating frosted glass container with smooth multi-tier diffuse shadow."""
+    """Draw the central floating frosted glass container with smooth diffuse shadow."""
     surf_r, surf_g, surf_b = palette["surface"]
     out_r, out_g, out_b = palette["outline"]
 
-    # 1. Multi-Tier Diffuse Soft Ambient Shadow (Zero Hard Lines / Zero Abrupt Pop)
     cr.save()
-    for off_y, spread, s_alpha in (
-        (2.0, 2.0, 0.08),
-        (6.0, 6.0, 0.06),
-        (14.0, 16.0, 0.04),
-        (24.0, 28.0, 0.02),
-    ):
-        draw_rounded_rect(cr, x - spread, y + off_y - spread / 2.0, w + spread * 2.0, h + spread, r + spread)
-        cr.set_source_rgba(0.0, 0.0, 0.0, s_alpha)
-        cr.fill()
+    shadow_spread = 28.0
+    pattern = cairo.RadialGradient(x + w / 2.0, y + h / 2.0, min(w, h) * 0.3, x + w / 2.0, y + h / 2.0, max(w, h) * 0.75)
+    pattern.add_color_stop_rgba(0.0, 0.0, 0.0, 0.0, 0.10)
+    pattern.add_color_stop_rgba(0.7, 0.0, 0.0, 0.0, 0.06)
+    pattern.add_color_stop_rgba(1.0, 0.0, 0.0, 0.0, 0.0)
+    draw_rounded_rect(cr, x - shadow_spread, y - shadow_spread + 6.0, w + shadow_spread * 2.0, h + shadow_spread * 2.0, r + shadow_spread)
+    cr.set_source(pattern)
+    cr.fill()
     cr.restore()
 
-    # 2. Translucent Frosted Glass Surface
     cr.save()
     draw_rounded_rect(cr, x, y, w, h, r)
     cr.set_source_rgba(surf_r, surf_g, surf_b, 0.96)
     cr.fill_preserve()
-
-    # 3. Subtle Perimeter Border
     cr.set_source_rgba(out_r, out_g, out_b, 0.20)
     cr.set_line_width(1.0)
     cr.stroke()
@@ -256,32 +269,32 @@ def draw_card(cr, x: float, y: float, w: float, h: float, item,
     out_rgb = palette["outline"]
     surf_bright = palette.get("surface_bright", (0.16, 0.18, 0.24))
 
-    # Subtle elevation on hover
     card_y = y
     r = CARD_RADIUS
 
-    # 1. Hover Glow / Shadow
+    cr.save()
+
+    if hover_val > 0.01:
+        cx_center = x + w / 2.0
+        cy_center = card_y + h / 2.0
+        cr.translate(cx_center, cy_center)
+        cr.scale(1.0 + 0.03 * hover_val, 1.0 + 0.03 * hover_val)
+        cr.translate(-cx_center, -cy_center)
+
     if is_hovered or is_active or is_current:
-        cr.save()
         draw_rounded_rect(cr, x, card_y + 4.0, w, h, r)
         glow_alpha = 0.22 + 0.18 * hover_val
         cr.set_source_rgba(prim_rgb[0], prim_rgb[1], prim_rgb[2], glow_alpha * 0.35)
         cr.fill()
-        cr.restore()
     else:
-        cr.save()
         draw_rounded_rect(cr, x, card_y + 2.0, w, h, r)
         cr.set_source_rgba(0.0, 0.0, 0.0, 0.15)
         cr.fill()
-        cr.restore()
 
-    # 2. Card Background
-    cr.save()
     draw_rounded_rect(cr, x, card_y, w, h, r)
     cr.set_source_rgba(surf_bright[0], surf_bright[1], surf_bright[2], 0.90)
     cr.fill()
 
-    # 3. Fast Pre-rendered Cairo Surface Blit (100% Pure Unobstructed Artwork)
     thumb_h = THUMB_HEIGHT
     if item.surface:
         cr.set_source_surface(item.surface, x, card_y)
@@ -291,7 +304,6 @@ def draw_card(cr, x: float, y: float, w: float, h: float, item,
         cr.set_source_rgba(0.08, 0.09, 0.13, 0.85)
         cr.fill()
 
-    # 4. Clean Inline Title with [Live] Tag for Video Wallpapers (Zero Floating Badges)
     info_y = card_y + thumb_h + 8.0
     text_left = x + 14.0
 
@@ -312,7 +324,6 @@ def draw_card(cr, x: float, y: float, w: float, h: float, item,
     cr.set_source_rgba(on_surf[0], on_surf[1], on_surf[2], 0.95)
     PangoCairo.show_layout(cr, title_layout)
 
-    # 5. Card Focus & Active Outline (Primary focus ring when active or current)
     draw_rounded_rect(cr, x, card_y, w, h, r)
     if is_active or is_hovered:
         cr.set_source_rgba(prim_rgb[0], prim_rgb[1], prim_rgb[2], 0.70 + 0.30 * hover_val)
