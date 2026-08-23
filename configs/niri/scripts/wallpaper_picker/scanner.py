@@ -133,10 +133,9 @@ class WallpaperScanner:
             else:
                 self.executor.submit(self._generate_thumbnail_worker, item)
 
-    def load_visible_thumbnails(self, start_idx: int, end_idx: int):
+    def load_visible_thumbnails(self, items_slice: list):
         """Load thumbnails for a visible range of items (lazy loading on scroll)."""
-        for i in range(max(0, start_idx), min(len(self.items), end_idx)):
-            item = self.items[i]
+        for item in items_slice:
             if item.surface is not None or item.is_loading:
                 continue
             if os.path.isfile(item.thumb_path):

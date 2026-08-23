@@ -57,6 +57,8 @@ class WallpaperPickerWindow(Gtk.Window):
         self.cursor_time = 0.0
         self.is_dismissing = False
         self._suppress_hover = False
+        self._cached_items = None
+        self._cached_items_key = None
 
         self.chip_boxes = []
         self.card_boxes = []
@@ -231,14 +233,22 @@ class WallpaperPickerWindow(Gtk.Window):
 
     def get_current_items(self) -> list:
         """Get filtered wallpaper items based on active category and search query."""
+        cache_key = (self.search_query.strip().lower(), self.active_cat_idx)
+        if self._cached_items_key == cache_key and self._cached_items is not None:
+            return self._cached_items
+
         if self.search_query.strip():
             q = self.search_query.strip().lower()
-            return [it for it in self.scanner.items if q in it.title.lower() or q in it.filename.lower()]
-
-        if 0 <= self.active_cat_idx < len(self.scanner.categories):
+            result = [it for it in self.scanner.items if q in it.title.lower() or q in it.filename.lower()]
+        elif 0 <= self.active_cat_idx < len(self.scanner.categories):
             cat_name = self.scanner.categories[self.active_cat_idx]
-            return self.scanner.category_items.get(cat_name, [])
-        return self.scanner.items
+            result = self.scanner.category_items.get(cat_name, [])
+        else:
+            result = self.scanner.items
+
+        self._cached_items = result
+        self._cached_items_key = cache_key
+        return result
 
     def select_and_apply(self, item):
         """Apply selected wallpaper in background thread and dismiss immediately."""
@@ -339,13 +349,11 @@ class WallpaperPickerWindow(Gtk.Window):
         max_scroll_y = self.get_max_scroll_y()
 
         first_visible_row = max(0, int(scroll_y // (CARD_HEIGHT + GAP_Y)))
-        last_visible_row = int((scroll_y + GRID_VIEWPORT_H) // (CARD_HEIGHT + GAP_Y)) + 1
+        last_visible_row = int((scroll_y + GRID_VIEWPORT_H) // (CARD_HEIGHT + GAP_Y)) + 2
         first_visible_idx = first_visible_row * GRID_COLS
-        last_visible_idx = last_visible_row * GRID_COLS + GRID_COLS
-        self.scanner.load_visible_thumbnails(
-            self.scanner.items.index(items[first_visible_idx]) if first_visible_idx < len(items) and items else 0,
-            self.scanner.items.index(items[min(last_visible_idx, len(items) - 1)]) + 1 if last_visible_idx < len(items) and items else len(self.scanner.items),
-        ) if items else None
+        last_visible_idx = min(last_visible_row * GRID_COLS + GRID_COLS, len(items))
+        if items and first_visible_idx < len(items):
+            self.scanner.load_visible_thumbnails(items[first_visible_idx:last_visible_idx])
 
         # Viewport clipping with safe padding
         cr.save()
