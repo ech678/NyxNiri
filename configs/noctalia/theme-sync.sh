@@ -75,6 +75,10 @@ set_system_theme() {
     if command -v gsettings >/dev/null 2>&1; then
         gsettings set org.gnome.desktop.interface color-scheme "$scheme" 2>/dev/null || true
         gsettings set org.gnome.desktop.interface gtk-theme "$gtk_theme" 2>/dev/null || true
+        (
+            sleep 0.5
+            gsettings set org.gnome.desktop.interface color-scheme "$scheme" 2>/dev/null || true
+        ) &
     elif command -v dconf >/dev/null 2>&1; then
         dconf write /org/gnome/desktop/interface/color-scheme "'$scheme'" 2>/dev/null || true
         dconf write /org/gnome/desktop/interface/gtk-theme "'$gtk_theme'" 2>/dev/null || true

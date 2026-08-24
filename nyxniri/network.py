@@ -22,6 +22,7 @@ from nyxniri.core import get_env, log_msg, register_temp_path
 from nyxniri.i18n import msg
 from nyxniri.tui import prompt_confirm
 
+_GIT_NET = ["-c", "http.lowSpeedLimit=1000", "-c", "http.lowSpeedTime=15", "-c", "http.connectTimeout=10", "-c", "http.timeout=20"]
 
 @dataclass(frozen=True)
 class _ProcessAttempt:
@@ -42,7 +43,12 @@ def _run_cancellable_process(
             text=True,
             **kwargs,
         )
-        stdout, _ = process.communicate()
+        try:
+            stdout, _ = process.communicate(timeout=120)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+            return _ProcessAttempt(-1, "")
         return _ProcessAttempt(process.returncode, stdout or "")
 
     process = subprocess.Popen(
@@ -135,6 +141,10 @@ def git_clone_timeout(url: str, target_dir: Path, cancellable: bool = False) -> 
             "http.lowSpeedTime=15",
             "-c",
             "http.lowSpeedLimit=1000",
+            "-c",
+            "http.connectTimeout=10",
+            "-c",
+            "http.timeout=20",
             "--depth",
             "1",
             url,
@@ -266,7 +276,6 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
 
     run_mode = get_env().run_mode
     env = {**os.environ, "LC_ALL": "C"}
-    git_net = ["-c", "http.lowSpeedLimit=1000", "-c", "http.lowSpeedTime=15"]
     # Check for uncommitted changes
     res_status = subprocess.run(
         ["git", "status", "--porcelain"],
@@ -296,7 +305,7 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
     # Fetch & pull
     sys.stdout.write(msg("checking_updates") + "\n")
     res_pull = _run_git_transfer(
-        ["git", *git_net, "pull", "--ff-only"],
+        ["git", *_GIT_NET, "pull", "--ff-only"],
         cwd=target_dir,
         env=env,
     )
@@ -310,7 +319,7 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
 
     # Fallback to fetch & reset only for the disposable remote cache.
     res_fetch = _run_git_transfer(
-        ["git", *git_net, "fetch", "--depth", "1", "origin", "main"],
+        ["git", *_GIT_NET, "fetch", "--depth", "1", "origin", "main"],
         cwd=target_dir,
         env=env,
     )

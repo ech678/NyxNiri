@@ -58,8 +58,9 @@ class WallpaperScanner:
         self.items = []
         self.categories = ["All", "Static", "Live"]
         self.category_items = {"All": [], "Static": [], "Live": []}
-        self.executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="wp_thumb")
+        self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="wp_thumb")
         os.makedirs(CACHE_DIR, exist_ok=True)
+        self._lazy_loaded = False
 
     def scan(self) -> list:
         """Scan all resolved search roots and subdirectories."""
@@ -117,18 +118,35 @@ class WallpaperScanner:
             if item.category in self.category_items and item.category not in ("All", "Static", "Live"):
                 self.category_items[item.category].append(item)
 
-        # Pre-warm first 6 items so the first paint has thumbnails
         for it in self.items[:6]:
-            self._ensure_thumbnail(it)
+            if os.path.isfile(it.thumb_path):
+                self._thumb_ready(it)
+            else:
+                self.executor.submit(self._generate_thumbnail_worker, it)
 
         return self.items
 
     def load_thumbnails_async(self):
         """Fire callback for already-cached thumbs, submit background jobs for the rest."""
-        for item in self.items:
+        for item in self.items[:24]:
             if os.path.isfile(item.thumb_path):
                 self._thumb_ready(item)
             else:
+                self.executor.submit(self._generate_thumbnail_worker, item)
+
+    def load_visible_thumbnails(self, items_slice: list):
+        for item in items_slice:
+            if os.path.isfile(item.thumb_path):
+                self._thumb_ready(item)
+            else:
+                self.executor.submit(self._generate_thumbnail_worker, item)
+
+    def load_category_thumbnails(self, cat_name: str):
+        items = self.category_items.get(cat_name, [])
+        for item in items:
+            if os.path.isfile(item.thumb_path):
+                self._thumb_ready(item)
+            elif not item.is_loading:
                 self.executor.submit(self._generate_thumbnail_worker, item)
 
     def _ensure_thumbnail(self, item: WallpaperItem):
@@ -183,7 +201,7 @@ class WallpaperScanner:
     def get_current_wallpaper(self) -> str:
         """Query Noctalia IPC for the currently active wallpaper path."""
         try:
-            res = subprocess.run(["noctalia", "msg", "wallpaper-get"], capture_output=True, text=True, timeout=1)
+            res = subprocess.run(["noctalia", "msg", "wallpaper-get"], capture_output=True, text=True, timeout=0.3)
             wp = res.stdout.strip()
             if wp and os.path.isfile(wp):
                 return os.path.realpath(wp)

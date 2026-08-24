@@ -80,54 +80,60 @@ def get_env() -> Environment:
         _ENV = Environment()
     return _ENV
 
+_PICS_DIR_CACHE: Optional[Path] = None
+
 def get_pics_dir() -> Path:
-    """Resolve the user's Pictures directory (XDG-aware with fallback to ~/Pictures)."""
+    global _PICS_DIR_CACHE
+    if _PICS_DIR_CACHE is not None:
+        return _PICS_DIR_CACHE
     home = get_env().home
     try:
         res = subprocess.run(
             ["xdg-user-dir", "PICTURES"],
-            capture_output=True,
-            text=True,
-            check=False,
+            capture_output=True, text=True, check=False,
             env={**os.environ, "LC_ALL": "C"}
         )
         d = res.stdout.strip()
         if d and d != str(home):
-            return Path(d)
+            _PICS_DIR_CACHE = Path(d)
+            return _PICS_DIR_CACHE
     except Exception:
         pass
-    return home / "Pictures"
+    _PICS_DIR_CACHE = home / "Pictures"
+    return _PICS_DIR_CACHE
 
 # --- Dynamic Version Extractor ---
+_VERSION_CACHE: str = ""
+
 def get_version(target_dir: Path) -> str:
-    """Extract release version from CHANGELOG.md, Git tag, or fallback to v3.0.0."""
+    global _VERSION_CACHE
+    if _VERSION_CACHE:
+        return _VERSION_CACHE
     changelog = target_dir / "CHANGELOG.md"
     if changelog.is_file():
         try:
             content = changelog.read_text(encoding="utf-8")
             for candidate in re.findall(r"^##\s+\[([^\]]+)\]", content, re.MULTILINE):
                 if candidate.lower() != "unreleased":
-                    return candidate
+                    _VERSION_CACHE = candidate
+                    return _VERSION_CACHE
         except Exception:
             pass
-
     if (target_dir / ".git").is_dir():
         try:
             res = subprocess.run(
                 ["git", "describe", "--tags", "--abbrev=0"],
-                cwd=target_dir,
-                capture_output=True,
-                text=True,
-                check=False,
+                cwd=target_dir, capture_output=True, text=True, check=False,
                 env={**os.environ, "LC_ALL": "C"}
             )
             v = res.stdout.strip()
             if v:
-                return v
+                _VERSION_CACHE = v
+                return _VERSION_CACHE
         except Exception:
             pass
-
-    return "v3.0.0"
+    _VERSION_CACHE = "v3.0.0"
+    return _VERSION_CACHE
 
 # --- Single-Instance Lock (fcntl.flock — auto-releases on process death) ---
 _LOCK_FILE: Optional[Path] = None

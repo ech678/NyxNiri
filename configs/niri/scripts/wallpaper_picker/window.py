@@ -259,6 +259,13 @@ class WallpaperPickerWindow(Gtk.Window):
         self.show_all()
         self.search_entry.grab_focus()
         self.scanner.load_thumbnails_async()
+        scrolled = self.dialog.get_children()
+        if scrolled:
+            for c in scrolled:
+                if isinstance(c, Gtk.ScrolledWindow):
+                    adj = c.get_vadjustment()
+                    adj.connect("value-changed", self._on_scroll)
+                    break
 
     # ── UI construction ──────────────────────────────────────────────────────
     def _build_ui(self):
@@ -440,7 +447,6 @@ class WallpaperPickerWindow(Gtk.Window):
     def on_chip_toggled(self, btn, idx):
         if not btn.get_active():
             return
-        # single-active radio group
         for i, b in enumerate(self.chip_buttons):
             if i != idx and b.get_active():
                 b.handler_block_by_func(self.on_chip_toggled)
@@ -450,6 +456,9 @@ class WallpaperPickerWindow(Gtk.Window):
         self.flowbox.invalidate_filter()
         self._refresh_count()
         self.search_entry.grab_focus()
+        cat = self.scanner.categories[idx]
+        if cat != "All":
+            self.scanner.load_category_thumbnails(cat)
 
     def on_child_activated(self, box, child):
         self.select_and_apply(child.item)
@@ -523,13 +532,20 @@ class WallpaperPickerWindow(Gtk.Window):
             self.select_and_apply(random.choice(items))
 
     # ── Thumbnail callback ────────────────────────────────────────────────────
-    def on_thumb_ready(self, item):
-        """Scanner fired: apply the freshly-generated thumb file to its card.
+    def _on_scroll(self, adj):
+        if self.is_dismissing:
+            return
+        if self.scanner._lazy_loaded:
+            return
+        val = adj.get_value()
+        page = adj.get_page_size()
+        max_val = adj.get_upper() - page
+        if val >= max_val * 0.6:
+            self.scanner._lazy_loaded = True
+            remaining = self.scanner.items[24:]
+            self.scanner.load_visible_thumbnails(remaining)
 
-        Called from multiple paths (pre-warm sync, pre-warm idle, load_thumbnails
-        async, worker idle), so dedup on _applied_thumbs to avoid stacking
-        CssProviders on the same style context.
-        """
+    def on_thumb_ready(self, item):
         if item.hash_id in self._applied_thumbs:
             return
         thumb = self.thumb_widgets.get(item.hash_id)

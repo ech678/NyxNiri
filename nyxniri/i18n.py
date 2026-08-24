@@ -16,6 +16,7 @@ def set_lang(lang: str) -> None:
     """Set language mode ('zh' or 'en')."""
     global _CURRENT_LANG
     _CURRENT_LANG = "zh" if lang.startswith("zh") else "en"
+    _MSG_CACHE.clear()
 
 TRANSLATIONS: Dict[str, Dict[str, str]] = {
     # Status badges
@@ -1335,17 +1336,25 @@ Commands:
     },
 }
 
+_MSG_CACHE: Dict[str, str] = {}
+
 def msg(key: str, *args: Any) -> str:
-    """Retrieve translated message with automatic fallback to English and string formatting."""
+    if not args:
+        cached = _MSG_CACHE.get(key)
+        if cached is not None:
+            return cached
     lang = get_lang()
     entry = TRANSLATIONS.get(key)
     if not entry:
-        return key if not args else f"{key} ({', '.join(str(a) for a in args)})"
-
+        result = key if not args else f"{key} ({', '.join(str(a) for a in args)})"
+        if not args:
+            _MSG_CACHE[key] = result
+        return result
     template = entry.get(lang) or entry.get("en") or key
     if args:
         try:
             return template.format(*args)
         except Exception:
             return template
+    _MSG_CACHE[key] = template
     return template

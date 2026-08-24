@@ -40,14 +40,32 @@ from nyxniri.tui import (
     show_logo,
 )
 
+_SCRIPTS_TO_CHMOD = [
+    "fish/clean-cache",
+    f"{THEME_ENGINE}/theme-sync.sh",
+    f"{THEME_ENGINE}/wallpaper-hook.sh",
+    f"{THEME_ENGINE}/mpvpaper-sync.sh",
+    f"{MAIN_WM}/scripts/toggle-eyecare.sh",
+    f"{MAIN_WM}/scripts/niri-scratch-toggle.sh",
+    f"{MAIN_WM}/scripts/orbit-launcher.py",
+    f"{MAIN_WM}/scripts/niri-scratch-menu.py",
+    f"{MAIN_WM}/scripts/wallpaper-picker.py",
+]
+
+_CONFIG_ITEMS_CACHE: List[str] = []
+
 def discover_config_items() -> List[str]:
-    """List valid dotfile configuration units inside configs/."""
+    global _CONFIG_ITEMS_CACHE
+    if _CONFIG_ITEMS_CACHE:
+        return _CONFIG_ITEMS_CACHE
     env = get_env()
     if env.configs_src.is_dir():
         items = [p.name for p in env.configs_src.iterdir() if p.name != "__pycache__"]
         if items:
-            return sorted(items)
-    return ["fastfetch", "fish", "kitty", "niri", "noctalia", "starship.toml", "xdg-desktop-portal", "zed"]
+            _CONFIG_ITEMS_CACHE = sorted(items)
+            return _CONFIG_ITEMS_CACHE
+    _CONFIG_ITEMS_CACHE = ["fastfetch", "fish", "kitty", "niri", "noctalia", "starship.toml", "xdg-desktop-portal", "zed"]
+    return _CONFIG_ITEMS_CACHE
 
 def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False) -> bool:
     """Atomic swap deployment via sibling temp directories with Dunder Protocol preservation."""
@@ -209,18 +227,7 @@ def _phase_atomic_deployment(
             log_msg("ERROR", f"Missing config source: {src}")
 
     # Executable permissions enforcement
-    scripts_to_chmod = [
-        "fish/clean-cache",
-        f"{THEME_ENGINE}/theme-sync.sh",
-        f"{THEME_ENGINE}/wallpaper-hook.sh",
-        f"{THEME_ENGINE}/mpvpaper-sync.sh",
-        f"{MAIN_WM}/scripts/toggle-eyecare.sh",
-        f"{MAIN_WM}/scripts/niri-scratch-toggle.sh",
-        f"{MAIN_WM}/scripts/orbit-launcher.py",
-        f"{MAIN_WM}/scripts/niri-scratch-menu.py",
-        f"{MAIN_WM}/scripts/wallpaper-picker.py",
-    ]
-    for rel in scripts_to_chmod:
+    for rel in _SCRIPTS_TO_CHMOD:
         p = config_dir / rel
         if p.is_file():
             p.chmod(0o755)
@@ -270,22 +277,26 @@ def _phase_render_templates() -> None:
         content = content.replace("/home/user", str(home))
         fish_vars.write_text(content, encoding="utf-8")
 
+_IS_NVIDIA: Optional[bool] = None
+
+def _detect_nvidia() -> bool:
+    global _IS_NVIDIA
+    if _IS_NVIDIA is not None:
+        return _IS_NVIDIA
+    try:
+        res = subprocess.run(["lspci"], capture_output=True, text=True, check=False, env={**os.environ, "LC_ALL": "C"})
+        _IS_NVIDIA = "nvidia" in res.stdout.lower()
+    except Exception:
+        _IS_NVIDIA = False
+    return _IS_NVIDIA
+
 def _phase_hardware_patches() -> None:
-    """NVIDIA GPU Hardware detection: uncomment Wayland envs in config.kdl."""
     env = get_env()
     niri_conf = env.config_dir / MAIN_WM / "config.kdl"
     if not niri_conf.is_file():
         return
 
-    is_nvidia = False
-    try:
-        res = subprocess.run(["lspci"], capture_output=True, text=True, check=False, env={**os.environ, "LC_ALL": "C"})
-        if "nvidia" in res.stdout.lower():
-            is_nvidia = True
-    except Exception:
-        pass
-
-    if is_nvidia:
+    if _detect_nvidia():
         print(msg("log_nvidia_gpu_detected"))
         log_msg("INFO", "NVIDIA GPU detected. Enabling NVIDIA envs in config.kdl")
         content = niri_conf.read_text(encoding="utf-8")
@@ -317,23 +328,28 @@ def _phase_post_install_services() -> None:
     if shutil.which("fish"):
         print(msg("log_check_fisher"))
         log_msg("INFO", "Checking Fisher plugin manager installation")
-        tfd, tname = tempfile.mkstemp(suffix=".fish")
-        os.close(tfd)
-        fisher_path = Path(tname)
-        register_temp_path(fisher_path)
-
-        msg_install = msg("log_install_fish_plugins")
-        msg_skip = msg("log_fisher_update_skipped")
-        if fetch_raw_with_fallback("jorgebucaran/fisher", "main", "functions/fisher.fish", fisher_path):
-            fish_code = (
-                f"if not functions -q fisher; source '{fisher_path}' && fisher install jorgebucaran/fisher; end; "
-                f"if test -f ~/.config/fish/fish_plugins && functions -q fisher; "
-                f"echo '{msg_install}'; fisher update || echo '{msg_skip}'; end"
-            )
-            subprocess.run(["fish", "-c", fish_code], check=False)
+        fish_check = subprocess.run(["fish", "-c", "functions -q fisher; echo $status"], capture_output=True, text=True, check=False)
+        if fish_check.returncode == 0 and fish_check.stdout.strip() == "0":
+            log_msg("INFO", "Fisher already installed, running update")
+            subprocess.run(["fish", "-c", "fisher update"], check=False)
         else:
-            print(msg("log_fisher_install_skipped"))
-            log_msg("WARN", "Fisher auto-install skipped (network unreachable)")
+            tfd, tname = tempfile.mkstemp(suffix=".fish")
+            os.close(tfd)
+            fisher_path = Path(tname)
+            register_temp_path(fisher_path)
+
+            msg_install = msg("log_install_fish_plugins")
+            msg_skip = msg("log_fisher_update_skipped")
+            if fetch_raw_with_fallback("jorgebucaran/fisher", "main", "functions/fisher.fish", fisher_path):
+                fish_code = (
+                    f"if not functions -q fisher; source '{fisher_path}' && fisher install jorgebucaran/fisher; end; "
+                    f"if test -f ~/.config/fish/fish_plugins && functions -q fisher; "
+                    f"echo '{msg_install}'; fisher update || echo '{msg_skip}'; end"
+                )
+                subprocess.run(["fish", "-c", fish_code], check=False)
+            else:
+                print(msg("log_fisher_install_skipped"))
+                log_msg("WARN", "Fisher auto-install skipped (network unreachable)")
 
 @dataclass(frozen=True)
 class WallpaperDeployResult:
