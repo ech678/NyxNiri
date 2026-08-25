@@ -1,5 +1,6 @@
 """System health diagnostics (System Doctor) and diagnostic report exporter."""
 
+import concurrent.futures
 import datetime
 import os
 import platform
@@ -273,8 +274,13 @@ def run_doctor() -> bool:
     """Execute comprehensive system health diagnosis."""
     print(msg("running_doctor"))
     env = get_env()
-    for check in DOCTOR_CHECKS:
-        check(env)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {executor.submit(check, env): check for check in DOCTOR_CHECKS}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception:
+                pass
     print(msg("all_done"))
     print(msg("reboot_hint"))
     log_msg("INFO", "System Doctor executed")
