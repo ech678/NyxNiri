@@ -1,0 +1,63 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+  "cli_default_open_behavior": "existing_window",
+  "disable_ai": true,
+  "project_panel": {
+    "dock": "left"
+  },
+  "outline_panel": {
+    "dock": "left"
+  },
+  "collaboration_panel": {
+    "dock": "left"
+  },
+  "agent": {
+    "sidebar_side": "left",
+    "dock": "right",
+    "favorite_models": [],
+    "model_parameters": []
+  },
+  "git_panel": {
+    "dock": "left"
+  },
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_fallbacks": [
+    "LXGW WenKai Mono"
+  ],
+  "ui_font_family": "Noto Sans",
+  "ui_font_fallbacks": [
+    "LXGW WenKai Mono"
+  ],
+  "terminal": {
+    "dock": "right",
+    "default_width": 480,
+    "font_family": "JetBrains Mono",
+    "font_fallbacks": [
+      "LXGW WenKai Mono"
+    ],
+    "font_size": 17.0
+  },
+  "session": {
+    "trust_all_worktrees": true
+  },
+  "icon_theme": {
+    "mode": "system",
+    "light": "Zed (Default)",
+    "dark": "Zed (Default)"
+  },
+  "base_keymap": "VSCode",
+  "ui_font_size": 18.0,
+  "buffer_font_size": 17.0,
+  "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "VSCode Dark Modern"
+  }
+}

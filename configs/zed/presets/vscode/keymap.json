@@ -1,0 +1,9 @@
+[
+  {
+    "bindings": {
+      "alt-w": "workspace::ToggleRightDock",
+      "alt-q": "git_panel::ToggleFocus",
+      "alt-a": "project_panel::ToggleFocus"
+    }
+  }
+]

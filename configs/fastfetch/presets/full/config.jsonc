@@ -1,0 +1,113 @@
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "type": "small",
+        "color": {
+            "1": "magenta",
+            "2": "magenta"
+        },
+        "padding": {
+            "top": 3,
+            "left": 4,
+            "right": 6
+        }
+    },
+    "display": {
+        "separator": "    ",
+        "color": {
+            "keys": "magenta",
+            "title": "magenta"
+        }
+    },
+    "modules": [
+        {
+            "type": "custom",
+            "format": ""
+        },
+        {
+            "type": "custom",
+            "format": " {#magenta}STAY LIBRE{#}  ──  自由であり続けろ"
+        },
+        {
+            "type": "custom",
+            "format": ""
+        },
+        {
+            "type": "custom",
+            "format": " {#magenta}✦ system{#}"
+        },
+        {
+            "type": "os",
+            "key": "   os  ",
+            "format": "{3} ({12})"
+        },
+        {
+            "type": "kernel",
+            "key": "   kern",
+            "format": "{2}"
+        },
+        {
+            "type": "wm",
+            "key": "   wm  ",
+            "format": "{1} ({3})"
+        },
+        {
+            "type": "custom",
+            "key": "   rice",
+            "format": "NyxNiri"
+        },
+        {
+            "type": "terminal",
+            "key": "   term",
+            "format": "{1}"
+        },
+        {
+            "type": "shell",
+            "key": "   sh  ",
+            "format": "{1}"
+        },
+        {
+            "type": "custom",
+            "format": ""
+        },
+        {
+            "type": "custom",
+            "format": " {#magenta}✦ hardware{#}"
+        },
+        {
+            "type": "cpu",
+            "key": "   cpu ",
+            "format": "{1}"
+        },
+        {
+            "type": "gpu",
+            "key": "   gpu ",
+            "format": "{2}"
+        },
+        {
+            "type": "display",
+            "key": "   disp",
+            "format": "{width}x{height} @{refresh-rate}Hz"
+        },
+        {
+            "type": "memory",
+            "key": "   mem ",
+            "format": "{1} / {2} ({3})"
+        },
+        {
+            "type": "disk",
+            "key": "   disk",
+            "folders": "/",
+            "format": "{1} / {2} ({3})"
+        },
+        {
+            "type": "uptime",
+            "key": "   up  ",
+            "format": "{?days}{days}d {?}{hours}h {minutes}m"
+        },
+        {
+            "type": "custom",
+            "format": ""
+        }
+    ]
+}

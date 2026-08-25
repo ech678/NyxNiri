@@ -1,0 +1,240 @@
+layer-rule {
+    match namespace="^noctalia-wallpaper*"
+    place-within-backdrop true
+}
+
+layer-rule {
+    match namespace="^mpvpaper$"
+    place-within-backdrop true
+}
+
+// noctalia(v5.0.0) 状态栏的命名空间
+layer-rule {
+    match namespace="^noctalia-bar-bar$"
+    opacity 1.0
+    geometry-corner-radius 0
+    shadow { off; }
+    background-effect {
+        blur false
+    }
+}
+
+// ==========================================
+// 特定应用规则
+// ==========================================
+
+window-rule {
+    match app-id=r"dev.noctalia.Noctalia"
+    open-floating true
+}
+
+window-rule {
+    match app-id=r"^org\.wezfurlong\.wezterm$"
+    default-column-width
+}
+
+window-rule {
+    match app-id=r"^gnome-control-center$"
+    match app-id=r"^pavucontrol$"
+    match app-id=r"^nm-connection-editor$"
+    default-column-width { proportion 0.5; }
+    open-floating false
+}
+
+window-rule {
+    match app-id=r"^org\.gnome\.Calculator$"
+    match app-id=r"^gnome-calculator$"
+    match app-id=r"^galculator$"
+    match app-id=r"^blueman-manager$"
+    match app-id=r"^org\.gnome\.Nautilus$"
+    match app-id=r"^xdg-desktop-portal$"
+    open-floating true
+}
+
+window-rule {
+    match app-id=r"^steam$" title=r"^notificationtoasts_\d+_desktop$"
+    default-floating-position x=10 y=10 relative-to="bottom-right"
+    open-focused false
+}
+
+window-rule {
+    match app-id="zoom"
+    open-floating true
+}
+
+window-rule {
+    match app-id="wine"
+    open-floating true
+    default-column-width { proportion 1.0; }
+    draw-border-with-background false
+}
+
+// Wine / Proton / Windows 占位与系统托盘窗口规避 (防止 explorer.exe 托盘在屏幕中央显示 160x20 / 166x52 小黑条/占位横幅)
+window-rule {
+    match app-id=r"(?i)^explorer\.exe$" title=r"^$"
+    match app-id=r"(?i)^explorer\.exe$" title=r"(?i)^Wine System Tray$"
+    match app-id=r"(?i)^explorer\.exe$" title=r"^Wine$"
+    match app-id=r"(?i)^(wineboot|services)\.exe$"
+    match title=r"(?i)^Wine System Tray$"
+    open-floating true
+    open-focused false
+    opacity 0.0
+    default-floating-position x=-9999 y=-9999
+    shadow { off; }
+}
+
+// 从 glassy-niri 复制的特定应用美化规则（纯 blur，无 xray）
+window-rule {
+    match app-id="org.pwmt.zathura"
+    opacity 0.8
+    background-effect { blur true; }
+}
+
+window-rule {
+    match app-id="codium"
+    opacity 0.85
+    background-effect { blur true; }
+}
+
+window-rule {
+    match app-id="steam"
+    opacity 0.9
+    background-effect { blur true; }
+}
+
+window-rule {
+    match app-id="obsidian"
+    opacity 0.9
+    background-effect { blur true; }
+}
+
+// Zen 浏览器
+window-rule {
+    match app-id="app.zen_browser.zen"
+    draw-border-with-background false
+    background-effect { blur true; }
+}
+
+window-rule {
+    match app-id=r"^org\.gnome\.Nautilus$"
+    draw-border-with-background false
+    background-effect { blur true; }
+}
+
+// ==========================================
+// 游戏专属规则：强制无特效、最高性能
+// ==========================================
+window-rule {
+    match app-id=r"^steam_app_.*"
+    match app-id=r"^gamescope$"
+    match app-id=r"^wine$"
+    match title=r"(?i)genshin impact|zenless zone zero|victoria 3|Minecraft|Endfield"
+    opacity 1.0
+    background-effect {
+        blur false
+    }
+    draw-border-with-background false
+}
+
+// 视频画中画：所有画中画全工作区悬浮（Mod+拖拽可移动）
+window-rule {
+    match title=r"(画中画|Picture-in-Picture)"
+    open-floating true
+    opacity 1.0
+    default-column-width
+    default-window-height
+    default-floating-position x=20 y=20 relative-to="bottom-right"
+}
+
+// 视频软件适配
+window-rule {
+    match app-id="org.kde.kdenlive"
+    match app-id="mpv"
+    match app-id="kazumi"
+    match app-id="celluloid"
+    match app-id="virt-manager"
+    opacity 1.0
+}
+
+// 图片/视频查看器（中英文标题 + app-id 双保险）
+window-rule {
+    match title=r"(图片查看器|Image Viewer|图片和视频|Image and Video Viewer|视频播放器|Video Player|Videos)"
+    match app-id="org.gnome.Loupe"
+    match app-id="org.gnome.Totem"
+    match app-id="org.gnome.Photos"
+    open-floating true
+    opacity 1.0
+}
+
+// steam 好友列表
+window-rule {
+    match app-id="steam" title="Friends List"
+    match app-id="steam" title="好友列表"
+    default-column-width { proportion 0.20; }
+}
+
+// QQ 资料卡 / 天气窗口不抢占焦点
+window-rule {
+    match app-id="QQ" title="资料卡"
+    match app-id="QQ" title="天气"
+    open-focused false
+}
+
+// QQ 群聊的聊天记录以浮动模式打开
+window-rule {
+    match app-id="QQ" title="群聊的聊天记录"
+    open-floating true
+}
+
+// imv 轻量图片查看器
+window-rule {
+    match app-id="imv"
+    open-floating true
+}
+
+// Ente-Auth 适配
+window-rule {
+    match app-id="io.ente.auth"
+    open-floating true
+    default-column-width { fixed 532; }
+    default-window-height { fixed 925; }
+}
+
+// Mission Center 系统监视器
+window-rule {
+    match app-id="io.missioncenter.MissionCenter"
+    open-floating true
+    default-column-width { proportion 0.65; }
+    default-window-height { proportion 0.70; }
+}
+
+// ==========================================
+// Scratchpad 终端 (Super+~ toggle)
+// ==========================================
+window-rule {
+    match app-id=r"^scratchpad$"
+    open-floating true
+
+    // ── 位置配置 ──
+    // 取消注释你想要的位置，同时注释掉其他选项。
+    // 如果选择正中央，请注释掉所有 default-floating-position 行。
+    //
+    // 上排：
+    default-floating-position x=0 y=40 relative-to="top"          // ← 当前：中上方
+    // default-floating-position x=40 y=40 relative-to="top-left"  // 左上方
+    // default-floating-position x=40 y=40 relative-to="top-right" // 右上方
+    //
+    // 中排：
+    // default-floating-position x=0 y=0 relative-to="left"        // 左中
+    // (注释掉所有 default-floating-position 行 = 正中央)
+    // default-floating-position x=0 y=0 relative-to="right"       // 右中
+    //
+    // 下排：
+    // default-floating-position x=40 y=40 relative-to="bottom-left"   // 左下方
+    // default-floating-position x=0 y=40 relative-to="bottom"         // 中下方
+    // default-floating-position x=40 y=40 relative-to="bottom-right"  // 右下方
+
+    // ── 尺寸配置 ──
+    default-column-width { proportion 0.5; }
+    default-window-height { proportion 0.45; }
+}

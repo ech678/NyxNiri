@@ -1,0 +1,78 @@
+// 引入由 nwg-displays 生成的显示器配置
+include "monitor.kdl"
+// 动态引入视觉特效样式 (普通模式 vs 护眼模式)
+include "effects.kdl"
+// 引入输入设备与手势配置 (受 Dunder Protocol 保护，更新自动保留)
+include optional=true "input__custom__.kdl"
+// 引入布局设置
+include "layout.kdl"
+// 引入动画配置
+include "animations.kdl"
+// 引入窗口与图层规则
+include "rules.kdl"
+// 引入快捷键绑定配置
+include "binds.kdl"
+
+overview {
+    backdrop-color "#4c566a90"
+    workspace-shadow {
+        off
+    }
+}
+
+environment {
+    XDG_CURRENT_DESKTOP "niri"
+    XDG_SESSION_TYPE "wayland"
+    GTK_IM_MODULE ""
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+    QT_QPA_PLATFORM "wayland;xcb"
+    QT_QPA_PLATFORMTHEME "gtk3"
+    QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
+
+    // NVIDIA environment variables (uncommented automatically by install.sh if NVIDIA GPU is detected)
+    // GBM_BACKEND "nvidia-drm"
+    // __GLX_VENDOR_LIBRARY_NAME "nvidia"
+    // LIBVA_DRIVER_NAME "nvidia"
+}
+
+spawn-at-startup "noctalia"
+spawn-at-startup "~/.config/niri/scripts/toggle-eyecare.sh" "--sync"
+// Re-render GTK M3 templates after Noctalia palette is ready (~8s on cold start)
+spawn-at-startup "bash" "-c" "sleep 8; noctalia msg config-reload && noctalia msg templates-apply"
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+prefer-no-csd
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+debug {
+    honor-xdg-activation-with-invalid-serial
+}
+
+recent-windows {
+    binds {
+        Alt+Tab         { next-window scope="output"; }
+        Alt+Shift+Tab   { previous-window scope="output"; }
+        Alt+grave       { next-window filter="app-id"; }
+        Alt+Shift+grave { previous-window filter="app-id"; }
+    }
+    highlight {
+        corner-radius 12
+        active-color "#b6c7e7"
+        urgent-color "#ffb4ab"
+    }
+}
+
+cursor {
+    xcursor-theme "Adwaita"
+    xcursor-size 24
+}
+
+// ==========================================================
+// 用户自定义配置 (User Custom Configuration)
+// 将自定义的自启项或窗口规则写在 __custom__.kdl 中，更新时自动保留。
+// 你也可以在当前目录创建 __custom__/ 文件夹放置个人脚本。
+// ==========================================================
+include "__custom__.kdl"

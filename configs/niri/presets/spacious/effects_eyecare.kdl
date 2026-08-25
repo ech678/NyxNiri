@@ -1,0 +1,17 @@
+// 护眼模式：禁用毛玻璃 Blur，窗口 100% 纯不透明（消除穿透与眩光）
+window-rule {
+    opacity 1.0
+    background-effect {
+        blur false
+        xray false
+    }
+}
+
+window-rule {
+    match is-focused=false
+    opacity 1.0
+}
+
+blur {
+    off
+}

@@ -1,0 +1,15 @@
+// NyxNiri Custom Configuration
+// 
+// Any modifications in this file will be safely preserved during system updates.
+// You can put your personal configuration habits here, for example:
+// 
+// 任何在此文件中的修改都会在系统更新时被安全保留。
+// 你可以把针对你个人习惯的配置写在这里，例如：
+// 
+// spawn-at-startup "fcitx5" "-d"
+// spawn-at-startup "easyeffects" "--gapplication-service"
+// 
+// window-rule {
+//     match app-id="my-custom-app"
+//     open-floating true
+// }

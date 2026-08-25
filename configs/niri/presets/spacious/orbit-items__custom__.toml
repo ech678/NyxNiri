@@ -1,0 +1,146 @@
+# =============================================================================
+# NyxNiri Orbit Launcher (星环启动器) · 自定义配置文件 (Dunder Custom Configuration)
+# =============================================================================
+# 遵循 Dunder 协议: 文件名含 `__custom__`，升级与安装时会被自动保留，绝不被覆盖。
+#
+# 架构特性:
+# - [search]: 全局搜索配置 (默认引擎、占位符文案等)
+# - [[search_engines]]: 搜索引擎与 AI 轮盘配置 (Tab 键循环切换，Enter 执行搜索)
+# - [[items]]: 星环菜单胶囊项配置 (支持应用、子菜单/文件夹、Web 链接)
+# =============================================================================
+
+[search]
+# 默认搜索引擎 ID (对应下方 search_engines 中的 id)
+default_engine = "bing"
+# 输入框占位提示符 (英文简洁风)
+placeholder = "Search or ask..."
+
+# -----------------------------------------------------------------------------
+# 搜索引擎与 AI 轮盘列表 (按 Tab 顺时针 / Shift+Tab 逆时针循环切换)
+# 图标说明:
+# - Bing: 󰍉 (Search)
+# - Google: 󰊭 (Google)
+# - DeepSeek: 󰈺 (用鱼来伪装的蓝鲸 · DeepSeek 官方吉祥物)
+# - ChatGPT: 󰚩 (OpenAI / AI)
+# - Claude: 󰣆 (信用卡 · 意思是 Anthropic Claude 很烧钱)
+# -----------------------------------------------------------------------------
+[[search_engines]]
+id = "bing"
+name = "Bing"
+icon = "󰍉"
+url = "https://www.bing.com/search?q={query}"
+
+[[search_engines]]
+id = "google"
+name = "Google"
+icon = "󰊭"
+url = "https://www.google.com/search?q={query}"
+
+[[search_engines]]
+id = "deepseek"
+name = "DeepSeek"
+icon = "󰈺"
+url = "https://chat.deepseek.com/?q={query}"
+
+[[search_engines]]
+id = "chatgpt"
+name = "ChatGPT"
+icon = "󰚩"
+url = "https://chatgpt.com/?hints=search&q={query}"
+
+[[search_engines]]
+id = "claude"
+name = "Claude"
+icon = "󰣆"
+url = "https://claude.ai/new?q={query}"
+
+# -----------------------------------------------------------------------------
+# 星环应用菜单项目 (4 颗主星环胶囊，支持 1~4 快捷键秒启)
+# -----------------------------------------------------------------------------
+[[items]]
+id = "kitty"
+name = "Kitty"
+desc = "Terminal"
+icon = "󰞷"
+cmd = "kitty"
+shortcut = "1"
+color_key = "secondary"
+
+[[items]]
+id = "tools"
+name = "System Tools"
+desc = "Folder · 3 Tools"
+icon = "󰘳"
+shortcut = "2"
+color_key = "secondary"
+
+  [[items.children]]
+  id = "missioncenter"
+  name = "Mission Center"
+  desc = "System Monitor"
+  icon = "󰓅"
+  cmd = "missioncenter"
+  shortcut = "1"
+  color_key = "secondary"
+
+  [[items.children]]
+  id = "eyecare"
+  name = "Eye Care"
+  desc = "Toggle Warmth"
+  icon = "󰛨"
+  cmd = "~/.config/niri/scripts/toggle-eyecare.sh"
+  shortcut = "2"
+  color_key = "secondary"
+
+  [[items.children]]
+  id = "cache"
+  name = "Clean Cache"
+  desc = "Free Disk Space"
+  icon = "󰃢"
+  cmd = "~/.config/fish/clean-cache"
+  shortcut = "3"
+  color_key = "secondary"
+
+[[items]]
+id = "websites"
+name = "Websites"
+desc = "Folder · 3 Sites"
+icon = "󰖟"
+shortcut = "3"
+color_key = "secondary"
+
+  [[items.children]]
+  id = "zhihu"
+  name = "Zhihu"
+  desc = "知乎 · 发现更大世界"
+  icon = "󰖟"
+  url = "https://www.zhihu.com"
+  shortcut = "1"
+  color_key = "secondary"
+
+  [[items.children]]
+  id = "bilibili"
+  name = "Bilibili"
+  desc = "哔哩哔哩 (゜-゜)つロ"
+  icon = "󰕧"
+  url = "https://www.bilibili.com"
+  shortcut = "2"
+  color_key = "secondary"
+
+  [[items.children]]
+  id = "github"
+  name = "GitHub"
+  desc = "Code Repository"
+  icon = "󰊤"
+  url = "https://github.com"
+  shortcut = "3"
+  color_key = "secondary"
+
+[[items]]
+id = "wallpaper"
+name = "Wallpapers"
+desc = "Static & Live"
+icon = "󰸉"
+cmd = "~/.config/niri/scripts/wallpaper-picker.py"
+shortcut = "4"
+color_key = "secondary"

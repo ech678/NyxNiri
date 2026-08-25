@@ -1,0 +1,206 @@
+// =============================================================================
+// Niri 快捷键配置文件 / Niri Keybindings Configuration
+// =============================================================================
+// 本配置文件包含 Niri 窗口管理器的所有键盘、鼠标与快捷键绑定。
+// This config file contains all keyboard, mouse, and shortcut keybindings for Niri.
+// =============================================================================
+
+binds {
+    // -------------------------------------------------------------------------
+    // 1. 会话与系统控制 / Session & System Controls
+    // -------------------------------------------------------------------------
+    // 切换概览视角 (禁止按键重复) / Toggle workspace overview (prevent key repeat)
+    Mod+Tab repeat=false { toggle-overview; }
+
+    // 关闭当前获得焦点的窗口 / Close active focused window
+    Mod+Q { close-window; }
+
+    // 退出 Niri 桌面会话 (对齐 Mod+Q，避免与 Mod+E 文件管理器误触) / Quit Niri desktop session
+    Mod+Shift+Q { quit; }
+
+    // 重新加载 Niri 配置文件 / Reload Niri configuration file
+    Mod+Shift+R { spawn "niri" "msg" "action" "load-config-file"; }
+
+    // 锁定屏幕 (使用 Noctalia 原生锁屏) / Lock screen using Noctalia native lockscreen
+    Mod+L { spawn "noctalia" "msg" "session" "lock"; }
+
+    // 显示快捷键提示覆盖层 / Show interactive hotkey overlay
+    Mod+Slash { show-hotkey-overlay; }
+
+    // -------------------------------------------------------------------------
+    // 2. 应用启动与 Noctalia 组件 / App Launchers & Noctalia Panels
+    // -------------------------------------------------------------------------
+    // 启动终端模拟器 (Kitty) / Launch terminal emulator (Kitty)
+    Mod+Return { spawn "kitty"; }
+
+    // 启动文件管理器 (Nautilus) / Launch file manager (Nautilus)
+    Mod+E { spawn "nautilus"; }
+
+    // 切换 Noctalia 应用启动器 / Toggle Noctalia application launcher
+    Mod+R { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
+
+    // 切换 Noctalia 电源/会话菜单 / Toggle Noctalia power/session menu
+    Mod+X { spawn "noctalia" "msg" "panel-toggle" "session"; }
+
+    // 切换 Noctalia 系统设置面板 / Toggle Noctalia system settings panel
+    Mod+I { spawn "noctalia" "msg" "settings-toggle"; }
+
+    // 切换 Noctalia 剪贴板历史 / Toggle Noctalia clipboard history panel
+    Mod+V { spawn "noctalia" "msg" "panel-toggle" "clipboard"; }
+
+    // 呼出 M3E 原生壁纸选择器 (聚合静态/动态壁纸/搜索/分类) / Open M3E wallpaper picker (Static & Live)
+    Mod+W repeat=false { spawn "~/.config/niri/scripts/wallpaper-picker.py"; }
+
+    // 免打扰随机切换下一张壁纸 (主题取色自动跟随更新) / Switch to a random wallpaper immediately
+    Mod+Ctrl+W { spawn "noctalia" "msg" "wallpaper-random"; }
+
+    // 切换护眼模式 (调暖色温并关闭透明度/毛玻璃) / Toggle eye-care mode (warmer temp & disable blur/transparency)
+    Mod+N { spawn "~/.config/niri/scripts/toggle-eyecare.sh"; }
+
+    // 快速切换 Kitty 专属 Scratchpad 终端 / Toggle Kitty scratchpad terminal
+    Mod+Grave { spawn "~/.config/niri/scripts/niri-scratch-toggle.sh" "kitty"; }
+
+    // 呼出 Orbit Launcher M3E 矢量星环启动器 (按住 Super 点鼠标前侧键，或键盘 Mod+A) / Open Orbit Launcher M3E radial menu
+    Mod+A repeat=false { spawn "~/.config/niri/scripts/orbit-launcher.py"; }
+    Mod+MouseForward repeat=false { spawn "~/.config/niri/scripts/orbit-launcher.py"; }
+
+    // -------------------------------------------------------------------------
+    // 3. 焦点导航与窗口移动 / Focus Navigation & Window Movement
+    // -------------------------------------------------------------------------
+    // 智能焦点导航 (达到边缘时自动穿透跨屏与跨工作区) / Smart focus (auto cross monitor & workspace)
+    Mod+Left  { focus-column-or-monitor-left; }
+    Mod+Right { focus-column-or-monitor-right; }
+    Mod+Down  { focus-window-or-workspace-down; }
+    Mod+Up    { focus-window-or-workspace-up; }
+
+    // 列焦点快速横滑 (左 / 右) / Column focus left / right
+    Mod+Z { focus-column-left; }
+    Mod+C { focus-column-right; }
+
+    // 智能窗口/列搬运 (推至边缘时自动搬运至相邻显示器或工作区) / Smart movement (auto move to monitor & workspace)
+    Mod+Ctrl+Left  { move-column-left-or-to-monitor-left; }
+    Mod+Ctrl+Right { move-column-right-or-to-monitor-right; }
+    Mod+Ctrl+Down  { move-window-down-or-to-workspace-down; }
+    Mod+Ctrl+Up    { move-window-up-or-to-workspace-up; }
+
+    // Shift 辅助精准移动 (4 方向完整对称) / Precision movement with Shift modifier
+    Mod+Shift+Left  { move-column-left; }
+    Mod+Shift+Right { move-column-right; }
+    Mod+Shift+Down  { move-window-down; }
+    Mod+Shift+Up    { move-window-up; }
+
+    // 工作区方向导航 (Down / Up) / Workspace Navigation
+    Mod+D { focus-workspace-down; }
+    Mod+U { focus-workspace-up; }
+
+    // 显示器精准导航与搬运 / Precision Multi-Monitor Navigation
+    Mod+Shift+Ctrl+Left  { move-column-to-monitor-left; }
+    Mod+Shift+Ctrl+Right { move-column-to-monitor-right; }
+    Mod+Shift+Ctrl+Down  { move-column-to-monitor-down; }
+    Mod+Shift+Ctrl+Up    { move-column-to-monitor-up; }
+
+    // -------------------------------------------------------------------------
+    // 4. 窗口布局与尺寸调整 / Window Layout & Sizing
+    // -------------------------------------------------------------------------
+    // 切换当前窗口的浮动/平铺状态 / Toggle window floating state
+    Mod+T { toggle-window-floating; }
+
+    // 平铺与浮动窗口之间穿透转移焦点 / Switch focus between floating and tiling layout
+    Mod+Shift+T { switch-focus-between-floating-and-tiling; }
+
+    // 切换当前列为标签页分组模式 (Tabbed Group) / Toggle column tabbed display
+    Mod+G { toggle-column-tabbed-display; }
+
+    // 最大化当前列宽度 / Maximize column width
+    Mod+F { maximize-column; }
+
+    // 全屏显示当前窗口 / Fullscreen focused window
+    Mod+Shift+F { fullscreen-window; }
+
+    // 循环切换预设列宽比例 / Switch preset column widths
+    Mod+Space { switch-preset-column-width; }
+
+    // 微调列宽与高度重置 / Fine-tune column width & reset height
+    Mod+Minus { set-column-width "-5%"; }
+    Mod+Equal { set-column-width "+5%"; }
+    Mod+Shift+Equal { reset-window-height; }
+
+    // 将相邻窗口合并入当前列 / Consume adjacent window into current column
+    Mod+Comma { consume-window-into-column; }
+
+    // 将当前窗口从列中分离吐出 / Expel window from current column
+    Mod+Period { expel-window-from-column; }
+
+    // -------------------------------------------------------------------------
+    // 5. 工作区管理 (1-9) / Workspace Management (1-9)
+    // -------------------------------------------------------------------------
+    // 切换至指定编号工作区 / Switch to workspace by index
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+
+    // 将当前列移动至指定编号工作区 / Move focused column to workspace by index
+    Mod+Shift+1 { move-column-to-workspace 1; }
+    Mod+Shift+2 { move-column-to-workspace 2; }
+    Mod+Shift+3 { move-column-to-workspace 3; }
+    Mod+Shift+4 { move-column-to-workspace 4; }
+    Mod+Shift+5 { move-column-to-workspace 5; }
+    Mod+Shift+6 { move-column-to-workspace 6; }
+    Mod+Shift+7 { move-column-to-workspace 7; }
+    Mod+Shift+8 { move-column-to-workspace 8; }
+    Mod+Shift+9 { move-column-to-workspace 9; }
+
+    // -------------------------------------------------------------------------
+    // 6. 鼠标与滚轮绑定 / Mouse & Wheel Binds
+    // -------------------------------------------------------------------------
+    // 滚轮上下滚动切换工作区 (带 150ms 冷却防误触) / Scroll wheel up/down to switch workspace (150ms cooldown)
+    Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp   cooldown-ms=150 { focus-workspace-up; }
+
+    // Ctrl+滚轮上下滚动携带当前列切换工作区 / Ctrl+Scroll wheel up/down to move column between workspaces
+    Mod+Ctrl+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
+    Mod+Ctrl+WheelScrollUp   cooldown-ms=150 { move-column-to-workspace-up; }
+
+    // 滚轮左右/Shift+滚轮切换列焦点 / Scroll wheel left/right or Shift+wheel to switch column focus
+    Mod+WheelScrollRight      { focus-column-right; }
+    Mod+WheelScrollLeft       { focus-column-left; }
+    Mod+Shift+WheelScrollDown { focus-column-right; }
+    Mod+Shift+WheelScrollUp   { focus-column-left; }
+
+    // Ctrl+滚轮左右/Ctrl+Shift+滚轮移动当前列 / Ctrl+wheel or Ctrl+Shift+wheel to move column left/right
+    Mod+Ctrl+WheelScrollRight      { move-column-right; }
+    Mod+Ctrl+WheelScrollLeft       { move-column-left; }
+    Mod+Ctrl+Shift+WheelScrollDown { move-column-right; }
+    Mod+Ctrl+Shift+WheelScrollUp   { move-column-left; }
+
+    // -------------------------------------------------------------------------
+    // 7. 多媒体与硬件控制 / Multimedia & Hardware Control
+    // -------------------------------------------------------------------------
+    // 音量加 / 减 / 静音 (WirePlumber) / Volume Up / Down / Mute via WirePlumber
+    XF86AudioRaiseVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
+    XF86AudioLowerVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
+    XF86AudioMute        { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+
+    // 外接显示器硬件亮度调节 (ddcutil, 允许锁屏状态下生效) / DDC monitor brightness control (allow when locked)
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "sh" "-c" "ddcutil setvcp 10 + 10"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "sh" "-c" "ddcutil setvcp 10 - 10"; }
+
+    // -------------------------------------------------------------------------
+    // 8. 截图按键控制 / Screenshot Controls
+    // -------------------------------------------------------------------------
+    // 交互式区域截图 / Interactive region screenshot
+    Mod+Shift+S { screenshot; }
+    Print       { screenshot; }
+
+    // 截取整个显示器屏幕 / Fullscreen screenshot
+    Ctrl+Print  { screenshot-screen; }
+
+    // 截取当前活动窗口 / Active window screenshot
+    Alt+Print   { screenshot-window; }
+}
