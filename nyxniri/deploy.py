@@ -1,5 +1,6 @@
 """Atomic dotfiles deployment, template rendering, Dunder preservation, and hardware patching."""
 
+import json
 import os
 import re
 import shutil
@@ -52,6 +53,9 @@ _SCRIPTS_TO_CHMOD = [
     f"{MAIN_WM}/scripts/wallpaper-picker.py",
 ]
 
+_PRESETS_DIR = "presets"
+_PRESET_STATE_FILE = "presets.json"
+
 _CONFIG_ITEMS_CACHE: List[str] = []
 
 def discover_config_items() -> List[str]:
@@ -60,12 +64,75 @@ def discover_config_items() -> List[str]:
         return _CONFIG_ITEMS_CACHE
     env = get_env()
     if env.configs_src.is_dir():
-        items = [p.name for p in env.configs_src.iterdir() if p.name != "__pycache__"]
+        items = [p.name for p in env.configs_src.iterdir() if p.name not in ("__pycache__", _PRESETS_DIR)]
         if items:
             _CONFIG_ITEMS_CACHE = sorted(items)
             return _CONFIG_ITEMS_CACHE
     _CONFIG_ITEMS_CACHE = ["fastfetch", "fish", "kitty", "niri", "noctalia", "starship.toml", "xdg-desktop-portal", "zed"]
     return _CONFIG_ITEMS_CACHE
+
+def _preset_state_path() -> Path:
+    env = get_env()
+    return env.state_dir / _PRESET_STATE_FILE
+
+def _load_preset_state() -> dict:
+    p = _preset_state_path()
+    if p.is_file():
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+def _save_preset_state(state: dict) -> None:
+    p = _preset_state_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def list_presets(config_item: str) -> List[str]:
+    env = get_env()
+    preset_root = env.configs_src / config_item / _PRESETS_DIR
+    if not preset_root.is_dir():
+        return []
+    return sorted([p.name for p in preset_root.iterdir() if p.is_dir()])
+
+def get_active_preset(config_item: str) -> str:
+    state = _load_preset_state()
+    return state.get(config_item, "")
+
+def set_preset(config_item: str, preset_name: str) -> bool:
+    env = get_env()
+    preset_path = env.configs_src / config_item / _PRESETS_DIR / preset_name
+    if not preset_path.is_dir():
+        return False
+    state = _load_preset_state()
+    state[config_item] = preset_name
+    _save_preset_state(state)
+    return True
+
+def apply_preset(config_item: str) -> bool:
+    preset_name = get_active_preset(config_item)
+    if not preset_name:
+        return True
+    env = get_env()
+    preset_path = env.configs_src / config_item / _PRESETS_DIR / preset_name
+    if not preset_path.is_dir():
+        return False
+    dest = env.config_dir / config_item
+    backup_path = env.state_dir / f"preset_backup_{config_item}"
+    if dest.is_dir():
+        shutil.copytree(dest, backup_path, symlinks=True, dirs_exist_ok=True)
+    else:
+        backup_path.mkdir(parents=True, exist_ok=True)
+    try:
+        if dest.is_dir():
+            shutil.rmtree(dest, ignore_errors=True)
+        shutil.copytree(preset_path, dest, symlinks=True)
+        return True
+    except Exception:
+        if backup_path.is_dir():
+            shutil.copytree(backup_path, dest, symlinks=True, dirs_exist_ok=True)
+        return False
 
 def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False) -> bool:
     """Atomic swap deployment via sibling temp directories with Dunder Protocol preservation."""
@@ -194,7 +261,11 @@ def _phase_atomic_deployment(
 
     failed_items: List[str] = []
     for item in items_to_deploy:
-        src = env.configs_src / item
+        preset_name = get_active_preset(item)
+        if preset_name:
+            src = env.configs_src / item / _PRESETS_DIR / preset_name
+        else:
+            src = env.configs_src / item
         dest = config_dir / item
 
         if src.exists():

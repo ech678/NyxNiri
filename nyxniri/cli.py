@@ -20,10 +20,14 @@ from nyxniri.core import (
     log_msg,
 )
 from nyxniri.deploy import (
+    apply_preset,
     deploy_selected_configs,
     deploy_wallpapers,
     discover_config_items,
+    get_active_preset,
+    list_presets,
     render_completion_screen,
+    set_preset,
     test_deploy,
     wallpapers_pack_present,
 )
@@ -662,6 +666,49 @@ def _cmd_update(sub_args: List[str]) -> int:
         return 1
     return 0
 
+def _cmd_preset(sub_args: List[str]) -> int:
+    if not sub_args:
+        print("Usage:")
+        print(f"  {CLI_CMD} preset list [config]")
+        print(f"  {CLI_CMD} preset set <config> <preset>")
+        print(f"  {CLI_CMD} preset apply [config]")
+        return 0
+    sub = sub_args[0].lower()
+    if sub == "list":
+        items = sub_args[1:] if len(sub_args) > 1 else discover_config_items()
+        for item in items:
+            presets = list_presets(item)
+            active = get_active_preset(item)
+            if not presets:
+                continue
+            print(f"{item}:")
+            for p in presets:
+                marker = " *" if p == active else ""
+                print(f"  {p}{marker}")
+            if not active:
+                print(f"  (default)")
+        return 0
+    elif sub == "set":
+        if len(sub_args) != 3:
+            exit_usage(f"{CLI_CMD} preset set <config> <preset>")
+        config_item, preset_name = sub_args[1], sub_args[2]
+        if not set_preset(config_item, preset_name):
+            print(f"Preset not found: {config_item}/{preset_name}", file=sys.stderr)
+            return 1
+        print(f"Preset set: {config_item} -> {preset_name}")
+        return 0
+    elif sub == "apply":
+        items = sub_args[1:] if len(sub_args) > 1 else discover_config_items()
+        ok = True
+        for item in items:
+            if not apply_preset(item):
+                print(f"Failed to apply preset for: {item}", file=sys.stderr)
+                ok = False
+        return 0 if ok else 1
+    else:
+        exit_usage(f"{CLI_CMD} preset [list|set|apply]")
+        return 1
+
 def _cmd_help(sub_args: List[str]) -> int:
     if sub_args:
         exit_usage(f"{CLI_CMD} help")
@@ -696,6 +743,7 @@ COMMANDS = {
     "gtk":       (_module_handler("gtktheme", "gtk"),
                   f"{CLI_CMD} gtk [install|status|uninstall]"),
     "theme":     (_cmd_theme,     f"{CLI_CMD} theme [toggle|dark|light|sync|status]"),
+    "preset":    (_cmd_preset,    f"{CLI_CMD} preset [list|set <config> <preset>|apply]"),
     "update":    (_cmd_update,    f"{CLI_CMD} update [--force|--no-deploy]"),
     "help":      (_cmd_help,      f"{CLI_CMD} help"),
     "-h":        (_cmd_help,      f"{CLI_CMD} help"),
