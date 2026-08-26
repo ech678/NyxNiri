@@ -1,9 +1,9 @@
-"""Global constants, paths, URLs, and color palettes for NyxNiri."""
-
-import os
+"""Project identity constants for NyxNiri."""
 from pathlib import Path
+from nyxniri.colors import Colors
+from nyxniri.urls import REPO_URL, GIT_MIRROR_REGISTRY, RAW_MIRROR_TEMPLATES, WALLPAPER_MIRRORS
+from nyxniri.deps_list import CORE_DEPS, AUR_DEPS, OPTIONAL_APPS
 
-# --- Project Identity ---
 PROJECT_NAME = "NyxNiri"
 CLI_CMD = "nyxniri"
 MAIN_WM = "niri"
@@ -14,90 +14,5 @@ GREETER_SESSION_BIN = "noctalia-greeter-session"
 GREETER_ETC_CFG = Path("/etc/greetd/config.toml")
 GREETER_POLKIT_RULE = Path(f"/etc/polkit-1/rules.d/50-{GREETER_PKG}.rules")
 FCITX_THEME = "nyxmellow"
-
-# --- Directory Constants ---
 CONFIG_DIR_NAME = "configs"
 ASSETS_DIR_NAME = "assets"
-
-# --- Repository & Network Mirrors ---
-REPO_URL = "https://github.com/ech678/NyxNiri.git"
-
-GIT_MIRROR_REGISTRY = [
-    ("Official", "https://github.com/ech678/NyxNiri.git"),
-    ("gh-proxy.org", "https://gh-proxy.org/https://github.com/ech678/NyxNiri.git"),
-]
-
-RAW_MIRROR_TEMPLATES = [
-    ("Official", "https://raw.githubusercontent.com/{USER_REPO}/{BRANCH}/{FILE_PATH}"),
-    ("jsDelivr-CDN", "https://fastly.jsdelivr.net/gh/{USER_REPO}@{BRANCH}/{FILE_PATH}"),
-    ("gh-proxy.org", "https://gh-proxy.org/https://raw.githubusercontent.com/{USER_REPO}/{BRANCH}/{FILE_PATH}"),
-]
-
-WALLPAPER_MIRRORS = [
-    ("Official", "https://github.com/ech678/wallpaper-collection.git"),
-    ("gh-proxy.org", "https://gh-proxy.org/https://github.com/ech678/wallpaper-collection.git"),
-]
-
-# --- Dependencies ---
-CORE_DEPS = [
-    MAIN_WM,
-    THEME_ENGINE,
-    "wlsunset",
-    "fish",
-    "starship",
-    "kitty",
-    "fastfetch",
-    "eza",
-    "mpvpaper",
-    "ffmpeg",
-    "jq",
-    "tmux",
-    "inotify-tools",
-    "fzf",
-    "python-gobject",
-    "gtk-layer-shell",
-    "ttf-jetbrains-mono",
-    "ttf-jetbrains-mono-nerd",
-    "noto-fonts-cjk",
-]
-
-AUR_DEPS = [
-    "mpvpaper",
-]
-
-OPTIONAL_APPS = [
-    "nautilus",
-    "missioncenter",
-    "fcitx5-rime",
-]
-
-# --- ANSI Styling Palette (NyxNiri Native) ---
-class Colors:
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    DIM = "\033[2m"
-
-    # Foreground colors
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    BLUE = "\033[34m"
-    PURPLE = "\033[35m"
-    CYAN = "\033[36m"
-    WHITE = "\033[37m"
-    DARK_GRAY = "\033[90m"
-
-    # Bold Foreground colors
-    BOLD_RED = "\033[1;31m"
-    BOLD_GREEN = "\033[1;32m"
-    BOLD_YELLOW = "\033[1;33m"
-    BOLD_BLUE = "\033[1;34m"
-    BOLD_PURPLE = "\033[1;35m"
-    BOLD_CYAN = "\033[1;36m"
-    BOLD_WHITE = "\033[1;37m"
-
-    # Cursor controls
-    CURSOR_HIDE = "\033[?25l"
-    CURSOR_SHOW = "\033[?25h"
-    CLEAR_SCREEN = "\033[H\033[J"
-    CLEAR_LINE = "\033[2K\r"

@@ -68,18 +68,15 @@ from nyxniri.tui import (
     select_language,
 )
 
-# --- Master Component Menu & Preflight ---
 def run_master_component_menu(is_update: bool = False, mode: str = "full") -> Optional[dict]:
     """Interactive checklist for choosing configs, wallpapers, modules, and backup behavior."""
     items = discover_config_items()
     entries: List[CheckboxEntry] = []
 
-    # 1. Configs
     for item in items:
         entries.append(CheckboxEntry(key=f"config_{item}", label=msg("master_item_config", item), checked=True))
 
     if mode == "full" or is_update:
-        # 2. Heavy assets (wallpapers)
         wp_checked = not wallpapers_pack_present()
         wp_status = msg("status_wallpapers_installed") if wallpapers_pack_present() else msg("status_wallpapers_missing")
         entries.append(CheckboxEntry(
@@ -88,7 +85,6 @@ def run_master_component_menu(is_update: bool = False, mode: str = "full") -> Op
             checked=wp_checked,
         ))
 
-        # 3. Fcitx5
         if fcitx5_installed():
             fcitx_check = not (is_update and not fcitx_enabled())
             entries.append(CheckboxEntry(
@@ -97,14 +93,12 @@ def run_master_component_menu(is_update: bool = False, mode: str = "full") -> Op
                 checked=fcitx_check,
             ))
 
-        # 4. Greeter
         entries.append(CheckboxEntry(
             key="module_greeter",
             label=msg("master_item_module", f"Noctalia Greeter {greeter_status_label()}"),
             checked=False,
         ))
 
-    # 5. Behavior: Backup
     entries.append(CheckboxEntry(key="sep_behavior", label=msg("master_item_behavior"), is_separator=True))
     entries.append(CheckboxEntry(key="behavior_backup", label=msg("master_item_backup"), checked=True))
 
@@ -191,17 +185,15 @@ def install_configs_workflow(mode: str = "full") -> bool:
 
     _phase_preflight_check(mode, chosen_configs, do_fcitx, do_greeter, do_wallpapers, do_backup)
 
-    # Step counting
-    steps = 2  # configs + wallpapers
+    steps = 2
     if mode == "full":
-        steps += 1  # deps
+        steps += 1
     if do_fcitx:
         steps += 1
     if do_greeter:
         steps += 1
     cur_step = 0
 
-    # 1. Deps
     if mode == "full":
         cur_step += 1
         print(msg("install_step_deps", f"{cur_step}/{steps}"))
@@ -209,7 +201,6 @@ def install_configs_workflow(mode: str = "full") -> bool:
         if missing:
             install_selected_deps(missing)
 
-    # 2. Configs
     cur_step += 1
     print(msg("install_step_configs", f"{cur_step}/{steps}"))
     preserved_log: List[str] = []
@@ -224,25 +215,21 @@ def install_configs_workflow(mode: str = "full") -> bool:
             )
             return False
 
-    # 3. Wallpapers (always run — at least syncs offline fallback wallpapers)
     wallpaper_result = None
     cur_step += 1
     print(msg("install_step_wallpapers", f"{cur_step}/{steps}"))
     wallpaper_result = deploy_wallpapers(do_download=do_wallpapers)
 
-    # 4. Fcitx5
     if do_fcitx:
         cur_step += 1
         print(msg("install_step_fcitx", f"{cur_step}/{steps}"))
         fcitx_install()
 
-    # 5. Greeter
     if do_greeter:
         cur_step += 1
         print(msg("install_step_greeter", f"{cur_step}/{steps}"))
         greeter_install()
 
-    # Completion
     render_completion_screen(
         mode=mode,
         chosen_items=chosen_configs,
@@ -283,7 +270,6 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
         render_completion_screen("update", wallpaper_result=wallpaper_result)
         return True
 
-    # Interactive choice menu
     items = [
         MenuItem(label=msg("overwrite_opt1")),
         MenuItem(label=msg("overwrite_opt2")),
@@ -335,7 +321,6 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
         print(msg("log_config_deploy_skipped"))
     return True
 
-# --- Submenus ---
 def check_new_deps_post_update() -> None:
     """Check for newly introduced core dependencies after a repository update."""
     missing = get_missing_deps()
@@ -488,7 +473,6 @@ def main_menu_loop() -> None:
                 check_new_deps_post_update()
                 print(msg("updating_done"))
                 press_any_key()
-                # Re-exec to load new code
                 os.execv(sys.executable, [sys.executable, "-m", "nyxniri"])
             elif update_result is False:
                 print(msg("updating_failed"), file=sys.stderr)
@@ -507,7 +491,6 @@ def main_menu_loop() -> None:
         elif choice == 8:
             sys.exit(0)
 
-# --- CLI Dispatcher ---
 def print_help(file=None) -> None:
     """Print standard CLI help and commands overview."""
     if file is None:
@@ -521,9 +504,6 @@ def exit_usage(usage: str) -> None:
     sys.exit(2)
 
 
-# --- Command Handlers ---
-# Each handler receives (sub_args: List[str]) and returns an int exit code.
-# Adding a new command = write a handler + add one line to COMMANDS.
 
 def _cmd_install(sub_args: List[str]) -> int:
     mode = sub_args[0] if sub_args else "full"
@@ -727,7 +707,6 @@ def main() -> None:
         print_help(file=sys.stderr)
         sys.exit(2)
 
-    # Interactive flow
     if not sys.stdin.isatty():
         sys.exit(0 if install_configs_workflow("full") else 1)
     select_language()

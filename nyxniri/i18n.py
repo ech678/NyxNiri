@@ -19,7 +19,6 @@ def set_lang(lang: str) -> None:
     _MSG_CACHE.clear()
 
 TRANSLATIONS: Dict[str, Dict[str, str]] = {
-    # Status badges
     "installed": {
         "zh": f"{Colors.BOLD_GREEN}[已安装]{Colors.RESET}",
         "en": f"{Colors.BOLD_GREEN}[Installed]{Colors.RESET}",
@@ -29,7 +28,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_RED}[Missing]{Colors.RESET}",
     },
 
-    # Main Menu
     "menu_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── {PROJECT_NAME} 控制面板 ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_CYAN}── {PROJECT_NAME} Control Panel ──{Colors.RESET}\n",
@@ -83,7 +81,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Exit",
     },
 
-    # Snapshot Submenu
     "snapshot_menu_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── 快照管理 ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_CYAN}── Snapshot Management ──{Colors.RESET}\n",
@@ -109,7 +106,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Back to Main Menu",
     },
 
-    # Optional Modules Submenu
     "optmod_menu_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── 可选模块 ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_CYAN}── Optional Modules ──{Colors.RESET}\n",
@@ -123,7 +119,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Back to Main Menu",
     },
 
-    # Greeter Submenu
     "greeter_menu_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── Noctalia Greeter ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_CYAN}── Noctalia Greeter ──{Colors.RESET}\n",
@@ -145,7 +140,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Back",
     },
 
-    # Fcitx Submenu
     "fcitx_menu_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── NyxMellow fcitx5 皮肤 ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_CYAN}── NyxMellow fcitx5 Skin ──{Colors.RESET}\n",
@@ -167,7 +161,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Back",
     },
 
-    # Module Status Labels
     "status_installed_enabled": {
         "zh": f"{Colors.BOLD_GREEN}[已安装+已启用]{Colors.RESET}",
         "en": f"{Colors.BOLD_GREEN}[Installed + Enabled]{Colors.RESET}",
@@ -201,7 +194,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_YELLOW}[Not Downloaded]{Colors.RESET}",
     },
 
-    # Optional Modules Menu Labels & Wallpapers
     "optmod_sub_apps": {
         "zh": "常用软件",
         "en": "Recommended Apps",
@@ -235,7 +227,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_YELLOW}[!] Wallpaper refresh failed; the existing pack was kept{Colors.RESET}",
     },
 
-    # Install Flow
     "fcitx_skipped_not_installed": {
         "zh": f"{Colors.BOLD_YELLOW}[!] 未检测到 fcitx5，已跳过皮肤激活。安装后运行: nyxniri fcitx install{Colors.RESET}",
         "en": f"{Colors.BOLD_YELLOW}[!] fcitx5 not detected; skin activation skipped. Run: nyxniri fcitx install{Colors.RESET}",
@@ -265,7 +256,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"\n{Colors.BOLD_BLUE}:: [{Colors.BOLD_CYAN}{{0}}{Colors.BOLD_BLUE}] Configuring Noctalia Greeter…{Colors.RESET}",
     },
 
-    # Summary screen
     "summary_title_install": {
         "zh": "主人，NyxNiri 装完了喵~",
         "en": "Master, NyxNiri is all set nya~",
@@ -367,7 +357,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Control Panel : Run nyxniri",
     },
 
-    # Summary action card
     "summary_action_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── 下一步 ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_CYAN}── Next Steps ──{Colors.RESET}\n",
@@ -397,7 +386,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"\n  {Colors.BOLD_GREEN}[✓] Thanks for your support! Opened repository:{Colors.RESET} {{0}}\n",
     },
 
-    # Test & General Prompts
     "test_start": {
         "zh": f"\n{Colors.BOLD_BLUE}:: [test] 幂等测试部署 (跳过备份与依赖检查)…{Colors.RESET}",
         "en": f"\n{Colors.BOLD_BLUE}:: [test] Idempotent test deploy (skipped backup & deps)…{Colors.RESET}",
@@ -435,7 +423,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_GREEN}[✓] Bug Report exported to:{Colors.RESET} {{0}}\n{Colors.BOLD_CYAN}Hint: Please attach this file when opening an issue{Colors.RESET}\n{Colors.DARK_GRAY}QQ Group: 631425889 | Telegram: @Echoes678{Colors.RESET}",
     },
 
-    # Overwrite & Upgrade
     "overwrite_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── NyxNiri 配置更新 ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_CYAN}── NyxNiri Config Update ──{Colors.RESET}\n",
@@ -489,7 +476,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"\n{Colors.BOLD_CYAN}:: Configuration Diff (Press 'q' to quit){Colors.RESET}",
     },
 
-    # Uninstall & Restore
     "uninstall_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── 卸载与复原 ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_RED}── NyxNiri Uninstall & Environment Restoration ──{Colors.RESET}\n",
@@ -543,7 +529,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_GREEN}[✓] Restored system to original state{Colors.RESET}",
     },
 
-    # Rollback & Snapshots
     "no_backups_found": {
         "zh": f"{Colors.BOLD_YELLOW}[!] 未找到可用快照{Colors.RESET}",
         "en": f"{Colors.BOLD_YELLOW}[!] No configuration snapshots found{Colors.RESET}",
@@ -621,7 +606,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_GREEN}[✓] Deleted {{0}} snapshots, {{1}} remaining{Colors.RESET}",
     },
 
-    # Dependencies & Apps
     "deps_menu_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── 依赖与常用软件 ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_CYAN}── Dependencies & Apps ──{Colors.RESET}\n",
@@ -707,7 +691,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.DARK_GRAY}Skipped installation. Run nyxniri deps to install anytime.{Colors.RESET}",
     },
 
-    # Greeter
     "greeter_install_title": {
         "zh": f"\n{Colors.BOLD_PURPLE}[ 可选模块 ] Noctalia Greeter 安装与配置{Colors.RESET}",
         "en": f"\n{Colors.BOLD_PURPLE}[ Optional Module ] Noctalia Greeter{Colors.RESET}",
@@ -813,7 +796,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_GREEN}[✓] Greeter uninstalled. To remove packages: paru -R noctalia-greeter greetd{Colors.RESET}",
     },
 
-    # Fcitx5
     "fcitx_install_title": {
         "zh": f"\n{Colors.BOLD_PURPLE}[ 可选模块 ] NyxMellow 动态 fcitx5 皮肤配置{Colors.RESET}",
         "en": f"\n{Colors.BOLD_PURPLE}[ Optional Module ] NyxMellow fcitx5 skin{Colors.RESET}",
@@ -863,7 +845,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_YELLOW}[!] Noctalia templates not registered ({{0}}){Colors.RESET}",
     },
 
-    # GTK Material You Theme
     "gtk_install_title": {
         "zh": f"\n{Colors.BOLD_PURPLE}:: GTK Material You 主题渲染{Colors.RESET}",
         "en": f"\n{Colors.BOLD_PURPLE}:: GTK Material You theme render{Colors.RESET}",
@@ -901,7 +882,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_GREEN}[✓] GTK Material You theme removed; GTK apps reverted to adw-gtk3 defaults{Colors.RESET}",
     },
 
-    # Core Deployment & Backup
     "backing_up": {
         "zh": f"\n{Colors.BOLD_BLUE}:: 正在创建配置快照…{Colors.RESET}",
         "en": f"\n{Colors.BOLD_BLUE}:: Creating configuration snapshot…{Colors.RESET}",
@@ -927,7 +907,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"  {Colors.BOLD_RED}[✗]{Colors.RESET} Config deployment failed: {{0}}",
     },
 
-    # Doctor
     "running_doctor": {
         "zh": f"\n{Colors.BOLD_PURPLE}:: 正在运行 System Doctor 进行系统诊断…{Colors.RESET}",
         "en": f"\n{Colors.BOLD_PURPLE}Running System Doctor…{Colors.RESET}",
@@ -953,7 +932,6 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_CYAN}Hint: Restart Noctalia or reload Niri for settings to take effect{Colors.RESET}",
     },
 
-    # System Errors & Preflight
     "err_sudo_aborted": {
         "zh": f"\n{Colors.BOLD_RED}[✗] 缺少管理员权限。已中止。{Colors.RESET}",
         "en": f"\n{Colors.BOLD_RED}[✗] Administrator privileges required. Aborted.{Colors.RESET}",
@@ -1073,7 +1051,6 @@ Commands:
         "en": f"\n{Colors.BOLD_BLUE}:: Selected steps need administrator access. Authenticate sudo once:{Colors.RESET}",
     },
 
-    # Network
     "net_pull_repo": {
         "zh": f"{Colors.BOLD_BLUE}:: 拉取仓库 (官方 -> gh-proxy)…{Colors.RESET}",
         "en": f"{Colors.BOLD_BLUE}:: Pulling repository (Official -> gh-proxy)…{Colors.RESET}",
@@ -1127,7 +1104,6 @@ Commands:
         "en": f"{Colors.BOLD_RED}[✗] All mirror nodes failed{Colors.RESET}\n",
     },
 
-    # Logging & Atomic Deployment
     "log_keep_custom_file": {
         "zh": f"  {Colors.BOLD_GREEN}[✓]{Colors.RESET} 保留自定义文件: ~/.config/{{0}}",
         "en": f"  {Colors.BOLD_GREEN}[✓]{Colors.RESET} Preserved custom file: ~/.config/{{0}}",
@@ -1229,7 +1205,6 @@ Commands:
         "en": f"{Colors.BOLD_RED}[!]{Colors.RESET} Some AUR packages failed to install; continuing…",
     },
 
-    # AUR Bootstrap & Updates
     "aur_skip": {
         "zh": f"{Colors.BOLD_YELLOW}[!] AUR 软件包 ({{0}}) 需要 paru 或 yay，已跳过。{Colors.RESET}",
         "en": f"{Colors.BOLD_YELLOW}[!] AUR packages ({{0}}) require paru/yay; skipped.{Colors.RESET}",

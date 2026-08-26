@@ -17,7 +17,8 @@ from nyxniri.constants import (
     PROJECT_NAME,
     THEME_ENGINE,
 )
-from nyxniri.core import get_env, get_pics_dir, log_msg
+from nyxniri.env import get_env, get_pics_dir
+from nyxniri.log import log_msg
 from nyxniri.i18n import get_lang, msg
 
 
@@ -186,7 +187,7 @@ def _check_portal_config(env) -> None:
     if portal_conf.is_file() or portal_conf2.is_file():
         print(msg("doctor_ok", _text("桌面门户: niri-portals.conf 路由已配置", "Desktop Portal: niri-portals.conf routing is configured")))
 
-_MIN_HOME_FREE_KIB = 10 * 1024 * 1024  # 10 GiB expressed in KiB
+_MIN_HOME_FREE_KIB = 10 * 1024 * 1024
 _GIB_KIB = 1024 * 1024
 _MIB_KIB = 1024
 
@@ -243,8 +244,6 @@ def _check_greeter(env) -> None:
     greeter_status()
 
 
-# Ordered registry of all health checks.
-# Adding a check = write a function + append it here.
 DOCTOR_CHECKS = [
     _check_compositor,
     _check_wayland_session,
@@ -288,7 +287,6 @@ def generate_bug_report() -> Optional[Path]:
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     report_file = env.state_dir / f"nyxniri-bug-report-{timestamp}.md"
 
-    # OS Info
     os_name = "Linux"
     if Path("/etc/os-release").is_file():
         for line in Path("/etc/os-release").read_text(encoding="utf-8", errors="ignore").splitlines():
@@ -296,12 +294,10 @@ def generate_bug_report() -> Optional[Path]:
                 os_name = line.split("=", 1)[1].strip('"\'')
                 break
 
-    # Compositor & Shell
     compositor = os.environ.get("XDG_CURRENT_DESKTOP", "Unknown")
     session_type = os.environ.get("XDG_SESSION_TYPE", "Unknown")
     shell = os.environ.get("SHELL", "Unknown")
 
-    # GPU
     gpu_info = "Unknown"
     try:
         res = subprocess.run(["lspci"], capture_output=True, text=True, check=False, env={**os.environ, "LC_ALL": "C"})
@@ -311,13 +307,11 @@ def generate_bug_report() -> Optional[Path]:
     except Exception:
         pass
 
-    # Connected Displays
     displays = "Unknown"
     if shutil.which(MAIN_WM):
         res = subprocess.run([MAIN_WM, "msg", "outputs"], capture_output=True, text=True, check=False)
         displays = res.stdout.strip() if res.returncode == 0 and res.stdout.strip() else f"{MAIN_WM} msg outputs failed"
 
-    # Tool Versions
     tool_lines = []
     for cmd in (MAIN_WM, THEME_ENGINE, "fish", "starship", "kitty", "mpvpaper", "wpctl", "ddcutil", "brightnessctl"):
         if shutil.which(cmd):
@@ -339,7 +333,6 @@ def generate_bug_report() -> Optional[Path]:
             tool_lines.append(f"{cmd}: NOT INSTALLED")
     tool_versions = "\n".join(tool_lines)
 
-    # Daemon & Service Status
     daemon_lines = []
     if shutil.which(THEME_ENGINE):
         res = subprocess.run([THEME_ENGINE, "msg", "status"], capture_output=True, text=True, check=False)
@@ -351,7 +344,6 @@ def generate_bug_report() -> Optional[Path]:
         daemon_lines.append("\n".join(res.stdout.splitlines()[:10]) if res.stdout.strip() else "xdg-desktop-portal service check failed")
     daemon_status = "\n".join(daemon_lines)
 
-    # Health Checks
     health_lines = []
     if shutil.which("pacman"):
         res = subprocess.run(["pacman", "-Qq", "xdg-desktop-portal-gtk"], capture_output=True, text=True, check=False)
@@ -368,7 +360,6 @@ def generate_bug_report() -> Optional[Path]:
         health_lines.append(f"fcitx5 nyxmellow: {'enabled' if fcitx_enabled() else 'NOT enabled'}")
     health_checks = "\n".join(health_lines)
 
-    # Noctalia Hook Log
     hook_log_path = Path(os.environ.get("XDG_STATE_HOME", str(env.home / ".local" / "state"))) / THEME_ENGINE / "hook.log"
     if hook_log_path.is_file():
         try:
@@ -378,14 +369,12 @@ def generate_bug_report() -> Optional[Path]:
     else:
         hook_log = f"No hook.log found at {hook_log_path}"
 
-    # Systemd Journal
     if shutil.which("journalctl"):
         res = subprocess.run(["journalctl", "--user", "-n", "30", "--no-pager"], capture_output=True, text=True, check=False)
         journal = res.stdout.strip() if res.stdout.strip() else "journalctl log access unavailable"
     else:
         journal = "journalctl not available"
 
-    # Recent install log (last 30 lines)
     recent_log = "No log found."
     log_path = env.state_dir / "install.log"
     if log_path.is_file():

@@ -9,8 +9,9 @@ import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from nyxniri.constants import AUR_DEPS, CORE_DEPS, OPTIONAL_APPS
-from nyxniri.core import log_msg, register_temp_path
+from nyxniri.deps_list import AUR_DEPS, CORE_DEPS, OPTIONAL_APPS
+from nyxniri.log import log_msg
+from nyxniri.cleanup import register_temp_path
 from nyxniri.i18n import msg
 from nyxniri.network import git_clone_timeout
 from nyxniri.tui import CheckboxEntry, CheckboxList, pad_display, prompt_confirm
@@ -19,13 +20,11 @@ def is_dep_installed(cmd: str) -> bool:
     """Accurately check whether a specific software or font dependency is installed on the system."""
     env = {**os.environ, "LC_ALL": "C"}
 
-    # 1. Pacman package database (most authoritative on Arch)
     if shutil.which("pacman"):
         res = subprocess.run(["pacman", "-Qq", cmd], capture_output=True, text=True, check=False, env=env)
         if res.returncode == 0:
             return True
 
-    # 2. Specific runtime / font / tool checks
     if cmd == "inotify-tools":
         return shutil.which("inotifywait") is not None
     elif cmd == "python-gobject":
@@ -47,7 +46,6 @@ def is_dep_installed(cmd: str) -> bool:
             res = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True, check=False, env=env)
             return bool(re.search(r"noto.*cjk", res.stdout, re.IGNORECASE))
 
-    # 3. Fallback binary lookup
     return shutil.which(cmd) is not None
 
 def check_all_deps() -> Dict[str, bool]:
@@ -93,7 +91,6 @@ def ensure_aur_helper() -> Optional[str]:
         print(msg("aur_bootstrap_failed"))
         return None
 
-    # Remove stale paru-bin if conflicting
     env = {**os.environ, "LC_ALL": "C"}
     for stale in ("paru-bin", "paru-bin-debug"):
         res = subprocess.run(["pacman", "-Qq", stale], capture_output=True, check=False, env=env)
@@ -101,7 +98,6 @@ def ensure_aur_helper() -> Optional[str]:
             print(msg("aur_bootstrap_cleanup"))
             subprocess.run(["sudo", "pacman", "-Rdd", "--noconfirm", stale], check=False)
 
-    # 1. Try official repo package
     res_si = subprocess.run(["pacman", "-Si", "paru"], capture_output=True, check=False, env=env)
     if res_si.returncode == 0:
         print(msg("aur_bootstrap_repo"))
@@ -110,10 +106,8 @@ def ensure_aur_helper() -> Optional[str]:
         if helper:
             print(msg("aur_bootstrap_ok"))
             return helper
-        # Repo paru installed but not usable — remove before source build to avoid conflicts
         subprocess.run(["sudo", "pacman", "-Rdd", "--noconfirm", "paru"], check=False)
 
-    # 2. Source build from AUR
     res_base = subprocess.run(["sudo", "pacman", "-S", "--needed", "--noconfirm", "base-devel", "git"], check=False)
     if res_base.returncode != 0:
         print(msg("aur_bootstrap_failed"))
@@ -143,7 +137,6 @@ def check_mpvpaper_leak() -> None:
         return
     env = {**os.environ, "LC_ALL": "C"}
 
-    # Already on git version?
     res_git = subprocess.run(["pacman", "-Qi", "mpvpaper-git"], capture_output=True, text=True, check=False, env=env)
     if res_git.returncode == 0:
         git_ver = ""
@@ -167,7 +160,6 @@ def check_mpvpaper_leak() -> None:
     if not version:
         return
 
-    # Strip epoch and pkgrel: "1:1.8.2-3" → "1.8.2"
     clean_ver = re.sub(r'^[0-9]+:', '', version)
     clean_ver = re.sub(r'-.*$', '', clean_ver)
     clean_ver = re.sub(r'[^0-9.]', '', clean_ver)

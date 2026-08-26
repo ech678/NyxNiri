@@ -7,8 +7,10 @@ import subprocess
 import time
 from pathlib import Path
 
-from nyxniri.constants import Colors, FCITX_THEME, PROJECT_NAME, THEME_ENGINE
-from nyxniri.core import get_env, log_msg
+from nyxniri.colors import Colors
+from nyxniri.constants import FCITX_THEME, PROJECT_NAME, THEME_ENGINE
+from nyxniri.env import get_env
+from nyxniri.log import log_msg
 from nyxniri.i18n import get_lang, msg
 
 
@@ -179,8 +181,6 @@ def fcitx_register_templates() -> bool:
                 clean_lines.append(line)
 
         template_block = f"""
-# NyxMellow 动态 fcitx5 皮肤（mellow 形状 + Material You 自动取色）
-# 路径中的 /home/user 为占位符，由 nyxniri.deploy 在部署时替换为实际 $HOME
 [theme.templates.user.{FCITX_THEME}_theme]
 index = 0
 input_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/templates/theme.conf"
@@ -268,7 +268,6 @@ def fcitx_uninstall() -> bool:
     _, theme_dir, _, classicui, noctalia_conf, state_file, enabled_marker, _ = _fcitx_paths()
     print(msg("fcitx_uninstall_title"))
 
-    # Unregister from noctalia-config.toml
     if noctalia_conf.is_file() and fcitx_templates_registered():
         lines = noctalia_conf.read_text(encoding="utf-8").splitlines()
         new_lines = []
@@ -285,12 +284,10 @@ def fcitx_uninstall() -> bool:
         noctalia_conf.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
         print(msg("log_fcitx_template_unregistered", THEME_ENGINE))
 
-    # Remove theme directory
     if theme_dir.is_dir():
         shutil.rmtree(theme_dir, ignore_errors=True)
         print(msg("log_fcitx_theme_dir_removed", str(theme_dir)))
 
-    # Revert classicui.conf
     if state_file.is_file():
         try:
             state_txt = state_file.read_text(encoding="utf-8")

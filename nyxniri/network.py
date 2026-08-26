@@ -18,7 +18,9 @@ from nyxniri.constants import (
     GIT_MIRROR_REGISTRY,
     RAW_MIRROR_TEMPLATES,
 )
-from nyxniri.core import get_env, log_msg, register_temp_path
+from nyxniri.env import get_env
+from nyxniri.log import log_msg
+from nyxniri.cleanup import register_temp_path
 from nyxniri.i18n import msg
 from nyxniri.tui import prompt_confirm
 
@@ -93,12 +95,8 @@ def _with_git_progress(command: List[str]) -> Tuple[List[str], bool]:
     show_progress = sys.stderr.isatty()
     if not show_progress:
         return command, False
-    # Locate the git subcommand (first positional token after git and its
-    # value-taking top-level options like -c / -C / --git-dir / --work-tree / --namespace).
-    # Inserting --progress before the subcommand would feed it to the preceding
-    # value-taking option (e.g. as the -c key), which git rejects.
     value_opts = {"-c", "-C", "--git-dir", "--work-tree", "--namespace"}
-    i = 1  # skip "git"
+    i = 1
     while i < len(command):
         tok = command[i]
         if tok == "--":
@@ -244,7 +242,6 @@ def fetch_raw_with_fallback(user_repo: str, branch: str, file_path: str, output_
             duration_ms = int((time.time() - start_time) * 1000)
 
             if http_code == "200" and tmp_path.stat().st_size > 0:
-                # Check for HTML 404 block page
                 first_lines = tmp_path.read_text(encoding="utf-8", errors="ignore")[:200].lower()
                 if "<html" not in first_lines:
                     sys.stdout.write(msg("net_download_ok", duration_ms) + "\n")
@@ -276,7 +273,6 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
 
     run_mode = get_env().run_mode
     env = {**os.environ, "LC_ALL": "C"}
-    # Check for uncommitted changes
     res_status = subprocess.run(
         ["git", "status", "--porcelain"],
         cwd=target_dir,
@@ -286,7 +282,6 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         env=env,
     )
     if res_status.stdout.strip():
-        # Dirty tree
         print(msg("dirty_tree_warn", str(target_dir)))
         if run_mode == "repo":
             print(msg("update_skipped_dev_repo", str(target_dir)))
@@ -302,7 +297,6 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=target_dir, check=False, env=env)
         subprocess.run(["git", "clean", "-fd"], cwd=target_dir, check=False, env=env)
 
-    # Fetch & pull
     sys.stdout.write(msg("checking_updates") + "\n")
     res_pull = _run_git_transfer(
         ["git", *_GIT_NET, "pull", "--ff-only"],
@@ -317,7 +311,6 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         log_msg("WARN", f"Skipped non-fast-forward update for local repo: {target_dir}")
         return None
 
-    # Fallback to fetch & reset only for the disposable remote cache.
     res_fetch = _run_git_transfer(
         ["git", *_GIT_NET, "fetch", "--depth", "1", "origin", "main"],
         cwd=target_dir,

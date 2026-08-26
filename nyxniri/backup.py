@@ -9,7 +9,8 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional
 
-from nyxniri.constants import CLI_CMD, Colors, PROJECT_NAME
+from nyxniri.constants import CLI_CMD, PROJECT_NAME
+from nyxniri.colors import Colors
 from nyxniri.core import (
     get_env,
     get_pics_dir,
@@ -18,6 +19,7 @@ from nyxniri.core import (
 )
 from nyxniri.i18n import msg
 from nyxniri.tui import CheckboxEntry, CheckboxList, prompt_confirm, truncate_display
+from nyxniri.utils import _remove_path, _copy_path
 
 
 _MANAGED_SNAPSHOT_RE = re.compile(
@@ -25,30 +27,6 @@ _MANAGED_SNAPSHOT_RE = re.compile(
 )
 
 
-def _copy_path(src: Path, dest: Path) -> None:
-    """Copy one path while preserving a top-level symlink as a symlink."""
-    if src.is_symlink():
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.unlink(missing_ok=True)
-        dest.symlink_to(os.readlink(src))
-    elif src.is_dir():
-        shutil.copytree(src, dest, symlinks=True)
-    else:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
-
-
-def _remove_path(path: Path) -> None:
-    """Remove a path without following a top-level symlink."""
-    try:
-        if path.is_symlink():
-            path.unlink(missing_ok=True)
-        elif path.is_dir():
-            shutil.rmtree(path, ignore_errors=True)
-        else:
-            path.unlink(missing_ok=True)
-    except OSError:
-        pass
 
 
 def get_backup_base_dir() -> Path:
@@ -105,7 +83,6 @@ def get_all_backups() -> List[Path]:
             if d.is_dir() and not d.is_symlink() and _MANAGED_SNAPSHOT_RE.fullmatch(d.name):
                 backups.append(d)
 
-    # Legacy snapshots directly under ~/.config/
     if env.config_dir.is_dir():
         for d in env.config_dir.iterdir():
             if d.is_dir() and not d.is_symlink() and _MANAGED_SNAPSHOT_RE.fullmatch(d.name):
@@ -202,7 +179,6 @@ def rollback_configs(target_arg: str = "") -> bool:
 
     print(msg("rolling_back", chosen_backup.name))
 
-    # Auto pre-rollback snapshot
     pre_snap = backup_configs(note="pre-rollback safety snapshot", interactive=False)
     if pre_snap:
         print(msg("pre_rollback_backup", str(pre_snap)))
@@ -298,7 +274,6 @@ def uninstall_nyxniri(mode: str = "") -> bool:
     env = get_env()
     items = discover_config_items()
 
-    # Legacy mode aliases → canonical names
     if mode in ("1", "safe", "--safe"):
         mode = "standard"
     elif mode in ("2", "--restore"):
@@ -379,7 +354,6 @@ def uninstall_nyxniri(mode: str = "") -> bool:
         print(msg("restore_origin_done"))
         return True
 
-    # Standard uninstall: Archive current dotfiles, remove configs & CLI
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     archive_dir = env.config_dir / f"{PROJECT_NAME}_archive_{timestamp}"
     archive_dir.mkdir(parents=True, exist_ok=True)

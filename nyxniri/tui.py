@@ -13,8 +13,8 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
-from nyxniri.constants import Colors
-from nyxniri.core import Environment, get_env
+from nyxniri.colors import Colors
+from nyxniri.env import Environment, get_env
 from nyxniri.i18n import msg
 
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -59,7 +59,6 @@ class TerminalGuard:
 TerminalGuard.init()
 
 
-# --- Geometric Column Alignment ---
 def display_width(text: str) -> int:
     """Calculate the real physical terminal column width of a string (CJK = 2 cols)."""
     clean_text = ANSI_ESCAPE_RE.sub("", text)
@@ -122,7 +121,6 @@ def responsive_hint(key: str) -> str:
     return msg(short_keys.get(key, key))
 
 
-# --- Single Key Event Listener ---
 def read_key() -> str:
     """Listen for a single keyboard event using raw unbuffered OS file descriptor reads."""
     if not sys.stdin.isatty():
@@ -140,11 +138,9 @@ def read_key() -> str:
             if ready:
                 raw_bytes += os.read(fd, 31)
 
-        # 1. Standalone ESC
         if raw_bytes == b"\x1b":
             return "ESC"
 
-        # 2. Arrow keys (CSI: \x1b[ and SS3: \x1bO)
         if raw_bytes in (b"\x1b[A", b"\x1bOA"):
             return "UP"
         if raw_bytes in (b"\x1b[B", b"\x1bOB"):
@@ -154,7 +150,6 @@ def read_key() -> str:
         if raw_bytes in (b"\x1b[D", b"\x1bOD"):
             return "LEFT"
 
-        # 3. CSI Extended keys (Home, End, PageUp, PageDown)
         if raw_bytes.startswith(b"\x1b["):
             code = raw_bytes[2:]
             if code in (b"H", b"1~"):
@@ -167,15 +162,13 @@ def read_key() -> str:
                 return "PAGEDOWN"
             return "ESC"
 
-        # 4. Standard control keys
         if raw_bytes in (b"\r", b"\n"):
             return "ENTER"
         if raw_bytes == b" ":
             return "SPACE"
-        if raw_bytes in (b"\x03", b"\x04"):  # Ctrl+C / Ctrl+D — both exit
+        if raw_bytes in (b"\x03", b"\x04"):
             return "EXIT"
 
-        # 5. Normal UTF-8 single character
         try:
             return raw_bytes.decode("utf-8")
         except UnicodeDecodeError:
@@ -183,7 +176,6 @@ def read_key() -> str:
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_attr)
 
-# --- Rendering Primitives & Screen Cleaners ---
 def clear_screen() -> None:
     """Clear the visible terminal without destroying scrollback history."""
     if sys.stdin.isatty():
@@ -302,7 +294,6 @@ def prompt_confirm(prompt_key: str, default: str = "y") -> bool:
     except Exception:
         return default.lower().startswith("y")
 
-# --- Component: Interactive Menu ---
 @dataclass
 class MenuItem:
     label: str
@@ -375,7 +366,6 @@ class Menu:
             sys.stdout.write(Colors.CURSOR_SHOW)
             sys.stdout.flush()
 
-# --- Component: Checkbox Checklist ---
 @dataclass
 class CheckboxEntry:
     key: str
@@ -471,7 +461,6 @@ class CheckboxList:
             sys.stdout.write(Colors.CURSOR_SHOW)
             sys.stdout.flush()
 
-# --- Component: Language Selection ---
 def select_language() -> str:
     """Prompt user to select language mode with smooth arrow keys."""
     if not sys.stdin.isatty():
@@ -481,7 +470,7 @@ def select_language() -> str:
     clear_screen()
     from nyxniri.i18n import set_lang
     env = get_env()
-    focus = 1  # Default to Simplified Chinese
+    focus = 1
 
     sys.stdout.write(Colors.CURSOR_HIDE)
     try:

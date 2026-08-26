@@ -16,7 +16,7 @@ from nyxniri.constants import (
     MAIN_WM,
     THEME_ENGINE,
 )
-from nyxniri.core import log_msg
+from nyxniri.log import log_msg
 from nyxniri.i18n import get_lang, msg
 
 
@@ -71,7 +71,6 @@ def greeter_install_packages() -> bool:
     pkg_mgr = get_preferred_pkg_manager()
     is_aur = pkg_mgr != ["sudo", "pacman"]
 
-    # Check greetd
     if shutil.which("pacman"):
         res = subprocess.run(["pacman", "-Qq", "greetd"], capture_output=True, check=False)
         if res.returncode != 0:
@@ -96,14 +95,12 @@ def greeter_install() -> bool:
     if not greeter_install_packages():
         return False
 
-    # Check for conflicting display managers
     for dm in CONFLICT_DMS:
         if shutil.which("systemctl"):
             res = subprocess.run(["systemctl", "is-enabled", dm], capture_output=True, check=False)
             if res.returncode == 0:
                 print(msg("greeter_dm_conflict", dm))
 
-    # Backup & Write /etc/greetd/config.toml
     sess_path = shutil.which(GREETER_SESSION_BIN) or f"/usr/bin/{GREETER_SESSION_BIN}"
     sess_arg = _greeter_session_arg()
     command_str = f"{sess_path} {sess_arg}".strip()
@@ -136,7 +133,6 @@ def greeter_install() -> bool:
     if res_s.returncode == 0:
         print(msg("greeter_state_dir_created"))
 
-    # Polkit rule
     polkit_rule = (
         'polkit.addRule(function(action, subject) {\n'
         f'    if (action.id == "org.{THEME_ENGINE}.greeter.apply-appearance" &&\n'
@@ -152,7 +148,6 @@ def greeter_install() -> bool:
     else:
         print(msg("greeter_polkit_failed"))
 
-    # Enable greetd
     res_e = subprocess.run(["sudo", "systemctl", "enable", "greetd"], check=False)
     if res_e.returncode == 0:
         print(msg("greeter_enabled"))
