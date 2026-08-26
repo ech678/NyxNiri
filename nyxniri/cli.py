@@ -62,9 +62,11 @@ from nyxniri.tui import (
     CheckboxList,
     MenuItem,
     Menu,
+    Spinner,
     pad_display,
     press_any_key,
     prompt_confirm,
+    read_line,
     select_language,
 )
 
@@ -204,17 +206,17 @@ def install_configs_workflow(mode: str = "full") -> bool:
     # 1. Deps
     if mode == "full":
         cur_step += 1
-        print(msg("install_step_deps", f"{cur_step}/{steps}"))
-        missing = get_missing_deps()
-        if missing:
-            install_selected_deps(missing)
+        with Spinner(msg("install_step_deps", f"{cur_step}/{steps}")):
+            missing = get_missing_deps()
+            if missing:
+                install_selected_deps(missing)
 
     # 2. Configs
     cur_step += 1
-    print(msg("install_step_configs", f"{cur_step}/{steps}"))
     preserved_log: List[str] = []
     if chosen_configs:
-        failed_items = deploy_selected_configs(do_backup=do_backup, items_to_deploy=chosen_configs, preserved_log=preserved_log)
+        with Spinner(msg("install_step_configs", f"{cur_step}/{steps}")):
+            failed_items = deploy_selected_configs(do_backup=do_backup, items_to_deploy=chosen_configs, preserved_log=preserved_log)
         if failed_items:
             render_completion_screen(
                 mode=mode,
@@ -227,20 +229,20 @@ def install_configs_workflow(mode: str = "full") -> bool:
     # 3. Wallpapers (always run — at least syncs offline fallback wallpapers)
     wallpaper_result = None
     cur_step += 1
-    print(msg("install_step_wallpapers", f"{cur_step}/{steps}"))
-    wallpaper_result = deploy_wallpapers(do_download=do_wallpapers)
+    with Spinner(msg("install_step_wallpapers", f"{cur_step}/{steps}")):
+        wallpaper_result = deploy_wallpapers(do_download=do_wallpapers)
 
     # 4. Fcitx5
     if do_fcitx:
         cur_step += 1
-        print(msg("install_step_fcitx", f"{cur_step}/{steps}"))
-        fcitx_install()
+        with Spinner(msg("install_step_fcitx", f"{cur_step}/{steps}")):
+            fcitx_install()
 
     # 5. Greeter
     if do_greeter:
         cur_step += 1
-        print(msg("install_step_greeter", f"{cur_step}/{steps}"))
-        greeter_install()
+        with Spinner(msg("install_step_greeter", f"{cur_step}/{steps}")):
+            greeter_install()
 
     # Completion
     render_completion_screen(
@@ -362,12 +364,11 @@ def snapshot_menu_loop() -> None:
             MenuItem(label=msg("snapshot_sub_rollback")),
             MenuItem(label=msg("snapshot_sub_back"), style="subtle"),
         ]
-        menu = Menu("snapshot_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("snapshot_menu_title", items, hint_key="submenu_hint",
+                    breadcrumb=["NyxNiri", msg("snapshot_menu_title").strip()])
         choice = menu.run()
         if choice == 0:
-            sys.stdout.write(msg("snapshot_note_prompt"))
-            sys.stdout.flush()
-            note = sys.stdin.readline().strip()
+            note = read_line(msg("snapshot_note_prompt"))
             backup_configs(note=note, interactive=True)
             press_any_key()
         elif choice == 1:
@@ -391,7 +392,8 @@ def greeter_menu_loop() -> None:
             MenuItem(label=msg("greeter_sub_uninstall"), style="warn"),
             MenuItem(label=msg("greeter_sub_back"), style="subtle"),
         ]
-        menu = Menu("greeter_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("greeter_menu_title", items, hint_key="submenu_hint",
+                    breadcrumb=["NyxNiri", msg("greeter_menu_title").strip()])
         choice = menu.run()
         if choice == 0: greeter_install(); press_any_key()
         elif choice == 1: greeter_status(); press_any_key()
@@ -407,7 +409,8 @@ def fcitx_menu_loop() -> None:
             MenuItem(label=msg("fcitx_sub_uninstall"), style="warn"),
             MenuItem(label=msg("fcitx_sub_back"), style="subtle"),
         ]
-        menu = Menu("fcitx_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("fcitx_menu_title", items, hint_key="submenu_hint",
+                    breadcrumb=["NyxNiri", msg("fcitx_menu_title").strip()])
         choice = menu.run()
         if choice == 0: fcitx_install(); press_any_key()
         elif choice == 1: fcitx_status(); press_any_key()
@@ -426,7 +429,8 @@ def deps_menu_loop() -> None:
             MenuItem(label=msg("deps_sub_apps")),
             MenuItem(label=msg("deps_sub_back"), style="subtle"),
         ]
-        menu = Menu("deps_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("deps_menu_title", items, hint_key="submenu_hint",
+                    breadcrumb=["NyxNiri", msg("deps_menu_title").strip()])
         choice = menu.run()
         if choice == 0: run_dep_menu_loop(); press_any_key()
         elif choice == 1: run_optional_apps_menu_loop(); press_any_key()
@@ -448,7 +452,8 @@ def optional_modules_menu_loop() -> None:
             MenuItem(label=msg("optmod_purge"), style="warn"),
             MenuItem(label=msg("optmod_back"), style="subtle"),
         ]
-        menu = Menu("optmod_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("optmod_menu_title", items, hint_key="submenu_hint",
+                    breadcrumb=["NyxNiri", msg("optmod_menu_title").strip()])
         choice = menu.run()
         if choice == 0: run_optional_apps_menu_loop()
         elif choice == 1: greeter_menu_loop()
@@ -472,7 +477,8 @@ def main_menu_loop() -> None:
             MenuItem(label=msg("menu_opt8")),
             MenuItem(label=msg("menu_opt0"), style="subtle"),
         ]
-        menu = Menu("menu_title", items, hint_key="menu_hint")
+        menu = Menu("menu_title", items, hint_key="menu_hint",
+                    breadcrumb=["NyxNiri"])
         choice = menu.run()
 
         if choice == 0:
@@ -484,8 +490,9 @@ def main_menu_loop() -> None:
         elif choice == 3:
             update_result = safe_git_pull(env.repo_dir)
             if update_result is True:
-                offer_overwrite_upgrade()
-                check_new_deps_post_update()
+                with Spinner(msg("updating_done")):
+                    offer_overwrite_upgrade()
+                    check_new_deps_post_update()
                 print(msg("updating_done"))
                 press_any_key()
                 # Re-exec to load new code

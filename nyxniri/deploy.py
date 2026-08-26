@@ -67,7 +67,7 @@ def discover_config_items() -> List[str]:
     _CONFIG_ITEMS_CACHE = ["fastfetch", "fish", "kitty", "niri", "noctalia", "starship.toml", "xdg-desktop-portal", "zed"]
     return _CONFIG_ITEMS_CACHE
 
-def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False) -> bool:
+def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False, preserved_files: Optional[List[str]] = None) -> bool:
     """Atomic swap deployment via sibling temp directories with Dunder Protocol preservation."""
     pid = os.getpid()
     dest_parent = dest.parent
@@ -149,6 +149,18 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
                         if preserved_log is not None:
                             preserved_log.append(f"~/.config/{rel_display}/")
 
+        if preserved_files:
+            for rel in preserved_files:
+                src_preserve = dest / rel
+                target_preserve = tmp_new / rel
+                if src_preserve.is_file():
+                    target_preserve.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src_preserve, target_preserve)
+                    rel_display = str(dest.relative_to(home / ".config") / rel)
+                    print(msg("log_keep_monitor_config", MAIN_WM, MAIN_WM_HARDWARE_CONFIG))
+                    if preserved_log is not None:
+                        preserved_log.append(f"~/.config/{rel_display}")
+
         if dest.exists() or dest.is_symlink():
             old_dest = dest.with_name(f"{dest.name}.old.{pid}")
             dest.rename(old_dest)
@@ -198,26 +210,14 @@ def _phase_atomic_deployment(
         dest = config_dir / item
 
         if src.exists():
-            temp_monitor: Optional[Path] = None
-            if item == MAIN_WM and (dest / MAIN_WM_HARDWARE_CONFIG).is_file():
-                if keep_monitor or os.environ.get("NYXNIRI_KEEP_MONITOR", "0") == "1":
-                    tfd, tname = tempfile.mkstemp()
-                    os.close(tfd)
-                    temp_monitor = Path(tname)
-                    register_temp_path(temp_monitor)
-                    shutil.copy2(dest / MAIN_WM_HARDWARE_CONFIG, temp_monitor)
+            preserved_rel: Optional[List[str]] = None
+            if item == MAIN_WM and keep_monitor and (dest / MAIN_WM_HARDWARE_CONFIG).is_file():
+                preserved_rel = [MAIN_WM_HARDWARE_CONFIG]
 
-            if not atomic_replace_item(src, dest, preserved_log=preserved_log, test_mode=test_mode):
+            if not atomic_replace_item(src, dest, preserved_log=preserved_log, test_mode=test_mode, preserved_files=preserved_rel):
                 failed_items.append(item)
                 print(msg("log_deploy_config_failed", item), file=sys.stderr)
                 continue
-
-            if temp_monitor and temp_monitor.is_file():
-                shutil.copy2(temp_monitor, dest / MAIN_WM_HARDWARE_CONFIG)
-                temp_monitor.unlink(missing_ok=True)
-                print(msg("log_keep_monitor_config", MAIN_WM, MAIN_WM_HARDWARE_CONFIG))
-                if preserved_log is not None:
-                    preserved_log.append(f"~/.config/{MAIN_WM}/{MAIN_WM_HARDWARE_CONFIG}")
 
             print(msg("log_deploy_config_item", item))
             log_msg("INFO", f"Deployed config ~/.config/{item}")

@@ -1,5 +1,4 @@
 """TUI component and terminal presentation engine (Native ANSI + Standard Library)."""
-
 import atexit
 import os
 import re
@@ -8,20 +7,61 @@ import shutil
 import signal
 import sys
 import termios
+import threading
+import time
 import tty
 import unicodedata
-from dataclasses import dataclass
-from typing import Any, List, Optional
+from dataclasses import dataclass, field
+from typing import Any, Callable, List, Optional
 
 from nyxniri.constants import Colors
 from nyxniri.core import Environment, get_env
 from nyxniri.i18n import msg
 
-ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -\/]*[@-~]")
 
+_terminal_size_cache: Optional[tuple] = None
+
+
+def _get_terminal_size() -> tuple:
+    global _terminal_size_cache
+    if _terminal_size_cache is not None:
+        return _terminal_size_cache
+    size = shutil.get_terminal_size((80, 24))
+    _terminal_size_cache = (size.columns, size.lines)
+    return _terminal_size_cache
+
+
+_winch_handlers: List[Callable] = []
+
+
+def _on_sigwinch(signum, frame) -> None:
+    global _terminal_size_cache
+    _terminal_size_cache = None
+    for h in _winch_handlers:
+        try:
+            h()
+        except Exception:
+            pass
+
+try:
+    signal.signal(signal.SIGWINCH, _on_sigwinch)
+except (AttributeError, ValueError, OSError):
+    pass
+
+
+def _register_winch(handler: Callable) -> None:
+    if handler not in _winch_handlers:
+        _winch_handlers.append(handler)
+
+
+def _unregister_winch(handler: Callable) -> None:
+    try:
+        _winch_handlers.remove(handler)
+    except ValueError:
+        pass
 
 class TerminalGuard:
-    """Fail-safe guard that guarantees terminal attributes and cursor visibility are restored."""
     _orig_attr: Optional[List[Any]] = None
     _initialized: bool = False
 
@@ -55,13 +95,10 @@ class TerminalGuard:
         sys.stdout.write("\n")
         sys.exit(130)
 
-
 TerminalGuard.init()
 
 
-# --- Geometric Column Alignment ---
 def display_width(text: str) -> int:
-    """Calculate the real physical terminal column width of a string (CJK = 2 cols)."""
     clean_text = ANSI_ESCAPE_RE.sub("", text)
     return sum(
         0 if unicodedata.combining(ch) else 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
@@ -70,7 +107,6 @@ def display_width(text: str) -> int:
 
 
 def pad_display(text: str, width: int) -> str:
-    """Pad string with trailing spaces to achieve exact visual column alignment."""
     curr = display_width(text)
     if curr < width:
         return text + (" " * (width - curr))
@@ -78,12 +114,10 @@ def pad_display(text: str, width: int) -> str:
 
 
 def truncate_display(text: str, width: int, suffix: str = "…") -> str:
-    """Clip ANSI-styled text to a physical terminal width without splitting CJK glyphs."""
     if width <= 0:
         return ""
     if display_width(text) <= width:
         return text
-
     suffix_width = display_width(suffix)
     content_width = max(0, width - suffix_width)
     output: List[str] = []
@@ -95,22 +129,22 @@ def truncate_display(text: str, width: int, suffix: str = "…") -> str:
             output.append(match.group(0))
             pos = match.end()
             continue
-        char = text[pos]
-        char_width = 0 if unicodedata.combining(char) else 2 if unicodedata.east_asian_width(char) in ("W", "F") else 1
-        if used + char_width > content_width:
+        ch = text[pos]
+        ch_width = 0 if unicodedata.combining(ch) else 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+        if used + ch_width > content_width:
             break
-        output.append(char)
-        used += char_width
+        output.append(ch)
+        used += ch_width
         pos += 1
     reset = Colors.RESET if ANSI_ESCAPE_RE.search(text) else ""
     return "".join(output) + suffix + reset
 
 
 def responsive_hint(key: str) -> str:
-    """Use compact control hints when the terminal cannot hold the full legend."""
-    if shutil.get_terminal_size((80, 24)).columns >= 72:
+    cols, _ = _get_terminal_size()
+    if cols >= 72:
         return msg(key)
-    short_keys = {
+    short = {
         "menu_hint": "menu_hint_short",
         "submenu_hint": "submenu_hint_short",
         "selective_hint": "checklist_hint_short",
@@ -119,44 +153,37 @@ def responsive_hint(key: str) -> str:
         "opt_apps_menu_hint": "checklist_hint_short",
         "summary_action_hint": "summary_action_hint_short",
     }
-    return msg(short_keys.get(key, key))
+    return msg(short.get(key, key))
 
 
-# --- Single Key Event Listener ---
 def read_key() -> str:
-    """Listen for a single keyboard event using raw unbuffered OS file descriptor reads."""
     if not sys.stdin.isatty():
         return "ENTER"
-
     fd = sys.stdin.fileno()
     old_attr = termios.tcgetattr(fd)
     try:
         tty.setraw(fd)
-        raw_bytes = os.read(fd, 1)
-        if not raw_bytes:
+        raw = os.read(fd, 1)
+        if not raw:
             return "EOF"
-        if raw_bytes == b"\x1b":
+        if raw == b"\x1b":
             ready, _, _ = select.select([fd], [], [], 0.05)
             if ready:
-                raw_bytes += os.read(fd, 31)
-
-        # 1. Standalone ESC
-        if raw_bytes == b"\x1b":
+                raw += os.read(fd, 31)
+        if raw == b"\x1b":
             return "ESC"
-
-        # 2. Arrow keys (CSI: \x1b[ and SS3: \x1bO)
-        if raw_bytes in (b"\x1b[A", b"\x1bOA"):
+        if raw in (b"\x1b[A", b"\x1bOA"):
             return "UP"
-        if raw_bytes in (b"\x1b[B", b"\x1bOB"):
+        if raw in (b"\x1b[B", b"\x1bOB"):
             return "DOWN"
-        if raw_bytes in (b"\x1b[C", b"\x1bOC"):
+        if raw in (b"\x1b[C", b"\x1bOC"):
             return "RIGHT"
-        if raw_bytes in (b"\x1b[D", b"\x1bOD"):
+        if raw in (b"\x1b[D", b"\x1bOD"):
             return "LEFT"
-
-        # 3. CSI Extended keys (Home, End, PageUp, PageDown)
-        if raw_bytes.startswith(b"\x1b["):
-            code = raw_bytes[2:]
+        if raw in (b"\x7f", b"\x08"):
+            return "BACKSPACE"
+        if raw.startswith(b"\x1b["):
+            code = raw[2:]
             if code in (b"H", b"1~"):
                 return "HOME"
             if code in (b"F", b"4~"):
@@ -166,49 +193,43 @@ def read_key() -> str:
             if code == b"6~":
                 return "PAGEDOWN"
             return "ESC"
-
-        # 4. Standard control keys
-        if raw_bytes in (b"\r", b"\n"):
+        if raw in (b"\r", b"\n"):
             return "ENTER"
-        if raw_bytes == b" ":
+        if raw == b" ":
             return "SPACE"
-        if raw_bytes in (b"\x03", b"\x04"):  # Ctrl+C / Ctrl+D — both exit
+        if raw in (b"\x03", b"\x04"):
             return "EXIT"
-
-        # 5. Normal UTF-8 single character
         try:
-            return raw_bytes.decode("utf-8")
+            return raw.decode("utf-8")
         except UnicodeDecodeError:
             return ""
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_attr)
 
-# --- Rendering Primitives & Screen Cleaners ---
+
 def clear_screen() -> None:
-    """Clear the visible terminal without destroying scrollback history."""
     if sys.stdin.isatty():
         sys.stdout.write("\033[2J\033[H")
         sys.stdout.flush()
 
+
 def write_cleared(text: str) -> None:
-    """Write text, ensuring each line has \\033[K before \\n to wipe right-side ghost chars."""
     if not text:
         return
     lines = text.split("\n")
-    for i, line in enumerate(lines):
+    for i, l in enumerate(lines):
         if i == len(lines) - 1:
-            sys.stdout.write(line)
+            sys.stdout.write(l)
         else:
-            sys.stdout.write(f"{line}\033[K\n")
+            sys.stdout.write(f"{l}\033[K\n")
+
 
 def show_logo(env: Optional[Environment] = None) -> None:
-    """Render the official NyxNiri ASCII brand header."""
     if env is None:
         env = get_env()
-
-    terminal = shutil.get_terminal_size((80, 24))
-    if terminal.columns < 66 or terminal.lines < 20:
-        mode_line = truncate_display(f"Mode: {env.mode_label} ({env.repo_dir})", max(12, terminal.columns - 4))
+    cols, lines = _get_terminal_size()
+    if cols < 66 or lines < 20:
+        mode_line = truncate_display(f"Mode: {env.mode_label} ({env.repo_dir})", max(12, cols - 4))
         logo = (
             f"{Colors.BOLD_PURPLE}\n  NYX NIRI{Colors.RESET}  "
             f"{Colors.BOLD_WHITE}{env.version}{Colors.RESET}\n"
@@ -216,10 +237,9 @@ def show_logo(env: Optional[Environment] = None) -> None:
         )
         write_cleared(logo)
         return
-
     mode_line = truncate_display(
         f"Mode: {env.mode_label} ({env.repo_dir})",
-        max(12, terminal.columns - 4),
+        max(12, cols - 4),
     )
     logo = (
         f"{Colors.BOLD_PURPLE}\n"
@@ -235,8 +255,15 @@ def show_logo(env: Optional[Environment] = None) -> None:
     )
     write_cleared(logo)
 
+
+def render_breadcrumb(trail: Optional[List[str]]) -> None:
+    if not trail:
+        return
+    sep = f" {Colors.DARK_GRAY}›{Colors.RESET} "
+    write_cleared(f"  {sep.join(trail)}\n\n")
+
+
 def render_menu_item(idx: int, label: str, focus: int, style: str = "normal") -> None:
-    """Render a single interactive menu row with line-level erase."""
     if idx == focus:
         prefix = f"  {Colors.BOLD_CYAN}❯ {Colors.RESET}"
         if style == "warn":
@@ -253,43 +280,35 @@ def render_menu_item(idx: int, label: str, focus: int, style: str = "normal") ->
             color = Colors.DARK_GRAY
         else:
             color = ""
-    available = max(1, shutil.get_terminal_size((80, 24)).columns - display_width(prefix) - 1)
-    clipped_label = truncate_display(label, available)
-    sys.stdout.write(f"{prefix}{color}{clipped_label}{Colors.RESET}\033[K\n")
+    cols, _ = _get_terminal_size()
+    avail = max(1, cols - display_width(prefix) - 1)
+    clipped = truncate_display(label, avail)
+    sys.stdout.write(f"{prefix}{color}{clipped}{Colors.RESET}\033[K\n")
 
-def render_check_row(is_focus: bool, check_str: str, label: str) -> None:
-    """Render a single checkbox item row with line-level erase."""
+
+def render_check_row(is_focus: bool, chk: str, label: str) -> None:
     prefix = f"  {Colors.BOLD_CYAN}❯ {Colors.RESET}" if is_focus else "    "
-    available = max(
-        1,
-        shutil.get_terminal_size((80, 24)).columns
-        - display_width(prefix)
-        - display_width(check_str)
-        - 2,
-    )
-    clipped_label = truncate_display(label, available)
+    cols, _ = _get_terminal_size()
+    avail = max(1, cols - display_width(prefix) - display_width(chk) - 2)
+    clipped = truncate_display(label, avail)
     if is_focus:
-        sys.stdout.write(
-            f"  {Colors.BOLD_CYAN}❯ {Colors.RESET}{check_str} "
-            f"{Colors.BOLD_WHITE}{clipped_label}{Colors.RESET}\033[K\n"
-        )
+        sys.stdout.write(f"  {Colors.BOLD_CYAN}❯ {Colors.RESET}{chk} {Colors.BOLD_WHITE}{clipped}{Colors.RESET}\033[K\n")
     else:
-        sys.stdout.write(f"    {check_str} {clipped_label}\033[K\n")
+        sys.stdout.write(f"    {chk} {clipped}\033[K\n")
+
 
 def press_any_key() -> None:
-    """Prompt to press any key to continue."""
     if sys.stdin.isatty():
         sys.stdout.write(msg("press_any_key"))
         sys.stdout.flush()
         read_key()
         sys.stdout.write("\n")
 
-def prompt_confirm(prompt_key: str, default: str = "y") -> bool:
-    """Bilingual prompt confirmation (returns True for Yes, False for No)."""
+
+def prompt_confirm(key: str, default: str = "y") -> bool:
     if os.environ.get("NYXNIRI_AUTO_YES", "0") == "1":
         return True
-
-    sys.stdout.write(msg(prompt_key))
+    sys.stdout.write(msg(key))
     sys.stdout.flush()
     try:
         line = sys.stdin.readline()
@@ -302,7 +321,78 @@ def prompt_confirm(prompt_key: str, default: str = "y") -> bool:
     except Exception:
         return default.lower().startswith("y")
 
-# --- Component: Interactive Menu ---
+class Spinner:
+    FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+    def __init__(self, label: str):
+        self.label = label
+        self._stop = False
+        self._thread = None
+
+    def __enter__(self):
+        self._stop = False
+        def _spin():
+            i = 0
+            while not self._stop:
+                sys.stdout.write(f"\r{Colors.BOLD_CYAN}{self.FRAMES[i % len(self.FRAMES)]}{Colors.RESET} {self.label}")
+                sys.stdout.flush()
+                i += 1
+                time.sleep(0.08)
+        self._thread = threading.Thread(target=_spin, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._stop = True
+        if self._thread:
+            self._thread.join(timeout=1)
+        sys.stdout.write("\r\033[K")
+        sys.stdout.flush()
+
+
+def read_line(prompt: str, default: str = "") -> str:
+    if not sys.stdin.isatty():
+        return default
+    buf = list(default)
+    cursor = len(default)
+    fd = sys.stdin.fileno()
+    old_attr = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        while True:
+            sys.stdout.write(f"\r\033[K{prompt}{''.join(buf)}")
+            sys.stdout.write(f"\r{' ' * cursor}")
+            sys.stdout.flush()
+            key = read_key()
+            if key == "ENTER":
+                sys.stdout.write("\n")
+                return "".join(buf)
+            if key == "ESC":
+                sys.stdout.write("\n")
+                return default
+            if key == "BACKSPACE":
+                if cursor > 0:
+                    buf.pop(cursor - 1)
+                    cursor -= 1
+            elif key == "LEFT":
+                if cursor > 0:
+                    cursor -= 1
+            elif key == "RIGHT":
+                if cursor < len(buf):
+                    cursor += 1
+            elif key == "HOME":
+                cursor = 0
+            elif key == "END":
+                cursor = len(buf)
+            elif key == "EXIT":
+                raise KeyboardInterrupt
+            elif len(key) == 1 and key.isprintable():
+                buf.insert(cursor, key)
+                cursor += 1
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_attr)
+        sys.stdout.flush()
+
 @dataclass
 class MenuItem:
     label: str
@@ -310,59 +400,62 @@ class MenuItem:
     style: str = "normal"
     group_header: Optional[str] = None
 
-
 class Menu:
-    def __init__(self, title_key: str, items: List[MenuItem], hint_key: str = "menu_hint"):
+    def __init__(self, title_key: str, items: List[MenuItem], hint_key: str = "menu_hint",
+                 breadcrumb: Optional[List[str]] = None):
         self.title_key = title_key
         self.items = items
         self.hint_key = hint_key
+        self.breadcrumb = breadcrumb
 
     def run(self, initial_focus: int = 0) -> int:
-        """Run interactive menu loop and return the selected item index."""
         if not sys.stdin.isatty():
             return len(self.items) - 1
-
         clear_screen()
         focus = initial_focus
         max_idx = len(self.items) - 1
         env = get_env()
-
+        redraw = True
+        def _set_redraw():
+            nonlocal redraw
+            redraw = True
+        _register_winch(_set_redraw)
         sys.stdout.write(Colors.CURSOR_HIDE)
         try:
             while True:
-                sys.stdout.write("\033[?25l\033[H")
-                show_logo(env)
-                title = msg(self.title_key).strip("\n")
-                write_cleared(f"{title}\n\n")
-
-                terminal_lines = shutil.get_terminal_size((80, 24)).lines
-                visible_count = max(3, terminal_lines - 18)
-                start = max(0, min(focus - visible_count // 2, len(self.items) - visible_count))
-                end = min(len(self.items), start + visible_count)
-                if start > 0:
-                    write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
-                for curr_idx in range(start, end):
-                    item = self.items[curr_idx]
-                    if item.group_header:
-                        header = truncate_display(
-                            item.group_header,
-                            max(1, shutil.get_terminal_size((80, 24)).columns - 1),
-                        )
-                        write_cleared(f"{header}\n")
-                    render_menu_item(curr_idx, item.label, focus, item.style)
-                if end < len(self.items):
-                    write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
-
-                hint = responsive_hint(self.hint_key).strip("\n")
-                write_cleared(f"\n{hint}\n")
-                sys.stdout.write("\033[J")
-                sys.stdout.flush()
-
+                if redraw:
+                    sys.stdout.write("\033[?25l\033[H")
+                    show_logo(env)
+                    if self.breadcrumb:
+                        render_breadcrumb(self.breadcrumb)
+                    title = msg(self.title_key).strip("\n")
+                    write_cleared(f"{title}\n\n")
+                    cols, term_lines = _get_terminal_size()
+                    visible = max(3, term_lines - 18)
+                    start = max(0, min(focus - visible // 2, len(self.items) - visible))
+                    end = min(len(self.items), start + visible)
+                    if start > 0:
+                        write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
+                    for i in range(start, end):
+                        item = self.items[i]
+                        if item.group_header:
+                            hdr = truncate_display(item.group_header, max(1, cols - 1))
+                            write_cleared(f"{hdr}\n")
+                        render_menu_item(i, item.label, focus, item.style)
+                    if end < len(self.items):
+                        write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
+                    hint = responsive_hint(self.hint_key).strip("\n")
+                    write_cleared(f"\n{hint}\n")
+                    sys.stdout.write("\033[J")
+                    sys.stdout.flush()
+                    redraw = False
                 key = read_key()
                 if key in ("UP", "k", "K", "LEFT", "h", "H"):
                     focus = max_idx if focus <= 0 else focus - 1
+                    redraw = True
                 elif key in ("DOWN", "j", "J", "RIGHT", "l", "L"):
                     focus = 0 if focus >= max_idx else focus + 1
+                    redraw = True
                 elif key in ("ENTER", "SPACE"):
                     return focus
                 elif key.isdigit() and 1 <= int(key) <= len(self.items):
@@ -372,10 +465,10 @@ class Menu:
                 elif key in ("ESC", "EXIT"):
                     return max_idx
         finally:
+            _unregister_winch(_set_redraw)
             sys.stdout.write(Colors.CURSOR_SHOW)
             sys.stdout.flush()
 
-# --- Component: Checkbox Checklist ---
 @dataclass
 class CheckboxEntry:
     key: str
@@ -383,97 +476,98 @@ class CheckboxEntry:
     checked: bool = False
     is_separator: bool = False
 
-
 class CheckboxList:
-    def __init__(self, title_key: str, entries: List[CheckboxEntry], hint_key: str = "selective_hint"):
+    def __init__(self, title_key: str, entries: List[CheckboxEntry], hint_key: str = "selective_hint",
+                 breadcrumb: Optional[List[str]] = None):
         self.title_key = title_key
         self.entries = entries
         self.hint_key = hint_key
+        self.breadcrumb = breadcrumb
 
     def run(self, accept_defaults: bool = False) -> Optional[List[str]]:
-        """Run checkbox selection loop. Returns list of selected keys, or None if cancelled."""
-        if not any(not entry.is_separator for entry in self.entries):
+        if not any(not e.is_separator for e in self.entries):
             return []
         if not sys.stdin.isatty():
-            if accept_defaults:
-                return [e.key for e in self.entries if not e.is_separator and e.checked]
-            return None
-
+            return [e.key for e in self.entries if not e.is_separator and e.checked] if accept_defaults else None
         clear_screen()
-        selectable = [idx for idx, entry in enumerate(self.entries) if not entry.is_separator]
-        focus_pos = 0
-
+        selectable = [i for i, e in enumerate(self.entries) if not e.is_separator]
+        focus = 0
         env = get_env()
+        redraw = True
+        def _set_redraw():
+            nonlocal redraw
+            redraw = True
+        _register_winch(_set_redraw)
         sys.stdout.write(Colors.CURSOR_HIDE)
         try:
             while True:
-                sys.stdout.write("\033[?25l\033[H")
-                show_logo(env)
-                title = msg(self.title_key).strip("\n")
-                write_cleared(f"{title}\n\n")
-
-                focus = selectable[focus_pos]
-                terminal_lines = shutil.get_terminal_size((80, 24)).lines
-                visible_count = max(4, terminal_lines - 18)
-                start = max(
-                    0,
-                    min(focus - visible_count // 2, len(self.entries) - visible_count),
-                )
-                end = min(len(self.entries), start + visible_count)
-                if start > 0:
-                    write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
-                for idx in range(start, end):
-                    entry = self.entries[idx]
-                    if entry.is_separator:
-                        write_cleared(f"{entry.label}\n")
-                        continue
-
-                    check_str = (
-                        f"{Colors.BOLD_GREEN}[✓]{Colors.RESET}"
-                        if entry.checked
-                        else f"{Colors.DARK_GRAY}[ ]{Colors.RESET}"
-                    )
-                    render_check_row(idx == focus, check_str, entry.label)
-                if end < len(self.entries):
-                    write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
-
-                hint = responsive_hint(self.hint_key).strip("\n")
-                write_cleared(f"\n{hint}\n")
-                sys.stdout.write("\033[J")
-                sys.stdout.flush()
-
+                if redraw:
+                    sys.stdout.write("\033[?25l\033[H")
+                    show_logo(env)
+                    if self.breadcrumb:
+                        render_breadcrumb(self.breadcrumb)
+                    title = msg(self.title_key).strip("\n")
+                    write_cleared(f"{title}\n\n")
+                    focus_idx = selectable[focus]
+                    cols, term_lines = _get_terminal_size()
+                    visible = max(4, term_lines - 18)
+                    start = max(0, min(focus_idx - visible // 2, len(self.entries) - visible))
+                    end = min(len(self.entries), start + visible)
+                    if start > 0:
+                        write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
+                    for i in range(start, end):
+                        e = self.entries[i]
+                        if e.is_separator:
+                            write_cleared(f"{e.label}\n")
+                            continue
+                        chk = f"{Colors.BOLD_GREEN}[✓]{Colors.RESET}" if e.checked else f"{Colors.DARK_GRAY}[ ]{Colors.RESET}"
+                        render_check_row(i == focus_idx, chk, e.label)
+                    if end < len(self.entries):
+                        write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
+                    hint = responsive_hint(self.hint_key).strip("\n")
+                    write_cleared(f"\n{hint}\n")
+                    sys.stdout.write("\033[J")
+                    sys.stdout.flush()
+                    redraw = False
                 key = read_key()
                 if key in ("UP", "k", "K", "LEFT", "h", "H"):
-                    focus_pos = (focus_pos - 1) % len(selectable)
+                    focus = (focus - 1) % len(selectable)
+                    redraw = True
                 elif key in ("DOWN", "j", "J", "RIGHT", "l", "L"):
-                    focus_pos = (focus_pos + 1) % len(selectable)
+                    focus = (focus + 1) % len(selectable)
+                    redraw = True
                 elif key == "SPACE":
-                    self.entries[focus].checked = not self.entries[focus].checked
+                    idx = selectable[focus]
+                    self.entries[idx].checked = not self.entries[idx].checked
+                    redraw = True
                 elif key in ("a", "A"):
                     for e in self.entries:
                         if not e.is_separator:
                             e.checked = True
+                    redraw = True
                 elif key in ("n", "N"):
                     for e in self.entries:
                         if not e.is_separator:
                             e.checked = False
+                    redraw = True
                 elif key in ("0", "q", "Q", "ESC", "EXIT"):
                     return None
                 elif key.isdigit():
                     num = int(key) - 1
                     if 0 <= num < len(selectable):
-                        focus_pos = num
-                        entry_idx = selectable[focus_pos]
-                        self.entries[entry_idx].checked = not self.entries[entry_idx].checked
+                        focus = num
+                        idx = selectable[focus]
+                        self.entries[idx].checked = not self.entries[idx].checked
+                        redraw = True
                 elif key == "ENTER":
                     return [e.key for e in self.entries if not e.is_separator and e.checked]
         finally:
+            _unregister_winch(_set_redraw)
             sys.stdout.write(Colors.CURSOR_SHOW)
             sys.stdout.flush()
 
-# --- Component: Language Selection ---
+
 def select_language() -> str:
-    """Prompt user to select language mode with smooth arrow keys."""
     if not sys.stdin.isatty():
         from nyxniri.i18n import get_lang
         return get_lang()
@@ -481,32 +575,36 @@ def select_language() -> str:
     clear_screen()
     from nyxniri.i18n import set_lang
     env = get_env()
-    focus = 1  # Default to Simplified Chinese
-
+    focus = 1
+    redraw = True
+    def _set_redraw():
+        nonlocal redraw
+        redraw = True
+    _register_winch(_set_redraw)
     sys.stdout.write(Colors.CURSOR_HIDE)
     try:
         while True:
-            sys.stdout.write("\033[?25l\033[H")
-            show_logo(env)
-            write_cleared(f"  {Colors.BOLD_CYAN}── 请选择语言 / Select Language ──{Colors.RESET}\n\n")
-
-            if focus == 0:
-                sys.stdout.write(f"  {Colors.BOLD_CYAN}❯ {Colors.BOLD_WHITE}English{Colors.RESET}\033[K\n")
-                sys.stdout.write(f"    {Colors.DARK_GRAY}简体中文 (Simplified Chinese){Colors.RESET}\033[K\n")
-            else:
-                sys.stdout.write(f"    {Colors.DARK_GRAY}English{Colors.RESET}\033[K\n")
-                sys.stdout.write(f"  {Colors.BOLD_CYAN}❯ {Colors.BOLD_WHITE}简体中文 (Simplified Chinese){Colors.RESET}\033[K\n")
-
-            hint = "[↑/↓] Move  [Enter] Select"
-            write_cleared(f"\n  {Colors.DARK_GRAY}{hint}{Colors.RESET}\n")
-            sys.stdout.write("\033[J")
-            sys.stdout.flush()
-
+            if redraw:
+                sys.stdout.write("\033[?25l\033[H")
+                show_logo(env)
+                write_cleared(f"  {Colors.BOLD_CYAN}── 请选择语言 / Select Language ──{Colors.RESET}\n\n")
+                if focus == 0:
+                    sys.stdout.write(f"  {Colors.BOLD_CYAN}❯ {Colors.BOLD_WHITE}English{Colors.RESET}\033[K\n")
+                    sys.stdout.write(f"    {Colors.DARK_GRAY}简体中文 (Simplified Chinese){Colors.RESET}\033[K\n")
+                else:
+                    sys.stdout.write(f"    {Colors.DARK_GRAY}English{Colors.RESET}\033[K\n")
+                    sys.stdout.write(f"  {Colors.BOLD_CYAN}❯ {Colors.BOLD_WHITE}简体中文 (Simplified Chinese){Colors.RESET}\033[K\n")
+                write_cleared(f"\n  {Colors.DARK_GRAY}[↑/↓] Move  [Enter] Select\n")
+                sys.stdout.write("\033[J")
+                sys.stdout.flush()
+                redraw = False
             key = read_key()
             if key in ("UP", "k", "K", "LEFT", "h", "H", "1"):
                 focus = 0
+                redraw = True
             elif key in ("DOWN", "j", "J", "RIGHT", "l", "L", "2"):
                 focus = 1
+                redraw = True
             elif key in ("ENTER", "SPACE"):
                 chosen = "en" if focus == 0 else "zh"
                 set_lang(chosen)
@@ -515,5 +613,6 @@ def select_language() -> str:
             elif key in ("ESC", "EXIT"):
                 sys.exit(130)
     finally:
+        _unregister_winch(_set_redraw)
         sys.stdout.write(Colors.CURSOR_SHOW)
         sys.stdout.flush()
