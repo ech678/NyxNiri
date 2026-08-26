@@ -690,6 +690,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "zh": f"{Colors.DARK_GRAY}未选择任何软件。{Colors.RESET}",
         "en": f"{Colors.DARK_GRAY}No apps selected.{Colors.RESET}",
     },
+    "flatpak_missing": {
+        "zh": f"{Colors.BOLD_YELLOW}[!]{Colors.RESET} 未安装 flatpak，已跳过: {{0}}。请先 dnf install flatpak。",
+        "en": f"{Colors.BOLD_YELLOW}[!]{Colors.RESET} flatpak is not installed; skipped: {{0}}. Run dnf install flatpak first.",
+    },
     "interactive_terminal_required": {
         "zh": f"{Colors.BOLD_YELLOW}[!] 此命令需要交互式终端；未执行安装。{Colors.RESET}",
         "en": f"{Colors.BOLD_YELLOW}[!] This command needs an interactive terminal; nothing was installed.{Colors.RESET}",
@@ -1227,6 +1231,44 @@ Commands:
     "log_aur_pkgs_partial_fail": {
         "zh": f"{Colors.BOLD_RED}[!]{Colors.RESET} 部分 AUR 软件包安装失败，继续后续步骤…",
         "en": f"{Colors.BOLD_RED}[!]{Colors.RESET} Some AUR packages failed to install; continuing…",
+    },
+
+    # Fedora source builds & COPR
+    "building_from_source": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: 从源码编译: {{0}}…{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: Building from source: {{0}}…{Colors.RESET}",
+    },
+    "build_tool_missing": {
+        "zh": f"{Colors.BOLD_RED}[✗]{Colors.RESET} 缺少编译工具 {{0}}；请先安装: {{1}}",
+        "en": f"{Colors.BOLD_RED}[✗]{Colors.RESET} Build tool {{0}} is missing; install first: {{1}}",
+    },
+    "build_clone_failed": {
+        "zh": f"{Colors.BOLD_RED}[✗]{Colors.RESET} 拉取 {{0}} 源码失败。",
+        "en": f"{Colors.BOLD_RED}[✗]{Colors.RESET} Failed to clone {{0}} source.",
+    },
+    "build_fallback_dnf": {
+        "zh": f"{Colors.BOLD_YELLOW}[!]{Colors.RESET} {{0}} 编译失败，回退到 dnf 安装: {{1}}",
+        "en": f"{Colors.BOLD_YELLOW}[!]{Colors.RESET} {{0}} build failed; falling back to dnf: {{1}}",
+    },
+    "build_failed_manual": {
+        "zh": f"{Colors.BOLD_RED}[✗]{Colors.RESET} {{0}} 编译失败且无可回退包；请手动安装。",
+        "en": f"{Colors.BOLD_RED}[✗]{Colors.RESET} {{0}} build failed with no fallback; install manually.",
+    },
+    "rpmfusion_enabling": {
+        "zh": ":: 启用 RPM Fusion 仓库 (free + nonfree)…",
+        "en": ":: Enabling RPM Fusion repos (free + nonfree)…",
+    },
+    "nvidia_waiting_build": {
+        "zh": ":: NVIDIA 驱动内核模块编译中 (akmods)，这可能需要几分钟…",
+        "en": ":: NVIDIA driver kernel module building (akmods) — this may take a few minutes…",
+    },
+    "nvidia_build_ready": {
+        "zh": f"{Colors.BOLD_GREEN}[✓]{Colors.RESET} NVIDIA 内核模块已就绪 (版本: {{0}})。重启后生效。",
+        "en": f"{Colors.BOLD_GREEN}[✓]{Colors.RESET} NVIDIA kernel module ready (version: {{0}}). Reboot to apply.",
+    },
+    "nvidia_build_timeout": {
+        "zh": f"{Colors.BOLD_YELLOW}[!]{Colors.RESET} NVIDIA 内核模块尚未就绪。重启后系统可能仍使用 nouveau。",
+        "en": f"{Colors.BOLD_YELLOW}[!]{Colors.RESET} NVIDIA kernel module not ready yet. System may fall back to nouveau after reboot.",
     },
 
     # AUR Bootstrap & Updates

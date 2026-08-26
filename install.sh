@@ -134,6 +134,32 @@ main() {
         exit 1
     fi
 
+    # 3.5. Fedora minimum version check (only applies on Fedora)
+    # The Python engine handles distro detection and dnf dispatch; this only
+    # enforces the 44+ floor at the bootstrap so old Fedoras fail fast.
+    if [ -f /etc/os-release ]; then
+        distro_id=""; distro_likes=""; fedora_ver=""
+        while IFS='=' read -r k v; do
+            case "$k" in
+                ID) distro_id="${v//\"/}" ;;
+                ID_LIKE) distro_likes="${v//\"/}" ;;
+                VERSION_ID) fedora_ver="${v//\"/}" ;;
+            esac
+        done < /etc/os-release
+
+        is_fedora=0
+        [ "$distro_id" = "fedora" ] && is_fedora=1
+        case " $distro_likes " in *" fedora "*) is_fedora=1 ;; esac
+
+        if [ "$is_fedora" -eq 1 ] && [ -n "$fedora_ver" ]; then
+            IFS=. read -r fed_major _ <<< "$fedora_ver"
+            if [ "${fed_major:-0}" -lt 44 ]; then
+                echo -e "\e[1;31m[✗] Fedora $fedora_ver is too old. NyxNiri requires Fedora 44+. Please upgrade.\e[0m" >&2
+                exit 1
+            fi
+        fi
+    fi
+
     # 4. Local repository execution
     if [ -n "$script_dir" ] \
         && { [ -d "$script_dir/nyxniri" ] || [ -d "$script_dir/configs" ] || [ -d "$script_dir/assets" ]; }; then

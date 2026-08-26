@@ -65,9 +65,24 @@ def _greeter_session_arg() -> str:
 
 def greeter_install_packages() -> bool:
     """Install greetd and noctalia-greeter."""
-    from nyxniri.deps import ensure_aur_helper, get_preferred_pkg_manager
+    from nyxniri.deps import ensure_aur_helper, get_preferred_pkg_manager, is_fedora
     print(msg("greeter_install_pkgs"))
 
+    # Fedora branch: greetd + noctalia-greeter via dnf (no AUR concept).
+    if is_fedora():
+        env = {**os.environ, "LC_ALL": "C"}
+        # Check greetd via rpm.
+        res_greetd = subprocess.run(["rpm", "-q", "greetd"], capture_output=True, check=False, env=env)
+        if res_greetd.returncode != 0:
+            subprocess.run(["sudo", "dnf", "-y", "install", "greetd"], check=False)
+        if not greeter_installed():
+            res_inst = subprocess.run(["sudo", "dnf", "-y", "install", GREETER_PKG], check=False)
+            if res_inst.returncode != 0 or not greeter_installed():
+                print(msg("greeter_install_failed"))
+                return False
+        return True
+
+    # Arch branch (unchanged)
     pkg_mgr = get_preferred_pkg_manager()
     is_aur = pkg_mgr != ["sudo", "pacman"]
 

@@ -18,12 +18,43 @@ from nyxniri.constants import (
     THEME_ENGINE,
 )
 from nyxniri.core import get_env, get_pics_dir, log_msg
+from nyxniri.deps import is_arch, is_fedora
 from nyxniri.i18n import get_lang, msg
 
 
 def _text(zh: str, en: str) -> str:
     """Select concise diagnostic text for the active interface language."""
     return zh if get_lang() == "zh" else en
+
+
+def _pkg_installed(pkg: str) -> bool:
+    """Check if a native package is installed (pacman on Arch, rpm on Fedora)."""
+    env = {**os.environ, "LC_ALL": "C"}
+    if is_arch() and shutil.which("pacman"):
+        res = subprocess.run(["pacman", "-Qq", pkg], capture_output=True, check=False, env=env)
+        return res.returncode == 0
+    if is_fedora() and shutil.which("rpm"):
+        res = subprocess.run(["rpm", "-q", pkg], capture_output=True, check=False, env=env)
+        return res.returncode == 0
+    return False
+
+def _pkg_version(pkg: str) -> Optional[str]:
+    """Return installed package version string, or None if not installed/unknown."""
+    env = {**os.environ, "LC_ALL": "C"}
+    if is_arch() and shutil.which("pacman"):
+        res = subprocess.run(["pacman", "-Q", pkg], capture_output=True, text=True, check=False, env=env)
+        if res.returncode == 0 and res.stdout.strip():
+            # Output: "pkgname 1.2.3-4"
+            parts = res.stdout.strip().split(maxsplit=1)
+            return parts[1] if len(parts) > 1 else res.stdout.strip()
+        return None
+    if is_fedora() and shutil.which("rpm"):
+        res = subprocess.run(["rpm", "-q", "--qf", "%{VERSION}-%{RELEASE}", pkg],
+                             capture_output=True, text=True, check=False, env=env)
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+        return None
+    return None
 
 def _check_compositor(env) -> None:
     xdg_curr = os.environ.get("XDG_CURRENT_DESKTOP", "")
@@ -173,9 +204,8 @@ def _check_portal_active(env) -> None:
         print(msg("doctor_warn", _text("桌面门户: xdg-desktop-portal 未运行", "Desktop Portal: xdg-desktop-portal is not active")))
 
 def _check_portal_gtk(env) -> None:
-    if shutil.which("pacman"):
-        res = subprocess.run(["pacman", "-Qq", "xdg-desktop-portal-gtk"], capture_output=True, check=False)
-        if res.returncode == 0:
+    if shutil.which("pacman") or shutil.which("rpm"):
+        if _pkg_installed("xdg-desktop-portal-gtk"):
             print(msg("doctor_ok", _text("桌面门户: xdg-desktop-portal-gtk 后端已安装", "Desktop Portal: xdg-desktop-portal-gtk backend is installed")))
         else:
             print(msg("doctor_warn", _text("桌面门户: 缺少 xdg-desktop-portal-gtk", "Desktop Portal: xdg-desktop-portal-gtk is missing")))
@@ -326,11 +356,9 @@ def generate_bug_report() -> Optional[Path]:
                 res = subprocess.run(["wireplumber", "--version"], capture_output=True, text=True, check=False)
                 ver = next((l for l in res.stdout.splitlines() if "libwireplumber" in l.lower()), "")
                 if not ver:
-                    res = subprocess.run(["pacman", "-Q", "wireplumber"], capture_output=True, text=True, check=False)
-                    ver = res.stdout.strip() or "installed"
+                    ver = _pkg_version("wireplumber") or "installed"
             elif cmd == "mpvpaper":
-                res = subprocess.run(["pacman", "-Q", "mpvpaper", "mpvpaper-git"], capture_output=True, text=True, check=False)
-                ver = res.stdout.splitlines()[0] if res.stdout.strip() else "installed"
+                ver = _pkg_version("mpvpaper") or _pkg_version("mpvpaper-git") or "installed"
             else:
                 res = subprocess.run([cmd, "--version"], capture_output=True, text=True, check=False)
                 ver = res.stdout.splitlines()[0] if res.stdout.strip() else (res.stderr.splitlines()[0] if res.stderr.strip() else "installed")
@@ -353,9 +381,8 @@ def generate_bug_report() -> Optional[Path]:
 
     # Health Checks
     health_lines = []
-    if shutil.which("pacman"):
-        res = subprocess.run(["pacman", "-Qq", "xdg-desktop-portal-gtk"], capture_output=True, text=True, check=False)
-        health_lines.append(f"xdg-desktop-portal-gtk: {'installed' if res.returncode == 0 else 'NOT INSTALLED'}")
+    if shutil.which("pacman") or shutil.which("rpm"):
+        health_lines.append(f"xdg-desktop-portal-gtk: {'installed' if _pkg_installed('xdg-desktop-portal-gtk') else 'NOT INSTALLED'}")
     try:
         res = subprocess.run(["df", "-h", str(env.home)], capture_output=True, text=True, check=False)
         lines = res.stdout.strip().splitlines()
