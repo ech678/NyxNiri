@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional
 
-from nyxniri.constants import CLI_CMD, Colors, PROJECT_NAME
+from nyxniri.constants import CLI_CMD, Colors, MAIN_WM, MAIN_WM_HARDWARE_CONFIG, PROJECT_NAME
 from nyxniri.core import (
     get_env,
     get_pics_dir,
@@ -56,6 +56,25 @@ def get_backup_base_dir() -> Path:
     return get_env().config_dir / PROJECT_NAME / "backups"
 
 
+MAX_SNAPSHOTS = 30
+
+def _prune_old_snapshots(base_dir: Path) -> None:
+    if not base_dir.is_dir():
+        return
+    snapshots = []
+    for d in base_dir.iterdir():
+        if d.is_dir() and not d.is_symlink() and _MANAGED_SNAPSHOT_RE.fullmatch(d.name):
+            snapshots.append(d)
+    if len(snapshots) <= MAX_SNAPSHOTS:
+        return
+    snapshots.sort(key=lambda p: p.name, reverse=True)
+    for old in snapshots[MAX_SNAPSHOTS:]:
+        try:
+            shutil.rmtree(old, ignore_errors=True)
+            log_msg("INFO", f"Pruned old snapshot {old.name}")
+        except Exception:
+            pass
+
 def backup_configs(note: str = "", interactive: bool = True) -> Optional[Path]:
     """Create a complete snapshot of all active dotfiles configurations."""
     from nyxniri.deploy import discover_config_items
@@ -88,6 +107,7 @@ def backup_configs(note: str = "", interactive: bool = True) -> Optional[Path]:
         (tmp_dir / "note.txt").write_text(note.strip(), encoding="utf-8")
 
     tmp_dir.rename(backup_dir)
+    _prune_old_snapshots(base_dir)
     if interactive:
         print(msg("backup_done", str(backup_dir)))
     log_msg("INFO", f"Created configuration snapshot at {backup_dir}")
@@ -213,7 +233,10 @@ def rollback_configs(target_arg: str = "") -> bool:
         snap_item = chosen_backup / item
         dest_item = env.config_dir / item
         if snap_item.exists() or snap_item.is_symlink():
-            if not atomic_replace_item(snap_item, dest_item):
+            preserved_rel = None
+            if item == MAIN_WM and (dest_item / MAIN_WM_HARDWARE_CONFIG).is_file():
+                preserved_rel = [MAIN_WM_HARDWARE_CONFIG]
+            if not atomic_replace_item(snap_item, dest_item, preserved_files=preserved_rel):
                 print(msg("log_deploy_config_failed", item), file=sys.stderr)
                 log_msg("ERROR", f"Failed to restore snapshot item {snap_item}")
                 return False
@@ -279,7 +302,7 @@ def delete_backup(target_arg: str = "") -> bool:
 
     if not deleted:
         return False
-    remaining = len(get_all_backups())
+    remaining = len(backups) - len(deleted)
     if len(deleted) == 1:
         print(msg("delete_done", deleted[0].name, remaining))
     else:

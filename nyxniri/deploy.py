@@ -67,7 +67,7 @@ def discover_config_items() -> List[str]:
     _CONFIG_ITEMS_CACHE = ["fastfetch", "fish", "kitty", "niri", "noctalia", "starship.toml", "xdg-desktop-portal", "zed"]
     return _CONFIG_ITEMS_CACHE
 
-def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False) -> bool:
+def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False, preserved_files: Optional[List[str]] = None) -> bool:
     """Atomic swap deployment via sibling temp directories with Dunder Protocol preservation."""
     pid = os.getpid()
     dest_parent = dest.parent
@@ -149,6 +149,18 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
                         if preserved_log is not None:
                             preserved_log.append(f"~/.config/{rel_display}/")
 
+        if preserved_files:
+            for rel in preserved_files:
+                src_p = dest / rel
+                tgt_p = tmp_new / rel
+                if src_p.is_file():
+                    tgt_p.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src_p, tgt_p)
+                    rel_display = str(dest.relative_to(home / ".config") / rel)
+                    print(msg("log_keep_monitor_config", MAIN_WM, MAIN_WM_HARDWARE_CONFIG))
+                    if preserved_log is not None:
+                        preserved_log.append(f"~/.config/{rel_display}")
+
         if dest.exists() or dest.is_symlink():
             old_dest = dest.with_name(f"{dest.name}.old.{pid}")
             dest.rename(old_dest)
@@ -198,26 +210,14 @@ def _phase_atomic_deployment(
         dest = config_dir / item
 
         if src.exists():
-            temp_monitor: Optional[Path] = None
-            if item == MAIN_WM and (dest / MAIN_WM_HARDWARE_CONFIG).is_file():
-                if keep_monitor or os.environ.get("NYXNIRI_KEEP_MONITOR", "0") == "1":
-                    tfd, tname = tempfile.mkstemp()
-                    os.close(tfd)
-                    temp_monitor = Path(tname)
-                    register_temp_path(temp_monitor)
-                    shutil.copy2(dest / MAIN_WM_HARDWARE_CONFIG, temp_monitor)
+            preserved_rel: Optional[List[str]] = None
+            if item == MAIN_WM and keep_monitor and (dest / MAIN_WM_HARDWARE_CONFIG).is_file():
+                preserved_rel = [MAIN_WM_HARDWARE_CONFIG]
 
-            if not atomic_replace_item(src, dest, preserved_log=preserved_log, test_mode=test_mode):
+            if not atomic_replace_item(src, dest, preserved_log=preserved_log, test_mode=test_mode, preserved_files=preserved_rel):
                 failed_items.append(item)
                 print(msg("log_deploy_config_failed", item), file=sys.stderr)
                 continue
-
-            if temp_monitor and temp_monitor.is_file():
-                shutil.copy2(temp_monitor, dest / MAIN_WM_HARDWARE_CONFIG)
-                temp_monitor.unlink(missing_ok=True)
-                print(msg("log_keep_monitor_config", MAIN_WM, MAIN_WM_HARDWARE_CONFIG))
-                if preserved_log is not None:
-                    preserved_log.append(f"~/.config/{MAIN_WM}/{MAIN_WM_HARDWARE_CONFIG}")
 
             print(msg("log_deploy_config_item", item))
             log_msg("INFO", f"Deployed config ~/.config/{item}")
@@ -235,7 +235,7 @@ def _phase_atomic_deployment(
     # Initial EyeCare symlink
     effects_normal = config_dir / MAIN_WM / "effects_normal.kdl"
     effects_sym = config_dir / MAIN_WM / "effects.kdl"
-    if effects_normal.is_file() and not effects_sym.exists():
+    if effects_normal.is_file() and not effects_sym.is_symlink():
         try:
             effects_sym.symlink_to(effects_normal)
         except Exception:
@@ -323,15 +323,36 @@ def _phase_post_install_services() -> None:
         from nyxniri.gtktheme import gtktheme_trigger_render
         gtktheme_trigger_render()
         print(msg("log_enable_mpvpaper"))
-        subprocess.run([THEME_ENGINE, "msg", "plugins", "enable", f"{THEME_ENGINE}/mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        subprocess.run([THEME_ENGINE, "msg", "plugins", "enable", f"{THEME_ENGINE}/mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=15)
 
     if shutil.which("fish"):
         print(msg("log_check_fisher"))
         log_msg("INFO", "Checking Fisher plugin manager installation")
-        fish_check = subprocess.run(["fish", "-c", "functions -q fisher; echo $status"], capture_output=True, text=True, check=False)
+        fish_check = subprocess.run(["fish", "-c", "functions -q fisher; echo $status"], capture_output=True, text=True, check=False, timeout=10)
+        fish_plugins = config_dir / "fish" / "fish_plugins"
+        need_update = False
+        if fish_plugins.is_file():
+            state_file = get_env().state_dir / "fish_plugins.hash"
+            current_hash = str(fish_plugins.stat().st_mtime_ns)
+            stored_hash = ""
+            if state_file.is_file():
+                try:
+                    stored_hash = state_file.read_text(encoding="utf-8").strip()
+                except Exception:
+                    pass
+            if current_hash != stored_hash:
+                need_update = True
+                try:
+                    state_file.parent.mkdir(parents=True, exist_ok=True)
+                    state_file.write_text(current_hash, encoding="utf-8")
+                except Exception:
+                    pass
         if fish_check.returncode == 0 and fish_check.stdout.strip() == "0":
-            log_msg("INFO", "Fisher already installed, running update")
-            subprocess.run(["fish", "-c", "fisher update"], check=False)
+            if need_update:
+                log_msg("INFO", "Fisher installed, running update")
+                subprocess.run(["fish", "-c", "fisher update"], check=False, timeout=60)
+            else:
+                log_msg("INFO", "Fisher installed, fish_plugins unchanged")
         else:
             tfd, tname = tempfile.mkstemp(suffix=".fish")
             os.close(tfd)
@@ -404,7 +425,8 @@ def deploy_wallpapers(do_download: bool = False) -> WallpaperDeployResult:
                         success = True
                         break
                     log_msg("WARN", f"Wallpaper mirror [{tag}] returned an incomplete pack")
-                shutil.rmtree(tmp_clone, ignore_errors=True)
+                if tmp_clone.exists():
+                    shutil.rmtree(tmp_clone, ignore_errors=True)
 
             if success:
                 shutil.rmtree(tmp_clone / ".git", ignore_errors=True)
