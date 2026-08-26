@@ -63,11 +63,11 @@ def gtktheme_trigger_render() -> None:
 
     subprocess.run(
         [THEME_ENGINE, "msg", "config-reload"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=15,
     )
     res = subprocess.run(
         [THEME_ENGINE, "msg", "templates-apply"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=30,
     )
     if res.returncode == 0:
         print(msg("gtk_render_ok"))

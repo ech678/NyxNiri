@@ -15,49 +15,67 @@ from nyxniri.i18n import msg
 from nyxniri.network import git_clone_timeout
 from nyxniri.tui import CheckboxEntry, CheckboxList, pad_display, prompt_confirm
 
-def is_dep_installed(cmd: str) -> bool:
-    """Accurately check whether a specific software or font dependency is installed on the system."""
+_PACMAN_INSTALLED_CACHE: Optional[set] = None
+_FC_LIST_CACHE: Optional[str] = None
+
+def _get_pacman_installed() -> set:
+    global _PACMAN_INSTALLED_CACHE
+    if _PACMAN_INSTALLED_CACHE is not None:
+        return _PACMAN_INSTALLED_CACHE
+    if not shutil.which("pacman"):
+        _PACMAN_INSTALLED_CACHE = set()
+        return _PACMAN_INSTALLED_CACHE
     env = {**os.environ, "LC_ALL": "C"}
+    res = subprocess.run(["pacman", "-Qq"], capture_output=True, text=True, check=False, env=env, timeout=30)
+    if res.returncode == 0:
+        _PACMAN_INSTALLED_CACHE = set(res.stdout.split())
+    else:
+        _PACMAN_INSTALLED_CACHE = set()
+    return _PACMAN_INSTALLED_CACHE
 
-    # 1. Pacman package database (most authoritative on Arch)
-    if shutil.which("pacman"):
-        res = subprocess.run(["pacman", "-Qq", cmd], capture_output=True, text=True, check=False, env=env)
-        if res.returncode == 0:
-            return True
+def _get_fc_list() -> str:
+    global _FC_LIST_CACHE
+    if _FC_LIST_CACHE is not None:
+        return _FC_LIST_CACHE
+    if not shutil.which("fc-list"):
+        _FC_LIST_CACHE = ""
+        return _FC_LIST_CACHE
+    env = {**os.environ, "LC_ALL": "C"}
+    res = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True, check=False, env=env, timeout=15)
+    _FC_LIST_CACHE = res.stdout.lower() if res.returncode == 0 else ""
+    return _FC_LIST_CACHE
 
-    # 2. Specific runtime / font / tool checks
+def is_dep_installed(cmd: str) -> bool:
+    if cmd in _get_pacman_installed():
+        return True
     if cmd == "inotify-tools":
         return shutil.which("inotifywait") is not None
     elif cmd == "python-gobject":
-        res = subprocess.run([sys.executable, "-c", "import gi"], capture_output=True, check=False)
+        res = subprocess.run([sys.executable, "-c", "import gi"], capture_output=True, check=False, timeout=10)
         return res.returncode == 0
     elif cmd == "gtk-layer-shell":
-        res = subprocess.run([sys.executable, "-c", "import gi; gi.require_version('GtkLayerShell', '0.1')"], capture_output=True, check=False)
+        res = subprocess.run([sys.executable, "-c", "import gi; gi.require_version('GtkLayerShell', '0.1')"], capture_output=True, check=False, timeout=10)
         return res.returncode == 0
     elif cmd == "ttf-jetbrains-mono":
-        if shutil.which("fc-list"):
-            res = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True, check=False, env=env)
-            return "jetbrains mono" in res.stdout.lower()
+        return "jetbrains mono" in _get_fc_list()
     elif cmd == "ttf-jetbrains-mono-nerd":
-        if shutil.which("fc-list"):
-            res = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True, check=False, env=env)
-            return bool(re.search(r"jetbrains.*nerd", res.stdout, re.IGNORECASE))
+        return bool(re.search(r"jetbrains.*nerd", _get_fc_list(), re.IGNORECASE))
     elif cmd == "noto-fonts-cjk":
-        if shutil.which("fc-list"):
-            res = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True, check=False, env=env)
-            return bool(re.search(r"noto.*cjk", res.stdout, re.IGNORECASE))
-
-    # 3. Fallback binary lookup
+        return bool(re.search(r"noto.*cjk", _get_fc_list(), re.IGNORECASE))
     return shutil.which(cmd) is not None
 
+_MISSING_DEPS_CACHE: Optional[List[str]] = None
+
 def check_all_deps() -> Dict[str, bool]:
-    """Check status of all core dependencies."""
     return {dep: is_dep_installed(dep) for dep in CORE_DEPS}
 
 def get_missing_deps() -> List[str]:
-    """Retrieve list of missing core dependencies."""
+    global _MISSING_DEPS_CACHE
+    if _MISSING_DEPS_CACHE is not None:
+        return _MISSING_DEPS_CACHE
     status_map = check_all_deps()
-    return [dep for dep, installed in status_map.items() if not installed]
+    _MISSING_DEPS_CACHE = [dep for dep, installed in status_map.items() if not installed]
+    return _MISSING_DEPS_CACHE
 
 def aur_helper_usable() -> Optional[str]:
     """Return name of a functioning AUR helper (paru or yay) after verifying binary execution."""
@@ -198,7 +216,7 @@ def check_mpvpaper_leak() -> None:
             print(msg("mpvpaper_upgrade_skip"))
 
 def install_selected_deps(selected_deps: List[str]) -> bool:
-    """Install selected packages using pacman or AUR helper."""
+    global _MISSING_DEPS_CACHE, _PACMAN_INSTALLED_CACHE
     if not selected_deps:
         return True
 
@@ -228,6 +246,8 @@ def install_selected_deps(selected_deps: List[str]) -> bool:
     if "mpvpaper" in selected_deps or shutil.which("mpvpaper"):
         check_mpvpaper_leak()
 
+    _MISSING_DEPS_CACHE = None
+    _PACMAN_INSTALLED_CACHE = None
     return True
 
 def run_dep_menu_loop() -> None:

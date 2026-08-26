@@ -44,7 +44,7 @@ def _run_cancellable_process(
             **kwargs,
         )
         try:
-            stdout, _ = process.communicate(timeout=120)
+            stdout, _ = process.communicate(timeout=60)
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
@@ -284,6 +284,7 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         text=True,
         check=False,
         env=env,
+        timeout=15,
     )
     if res_status.stdout.strip():
         # Dirty tree
@@ -299,8 +300,8 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         if not prompt_confirm("dirty_tree_confirm", "n"):
             print(msg("update_cancelled_dirty"))
             return None
-        subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=target_dir, check=False, env=env)
-        subprocess.run(["git", "clean", "-fd"], cwd=target_dir, check=False, env=env)
+        subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=target_dir, check=False, env=env, timeout=15)
+        subprocess.run(["git", "clean", "-fd"], cwd=target_dir, check=False, env=env, timeout=15)
 
     # Fetch & pull
     sys.stdout.write(msg("checking_updates") + "\n")
@@ -331,6 +332,7 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
             text=True,
             check=False,
             env=env,
+            timeout=15,
         )
         return res_reset.returncode == 0
     log_msg("ERROR", f"Failed to update repository: {target_dir}")
