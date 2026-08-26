@@ -8,13 +8,15 @@
 
 <h1>NyxNiri</h1>
 
-<p><strong>A Material You desktop experience for Arch / CachyOS</strong><br />
+<p><strong>A Material You desktop experience for Arch / CachyOS / Fedora 44+</strong><br />
 <sub>Built on Niri and Noctalia V5 — and stays out of your way.</sub></p>
 
 <p>
   <a href="https://github.com/ech678/NyxNiri/stargazers"><img height="22" src="https://m3-markdown-badges.vercel.app/stars/3/3/ech678/NyxNiri" alt="Stars" /></a>
   &nbsp;
   <a href="https://archlinux.org"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Arch/arch2.svg" alt="Arch Linux" /></a>
+  &nbsp;
+  <a href="https://fedoraproject.org"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Fedora/fedora.svg" alt="Fedora" /></a>
   &nbsp;
   <a href="LICENSE"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/LicenceGPLv3/licencegplv33.svg" alt="GPL-3.0" /></a>
 </p>
@@ -58,6 +60,18 @@ curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri
 
 > [!TIP]
 > Without an AUR helper, `nyxniri install full` can bootstrap `paru` for you.
+
+### Fedora 44+
+
+NyxNiri supports Fedora 44+ alongside Arch/CachyOS. The installer auto-detects the distro and switches to `dnf` for packages, `flatpak` for apps, and `rustup`/`meson`/`ninja` for source builds (starship, mpvpaper, ffmpeg). NVIDIA drivers are available via RPM Fusion — opt-in through `nyxniri apps`.
+
+```bash
+# Same bootstrap — it detects Fedora automatically
+curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+```
+
+> [!NOTE]
+> Fedora packages come from official repos + COPR (nerd-fonts). Starship / mpvpaper / ffmpeg are built from source. The NVIDIA driver requires RPM Fusion (auto-enabled when you opt in).
 
 ### From a git checkout (recommended)
 
@@ -169,7 +183,9 @@ NyxNiri
 
 **Wallpaper & video pack:** high-res wallpapers and live videos (~100MB) live in [wallpaper-collection](https://github.com/ech678/wallpaper-collection). Opt-in during `install` or download anytime via `nyxniri wallpapers`.
 
-**Noctalia Greeter:** greetd login screen matching Noctalia style. `nyxniri greeter install` installs `greetd` + `noctalia-greeter` (AUR), backs up `/etc/greetd/config.toml`, and configures Polkit rules. Does not disable existing display managers.
+**Noctalia Greeter:** greetd login screen matching Noctalia style. `nyxniri greeter install` installs `greetd` + `noctalia-greeter` (AUR on Arch, dnf on Fedora), backs up `/etc/greetd/config.toml`, and configures Polkit rules. Does not disable existing display managers.
+
+**NVIDIA driver (Fedora only):** proprietary driver via RPM Fusion. `nyxniri apps` → tick `nvidia-driver` to auto-enable RPM Fusion repos, install `akmod-nvidia` + `xorg-x11-drv-nvidia-cuda`, and wait for the kernel module build (5–10 min). Reboot after completion.
 
 ## Tooling
 
@@ -276,6 +292,25 @@ polkit.addRule(function(action, subject) {
 });
 EOF'
 ```
+
+</details>
+
+<details>
+<summary><b>NVIDIA driver on Fedora hangs or falls back to nouveau</b> — akmods may still be compiling the kernel module.</summary>
+
+After installing `akmod-nvidia`, the kernel module builds in the background. Wait for it to be ready before rebooting:
+
+```bash
+modinfo -F version nvidia   # shows version like 610.57.04 when ready
+```
+
+If it stays empty for >15 min, check the akmods build log:
+
+```bash
+journalctl -u akmods -f
+```
+
+On secure boot systems, you may need to enroll the akmod signing key — the RPM Fusion guide has full instructions.
 
 </details>
 

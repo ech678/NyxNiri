@@ -8,13 +8,15 @@
 
 <h1>NyxNiri</h1>
 
-<p><strong>Arch / CachyOS 上的 Material You 桌面体验</strong><br />
+<p><strong>Arch / CachyOS / Fedora 44+ 上的 Material You 桌面体验</strong><br />
 <sub>基于 Niri 和 Noctalia V5 —— 然后闭嘴！</sub></p>
 
 <p>
   <a href="https://github.com/ech678/NyxNiri/stargazers"><img height="22" src="https://m3-markdown-badges.vercel.app/stars/3/3/ech678/NyxNiri" alt="Stars" /></a>
   &nbsp;
   <a href="https://archlinux.org"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Arch/arch2.svg" alt="Arch Linux" /></a>
+  &nbsp;
+  <a href="https://fedoraproject.org"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Fedora/fedora.svg" alt="Fedora" /></a>
   &nbsp;
   <a href="LICENSE"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/LicenceGPLv3/licencegplv33.svg" alt="GPL-3.0" /></a>
 </p>
@@ -58,6 +60,18 @@ curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri
 
 > [!TIP]
 > 没有 AUR helper 时，`nyxniri install full` 会自动装好 `paru`。
+
+### Fedora 44+
+
+NyxNiri 同时支持 Arch/CachyOS 和 Fedora 44+。安装器会自动识别发行版，切换到 `dnf` 装包、`flatpak` 装应用、`rustup`/`meson`/`ninja` 从源码编译（starship、mpvpaper、ffmpeg）。NVIDIA 驱动通过 RPM Fusion 提供——在 `nyxniri apps` 里勾选即可。
+
+```bash
+# 同一个引导脚本，自动识别 Fedora
+curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+```
+
+> [!NOTE]
+> Fedora 包来源：官方源 + COPR（nerd-fonts）。Starship / mpvpaper / ffmpeg 从源码编译。NVIDIA 驱动需要 RPM Fusion 仓库（勾选后自动启用）。
 
 ### 从 Git 仓库安装（推荐）
 
@@ -169,7 +183,9 @@ NyxNiri
 
 **壁纸和动态视频包：** 高清壁纸和动态视频（约 100MB）在独立仓库 [wallpaper-collection](https://github.com/ech678/wallpaper-collection)。`install` 时可选拉取，或随时用 `nyxniri wallpapers` 下载。
 
-**Noctalia Greeter：** 和 Noctalia 主题一致的 greetd 登录界面。`nyxniri greeter install` 装 `greetd` + `noctalia-greeter`（AUR），备份现有配置并写入 Polkit 规则；不禁用已有显示管理器。
+**Noctalia Greeter：** 和 Noctalia 主题一致的 greetd 登录界面。`nyxniri greeter install` 装 `greetd` + `noctalia-greeter`（Arch 走 AUR，Fedora 走 dnf），备份现有配置并写入 Polkit 规则；不禁用已有显示管理器。
+
+**NVIDIA 驱动（仅 Fedora）：** 通过 RPM Fusion 安装闭源驱动。`nyxniri apps` 勾选 `nvidia-driver` 后自动启用 RPM Fusion 仓库、安装 `akmod-nvidia` + `xorg-x11-drv-nvidia-cuda`，等待内核模块编译完成（5–10 分钟），然后重启。
 
 ## 工具
 
@@ -246,6 +262,25 @@ NyxNiri
 [brightness]
 enable_ddcutil = false
 ```
+
+</details>
+
+<details>
+<summary><b>Fedora 上 NVIDIA 驱动卡住或回退到 nouveau</b> — akmods 可能还在后台编译内核模块。</summary>
+
+装完 `akmod-nvidia` 后，内核模块在后台编译。重启前先确认模块就绪：
+
+```bash
+modinfo -F version nvidia   # 就绪时显示版本号，如 610.57.04
+```
+
+如果超过 15 分钟仍为空，查看 akmods 编译日志：
+
+```bash
+journalctl -u akmods -f
+```
+
+Secure Boot 系统可能需要注册 akmod 签名密钥——RPM Fusion 指南有完整步骤。
 
 </details>
 

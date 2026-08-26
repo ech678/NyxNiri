@@ -7,6 +7,12 @@
 
 ## [Unreleased]
 
+### Added
+- 新增 Fedora 44+ 支持，与 Arch/CachyOS 共存。自动识别发行版，切换 dnf/flatpak/源码编译。
+- Starship、mpvpaper、ffmpeg 在 Fedora 上自动从源码编译（rustup + meson + ninja）。
+- Fedora 上可选安装 NVIDIA 闭源驱动（通过 RPM Fusion 仓库 + akmod-nvidia）。
+- Fedora 上 Noctalia Greeter 改用 dnf 安装，不再依赖 AUR。
+
 ### Fixed
 - 检查更新与安装时的网络命令增加连接与整体超时，弱网或镜像无响应时不再卡死。
 
