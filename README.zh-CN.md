@@ -16,7 +16,7 @@
   &nbsp;
   <a href="https://archlinux.org"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Arch/arch2.svg" alt="Arch Linux" /></a>
   &nbsp;
-  <a href="https://fedoraproject.org"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Fedora/fedora.svg" alt="Fedora" /></a>
+  <a href="https://fedoraproject.org"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Fedora/fedora1.svg" alt="Fedora" /></a>
   &nbsp;
   <a href="LICENSE"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/LicenceGPLv3/licencegplv33.svg" alt="GPL-3.0" /></a>
 </p>
