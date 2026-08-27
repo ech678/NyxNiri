@@ -14,37 +14,56 @@ empty, so a half-written state self-heals next run).
 """
 
 import os
+import re
 import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
-
 from nyxniri.constants import Colors
 from nyxniri.core import get_env
 from nyxniri.i18n import msg
 
+_INVALID_NAME_RE = re.compile(r'[\/\x00-\x1f]')
+
+def _validate_name(name: str) -> bool:
+    if not name or name != name.strip():
+        return False
+    if name in (".", ".."):
+        return False
+    if name.startswith("/") or os.path.isabs(name):
+        return False
+    if _INVALID_NAME_RE.search(name):
+        return False
+    if "/" in name or "\\" in name:
+        return False
+    return True
+
+def _validate_app(app: str) -> bool:
+    if not _validate_name(app):
+        return False
+    env = get_env()
+    return (env.configs_src / app).is_dir()
 
 def _active_path(app: str) -> Path:
     return get_env().presets_dir / f"{app}.active"
 
 
 def read_active_preset(app: str) -> str:
-    """Return the app's active preset name, or 'default' if unset/unreadable."""
     try:
         content = _active_path(app).read_text(encoding="utf-8").strip()
-        return content or "default"
+        if not content or not _validate_name(content):
+            return "default"
+        return content
     except Exception:
         return "default"
 
-
 def write_active_preset(app: str, name: str) -> None:
-    """Atomically write the active preset file (temp + rename).
-
-    A half-written (empty) file would be read as 'default' and silently switch
-    the user back to defaults — atomic write blocks that failure path (§3.2).
-    """
+    if not _validate_app(app):
+        return
+    if name != "default" and not _validate_name(name):
+        return
     env = get_env()
     env.presets_dir.mkdir(parents=True, exist_ok=True)
     final = _active_path(app)
@@ -70,12 +89,10 @@ class PresetSrcResult:
 
 
 def resolve_preset_src(app: str, active: str, dest: Path) -> PresetSrcResult:
-    """Resolve which source dir to deploy for ``app`` given its ``active`` preset.
-
-    Four branches (§3.2): dest-missing reset; default; official preset;
-    user preset. If none matches, src is None (freeze + warn) — we never
-    silently fall back to default, which would wipe the user's frozen state.
-    """
+    if not _validate_app(app):
+        return PresetSrcResult(src=None, reset_active=None, warnings=[msg("preset_warn_frozen", app, active)])
+    if active != "default" and not _validate_name(active):
+        return PresetSrcResult(src=None, reset_active=None, warnings=[msg("preset_warn_frozen", app, active)])
     env = get_env()
     app_root = env.configs_src / app
     repo_presets = app_root / "presets"
@@ -116,12 +133,10 @@ def resolve_preset_src(app: str, active: str, dest: Path) -> PresetSrcResult:
 # --- CLI-facing operations ----------------------------------------------------
 
 def _find_preset_src(app: str, name: str) -> Optional[Path]:
-    """Direct lookup of a named preset (apply flow). No dest-missing reset.
-
-    Distinct from resolve_preset_src (update flow): apply is an explicit user
-    choice, so a missing dest does not silently reset to default — the named
-    preset is deployed as-is. 'default' resolves to the app root.
-    """
+    if not _validate_app(app):
+        return None
+    if name != "default" and not _validate_name(name):
+        return None
     env = get_env()
     if name == "default":
         src = env.configs_src / app
@@ -150,7 +165,10 @@ class PresetInfo:
 
 
 def get_preset_info(app: str, name: str) -> PresetInfo:
-    """Inspect detailed metadata and key files for an app preset."""
+    if not _validate_app(app):
+        return PresetInfo(app=app, name=name, source="official", is_active=False, path="(invalid)", files=[], preserve=[], is_editable=False, is_deletable=False)
+    if name != "default" and not _validate_name(name):
+        return PresetInfo(app=app, name=name, source="official", is_active=False, path="(invalid)", files=[], preserve=[], is_editable=False, is_deletable=False)
     from nyxniri.deploy.manifest import load_manifest_for
 
     env = get_env()
@@ -218,12 +236,8 @@ def get_preset_info(app: str, name: str) -> PresetInfo:
 
 
 def collect_presets(app: str) -> List[Tuple[str, str, bool]]:
-    """Return (name, source, is_active) for every preset of an app.
-
-    source is 'official' (shipped in repo) or 'user' (saved under nyx_dir).
-    'default' is always first. Used by list_presets (printing) and the TUI
-    switcher (data only) — no side effects.
-    """
+    if not _validate_app(app):
+        return [("default", "official", True)]
     active = read_active_preset(app)
     entries: List[Tuple[str, str, bool]] = [("default", "official", active == "default")]
 
@@ -242,10 +256,9 @@ def collect_presets(app: str) -> List[Tuple[str, str, bool]]:
 
 
 def list_presets(app: str) -> List[Tuple[str, str, bool]]:
-    """List presets for an app; the active one is marked. ``list`` is status.
-
-    Prints a numbered list with the active entry prefixed by ``*``.
-    """
+    if not _validate_app(app):
+        print(msg("preset_not_found", app, ""))
+        return []
     entries = collect_presets(app)
     print(msg("preset_list_title", app))
     for i, (name, source, is_active) in enumerate(entries, 1):
@@ -268,16 +281,9 @@ def _render_preset_result(app: str, name: str, preserved_lines: List[str], faile
 
 
 def apply_preset(app: str, name: str) -> bool:
-    """Switch an app to a named preset (narrow deploy path).
-
-    Runs only atomic_replace + template render for this app — no hardware
-    patches, no post-install services (§9: switching kitty must not rerun
-    fisher). Writes the active file AFTER deploy succeeds (iron law, §3.2).
-
-    The manifest ``preserve`` list (e.g. niri/monitor.kdl, niri/effects.kdl) is
-    honoured just like the full-deploy path: a preset switch must not wipe
-    runtime-managed files the new variant doesn't ship.
-    """
+    if not _validate_app(app) or (name != "default" and not _validate_name(name)):
+        print(msg("preset_not_found", app, name))
+        return False
     from nyxniri.deploy.templates import _phase_render_templates
     from nyxniri.deploy.atomic import atomic_replace_item
     from nyxniri.deploy.manifest import load_manifest_for
@@ -316,11 +322,12 @@ def _ignore_custom_and_manifest(_src_dir, names):
 
 
 def save_preset(app: str, name: str) -> bool:
-    """Snapshot current ~/.config/<app>/ into a user preset, minus __custom__.
-
-    'default' is reserved (apply default = reset). Official-name collisions
-    are rejected (official presets win on name). §2.2
-    """
+    if not _validate_app(app):
+        print(msg("preset_not_found", app, name))
+        return False
+    if not _validate_name(name):
+        print(msg("preset_name_reserved", name))
+        return False
     if name == "default":
         print(msg("preset_name_reserved", name))
         return False
@@ -343,7 +350,12 @@ def save_preset(app: str, name: str) -> bool:
 
 
 def delete_preset(app: str, name: str) -> bool:
-    """Delete a user preset. Official presets cannot be deleted. §2.5"""
+    if not _validate_app(app):
+        print(msg("preset_not_found", app, name))
+        return False
+    if not _validate_name(name):
+        print(msg("preset_name_reserved", name))
+        return False
     if name == "default":
         print(msg("preset_name_reserved", name))
         return False
@@ -360,12 +372,12 @@ def delete_preset(app: str, name: str) -> bool:
     return True
 
 def edit_preset(app: str, name: str) -> bool:
-    """Open a user preset's directory in $EDITOR (rejects default + official).
-
-    Default is reserved; official presets are repo-owned read-only. Only user
-    presets under ~/.config/NyxNiri/presets/<app>/<name>/ are editable in place;
-    re-running ``apply <name>`` deploys the edits. Non-interactive → hint path.
-    """
+    if not _validate_app(app):
+        print(msg("preset_not_found", app, name))
+        return False
+    if not _validate_name(name):
+        print(msg("preset_name_reserved", name))
+        return False
     if name == "default":
         print(msg("preset_name_reserved", name))
         return False
