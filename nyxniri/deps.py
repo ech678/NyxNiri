@@ -85,16 +85,22 @@ def get_missing_deps() -> List[str]:
     _MISSING_DEPS_CACHE = [dep for dep, installed in status_map.items() if not installed]
     return _MISSING_DEPS_CACHE
 
+_AUR_HELPER_CACHE: Optional[str] = None
+
 def aur_helper_usable() -> Optional[str]:
-    """Return name of a functioning AUR helper (paru or yay) after verifying binary execution."""
+    global _AUR_HELPER_CACHE
+    if _AUR_HELPER_CACHE is not None:
+        return _AUR_HELPER_CACHE if _AUR_HELPER_CACHE else None
     for helper in ("paru", "yay"):
         if shutil.which(helper):
             try:
-                res = subprocess.run([helper, "--version"], capture_output=True, check=False)
+                res = subprocess.run([helper, "--version"], capture_output=True, check=False, timeout=10)
                 if res.returncode == 0:
+                    _AUR_HELPER_CACHE = helper
                     return helper
             except Exception:
                 pass
+    _AUR_HELPER_CACHE = ""
     return None
 
 def get_preferred_pkg_manager() -> List[str]:
@@ -256,6 +262,7 @@ def install_selected_deps(selected_deps: List[str]) -> bool:
 
     _MISSING_DEPS_CACHE = None
     _PACMAN_INSTALLED_CACHE = None
+    _AUR_HELPER_CACHE = None
     return True
 
 def run_dep_menu_loop() -> None:

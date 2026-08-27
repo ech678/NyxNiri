@@ -26,11 +26,15 @@ def greeter_installed() -> bool:
     """Check if noctalia-greeter session binary exists in PATH."""
     return shutil.which(GREETER_SESSION_BIN) is not None
 
-def greeter_status_label() -> str:
-    """Return compact status label for menus."""
-    if not greeter_installed():
-        return msg("status_not_installed")
+_GREETER_STATUS_CACHE: Optional[str] = None
 
+def greeter_status_label() -> str:
+    global _GREETER_STATUS_CACHE
+    if _GREETER_STATUS_CACHE is not None:
+        return _GREETER_STATUS_CACHE
+    if not greeter_installed():
+        _GREETER_STATUS_CACHE = msg("status_not_installed")
+        return _GREETER_STATUS_CACHE
     cfg_ok = False
     if GREETER_ETC_CFG.is_file():
         try:
@@ -39,15 +43,15 @@ def greeter_status_label() -> str:
                 cfg_ok = True
         except Exception:
             pass
-
     enabled = False
     if shutil.which("systemctl"):
-        res = subprocess.run(["systemctl", "is-enabled", "greetd"], capture_output=True, check=False)
+        res = subprocess.run(["systemctl", "is-enabled", "greetd"], capture_output=True, check=False, timeout=10)
         enabled = res.returncode == 0
-
     if enabled and cfg_ok:
-        return msg("status_installed_enabled")
-    return msg("status_installed")
+        _GREETER_STATUS_CACHE = msg("status_installed_enabled")
+    else:
+        _GREETER_STATUS_CACHE = msg("status_installed")
+    return _GREETER_STATUS_CACHE
 
 def _greeter_session_arg() -> str:
     """Check if niri session is discoverable by noctalia-greeter."""
