@@ -18,6 +18,7 @@ from nyxniri.tui import CheckboxEntry, CheckboxList, pad_display, prompt_confirm
 
 _PACMAN_INSTALLED_CACHE: Optional[set] = None
 _FC_LIST_CACHE: Optional[str] = None
+_GI_CACHE: Optional[dict] = None
 
 def _get_pacman_installed() -> set:
     global _PACMAN_INSTALLED_CACHE
@@ -43,17 +44,26 @@ def _get_fc_list() -> str:
     _FC_LIST_CACHE = res.stdout.lower() if res.returncode == 0 else ""
     return _FC_LIST_CACHE
 
+def _check_gi(version: str) -> bool:
+    global _GI_CACHE
+    if _GI_CACHE is None:
+        _GI_CACHE = {}
+    if version in _GI_CACHE:
+        return _GI_CACHE[version]
+    code = "import gi" if version == "gi" else f"import gi; gi.require_version('{version}', '0.1')"
+    res = subprocess.run([sys.executable, "-c", code], capture_output=True, check=False, timeout=10)
+    _GI_CACHE[version] = res.returncode == 0
+    return _GI_CACHE[version]
+
 def is_dep_installed(cmd: str) -> bool:
     if cmd in _get_pacman_installed():
         return True
     if cmd == "inotify-tools":
         return shutil.which("inotifywait") is not None
     elif cmd == "python-gobject":
-        res = subprocess.run([sys.executable, "-c", "import gi"], capture_output=True, check=False, timeout=10)
-        return res.returncode == 0
+        return _check_gi("gi")
     elif cmd == "gtk-layer-shell":
-        res = subprocess.run([sys.executable, "-c", "import gi; gi.require_version('GtkLayerShell', '0.1')"], capture_output=True, check=False, timeout=10)
-        return res.returncode == 0
+        return _check_gi("GtkLayerShell")
     elif cmd == "ttf-jetbrains-mono":
         return "jetbrains mono" in _get_fc_list()
     elif cmd == "ttf-jetbrains-mono-nerd":
