@@ -272,7 +272,8 @@ def install_configs_workflow(mode: str = "full") -> bool:
     if do_greeter:
         cur_step += 1
         print(msg("install_step_greeter", f"{cur_step}/{steps}"))
-        greeter_install()
+        if not greeter_install():
+            return False
 
     # Completion
     render_completion_screen(
@@ -297,9 +298,11 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
         if fcitx_enabled():
             fcitx_install()
         try:
-            greeter_install()
+            if not greeter_install():
+                return False
         except Exception as e:
             log_msg("WARN", f"Greeter install skipped during --force update: {e}")
+            return False
         render_completion_screen("update", wallpaper_result=wallpaper_result)
         return True
     elif flag == "--no-deploy":
@@ -343,7 +346,8 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
             if chosen["fcitx"]:
                 fcitx_install()
             if chosen["greeter"]:
-                greeter_install()
+                if not greeter_install():
+                    return False
             render_completion_screen(
                 "update",
                 chosen_items=chosen["configs"],
@@ -590,16 +594,16 @@ def main_menu_loop() -> None:
         elif choice == 4:
             update_result = safe_git_pull(env.repo_dir)
             if update_result is True:
-                offer_overwrite_upgrade()
-                check_new_deps_post_update()
-                print(msg("updating_done"))
-                press_any_key()
-                # Re-exec to load new code
-                try:
-                    os.execv(sys.executable, [sys.executable, "-m", "nyxniri"])
-                except Exception as e:
-                    log_msg("ERROR", f"Re-exec failed: {e}")
-                    print(msg("update_restart_needed"), file=sys.stderr)
+                if offer_overwrite_upgrade():
+                    check_new_deps_post_update()
+                    print(msg("updating_done"))
+                    press_any_key()
+                    # Re-exec to load new code
+                    try:
+                        os.execv(sys.executable, [sys.executable, "-m", "nyxniri"])
+                    except Exception as e:
+                        log_msg("ERROR", f"Re-exec failed: {e}")
+                        print(msg("update_restart_needed"), file=sys.stderr)
             elif update_result is False:
                 print(msg("updating_failed"), file=sys.stderr)
             press_any_key()
@@ -800,10 +804,11 @@ def _cmd_update(sub_args: List[str]) -> int:
     else:
         update_result = safe_git_pull(env.repo_dir)
     if update_result is True:
-        deploy_ok = offer_overwrite_upgrade(flag)
+        if not offer_overwrite_upgrade(flag):
+            return 1
         check_new_deps_post_update()
         print(msg("updating_done"))
-        return 0 if deploy_ok else 1
+        return 0
     if update_result is False:
         print(msg("updating_failed"), file=sys.stderr)
         return 1
