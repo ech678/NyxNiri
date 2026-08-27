@@ -191,9 +191,12 @@ def greeter_status() -> None:
             print(msg("doctor_warn", text("greetd 服务: 未启用", "greetd service: disabled")))
 
 def greeter_uninstall() -> bool:
-    """Uninstall Noctalia Greeter configuration and restore backups."""
     print(msg("greeter_uninstall_title"))
-
+    if shutil.which("systemctl"):
+        res = subprocess.run(["systemctl", "is-enabled", "greetd"], capture_output=True, check=False, timeout=10)
+        if res is not None and res.returncode == 0:
+            subprocess.run(["sudo", "systemctl", "disable", "greetd"], check=False, timeout=15)
+            print(msg("greeter_disabled"))
     bak = Path(f"{GREETER_ETC_CFG}.nyxniri.bak")
     if bak.is_file():
         restore_cmd = f"mv {bak} {GREETER_ETC_CFG}"
@@ -201,15 +204,18 @@ def greeter_uninstall() -> bool:
         print(msg("greeter_uninstall_restored", str(GREETER_ETC_CFG)))
     else:
         print(msg("greeter_uninstall_nobackup"))
-
     if GREETER_POLKIT_RULE.is_file():
         subprocess.run(["sudo", "rm", "-f", str(GREETER_POLKIT_RULE)], check=False)
         print(msg("greeter_uninstall_polkit"))
-
-    # Remove the greeter's state directory (created at install; previously leaked)
     subprocess.run(["sudo", "rm", "-rf", str(GREETER_STATE_DIR)], check=False)
     print(msg("greeter_uninstall_state_dir", str(GREETER_STATE_DIR)))
-
+    if shutil.which("systemctl"):
+        for dm in CONFLICT_DMS:
+            res = subprocess.run(["systemctl", "is-enabled", dm], capture_output=True, check=False, timeout=10)
+            if res is not None and res.returncode == 0:
+                subprocess.run(["sudo", "systemctl", "enable", "--force", dm], check=False, timeout=15)
+                print(msg("greeter_dm_restored", dm))
+                break
     print(msg("greeter_uninstall_done"))
     log_msg("INFO", "Uninstalled Noctalia Greeter configuration")
     return True
