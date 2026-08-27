@@ -87,20 +87,16 @@ def greeter_install_packages() -> bool:
     return True
 
 def greeter_install() -> bool:
-    """Full Noctalia Greeter installation and configuration pipeline."""
     print(msg("greeter_install_title"))
-
     if not greeter_install_packages():
         return False
-
-    # Check for conflicting display managers
-    for dm in CONFLICT_DMS:
-        if shutil.which("systemctl"):
-            res = subprocess.run(["systemctl", "is-enabled", dm], capture_output=True, check=False)
+    active_dm = ""
+    if shutil.which("systemctl"):
+        for dm in CONFLICT_DMS:
+            res = subprocess.run(["systemctl", "is-enabled", dm], capture_output=True, check=False, timeout=10)
             if res.returncode == 0:
                 print(msg("greeter_dm_conflict", dm))
-
-    # Backup & Write /etc/greetd/config.toml
+                active_dm = dm
     sess_path = shutil.which(GREETER_SESSION_BIN) or f"/usr/bin/{GREETER_SESSION_BIN}"
     sess_arg = _greeter_session_arg()
     command_str = f"{sess_path} {sess_arg}".strip()
@@ -112,18 +108,16 @@ def greeter_install() -> bool:
         f'command = "{command_str}"\n'
         'user = "greeter"\n'
     )
-
     bak = Path(f"{GREETER_ETC_CFG}.nyxniri.bak")
     backup_cmd = f"mkdir -p {GREETER_ETC_CFG.parent} && if [ -f {GREETER_ETC_CFG} ] && [ ! -f {bak} ]; then cp {GREETER_ETC_CFG} {bak}; fi"
     subprocess.run(["sudo", "sh", "-c", backup_cmd], check=False)
-
     write_cmd = f"cat << 'EOF' > {GREETER_ETC_CFG}\n{toml_content}\nEOF"
     res_w = subprocess.run(["sudo", "sh", "-c", write_cmd], check=False)
     if res_w.returncode == 0:
         print(msg("greeter_config_written", str(GREETER_ETC_CFG)))
     else:
         print(msg("greeter_config_failed", str(GREETER_ETC_CFG)))
-
+        return False
     state_cmd = (
         f"mkdir -p {GREETER_STATE_DIR} && "
         f"(chown -R greeter:greeter {GREETER_STATE_DIR} 2>/dev/null || true) && "
@@ -132,8 +126,6 @@ def greeter_install() -> bool:
     res_s = subprocess.run(["sudo", "sh", "-c", state_cmd], check=False)
     if res_s.returncode == 0:
         print(msg("greeter_state_dir_created"))
-
-    # Polkit rule
     polkit_rule = (
         'polkit.addRule(function(action, subject) {\n'
         f'    if (action.id == "org.{THEME_ENGINE}.greeter.apply-appearance" &&\n'
@@ -148,14 +140,27 @@ def greeter_install() -> bool:
         print(msg("greeter_polkit_written", str(GREETER_POLKIT_RULE)))
     else:
         print(msg("greeter_polkit_failed"))
-
-    # Enable greetd
-    res_e = subprocess.run(["sudo", "systemctl", "enable", "greetd"], check=False)
-    if res_e.returncode == 0:
-        print(msg("greeter_enabled"))
-    else:
+    if active_dm and shutil.which("systemctl"):
+        subprocess.run(["sudo", "systemctl", "disable", active_dm], check=False, timeout=15)
+        print(msg("greeter_dm_disabled", active_dm))
+    res_e = subprocess.run(["sudo", "systemctl", "enable", "greetd"], check=False, timeout=15)
+    if res_e.returncode != 0:
         print(msg("greeter_enable_failed"))
-
+        if active_dm:
+            subprocess.run(["sudo", "systemctl", "enable", "--force", active_dm], check=False, timeout=15)
+            print(msg("greeter_dm_restored", active_dm))
+        log_msg("ERROR", "Failed to enable greetd service")
+        return False
+    if shutil.which("systemctl"):
+        res_verify = subprocess.run(["systemctl", "is-enabled", "greetd"], capture_output=True, check=False, timeout=10)
+        if res_verify.returncode != 0:
+            print(msg("greeter_enable_failed"))
+            if active_dm:
+                subprocess.run(["sudo", "systemctl", "enable", "--force", active_dm], check=False, timeout=15)
+                print(msg("greeter_dm_restored", active_dm))
+            log_msg("ERROR", "greetd not enabled after enable command")
+            return False
+    print(msg("greeter_enabled"))
     print(msg("greeter_reboot_hint"))
     log_msg("INFO", "Configured Noctalia Greeter")
     return True
