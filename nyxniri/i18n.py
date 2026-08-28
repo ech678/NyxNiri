@@ -419,9 +419,25 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "zh": "速查手册 : 运行 nyxhelp",
         "en": "Quick Manual  : Run nyxhelp",
     },
+    "summary_next_help": {
+        "zh": "速查手册 : 运行 nyxhelp，按键和命令都有",
+        "en": "Quick Manual  : Run nyxhelp for keys and commands",
+    },
     "summary_next_panel": {
         "zh": "控制面板 : 运行 nyxniri",
         "en": "Control Panel : Run nyxniri",
+    },
+    "distro_unsupported": {
+        "zh": "[!] 未检测到 pacman，当前系统不是 Arch 系发行版",
+        "en": "[!] pacman not found: this does not look like an Arch-based distribution",
+    },
+    "distro_unsupported_hint": {
+        "zh": "NyxNiri 的依赖安装依赖 pacman 与 AUR，在别的发行版上无法自动完成。配置文件本身仍可手动取用：仓库 configs/ 目录下的内容按普通 dotfiles 的方式复制到 ~/.config 即可，壁纸在 assets/wallpapers。欢迎来仓库 Issue 说说你的发行版，人多了会考虑支持。",
+        "en": "NyxNiri installs its dependencies through pacman and the AUR, which is not available here. You can still take the configs manually: copy whatever you need from the configs/ directory in the repository into ~/.config like ordinary dotfiles, wallpapers live in assets/wallpapers. Feel free to open an Issue and tell us your distro, support may come if there is demand.",
+    },
+    "deps_menu_unsupported": {
+        "zh": "[!] 未检测到 pacman，依赖菜单仅适用于 Arch 系发行版。配置可以手动从仓库 configs/ 复制到 ~/.config 使用。",
+        "en": "[!] pacman not found: the dependency menus only apply to Arch-based systems. You can still copy configs manually from the repository configs/ directory into ~/.config.",
     },
 
     # Summary action card

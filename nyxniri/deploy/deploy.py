@@ -221,7 +221,7 @@ def render_completion_screen(
         _render_body()
         sys.stdout.write(f"\n  {Colors.BOLD_WHITE}{msg('summary_section_next')}{Colors.RESET}\n")
         sys.stdout.write(f"    {msg('summary_next_start')}\n")
-        sys.stdout.write(f"    {msg('summary_next_manual')}\n")
+        sys.stdout.write(f"    {msg('summary_next_help')}\n")
         sys.stdout.write(f"    {msg('summary_next_panel')}\n\n")
         return
 
