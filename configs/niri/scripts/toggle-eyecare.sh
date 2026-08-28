@@ -24,7 +24,6 @@ EYECARE_EFFECTS="$NIRI_DIR/effects_eyecare.kdl"
 
 # Desired EyeCare warm color temperature (in Kelvin: 5500K for subtle natural warmth)
 EYECARE_TEMP=5500
-RAMP_SECONDS=1.5
 RAMP_PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/nyxniri-eyecare-ramp.pid"
 
 # Log for reload failures / self-healing events (empty on success)
@@ -89,10 +88,8 @@ if [ "${1:-}" = "--sync" ]; then
         noctalia msg nightlight-disable 2>/dev/null || true
     fi
     pkill -x wlsunset 2>/dev/null || true
-    if [ "$CURRENTLY_ON" = "true" ]; then
-        if command -v wlsunset >/dev/null 2>&1; then
-            nohup wlsunset -T 6500 -t "$EYECARE_TEMP" -d "$RAMP_SECONDS" -S 00:00 -s 00:00 >/dev/null 2>&1 9>&- &
-        fi
+    if [ "$CURRENTLY_ON" = "true" ] && command -v wlsunset >/dev/null 2>&1; then
+        ramp_temp 6500 "$EYECARE_TEMP"
     fi
     exit 0
 fi
@@ -120,16 +117,16 @@ fi
 
 ramp_temp() {
     local from="$1" to="$2"
-    local steps=12 i t
+    local steps=14 i t
     (
         echo $$ > "$RAMP_PID_FILE"
         for i in $(seq 1 "$steps"); do
-            t=$(( from + (to - from) * i / steps ))
+            t=$(awk -v a="$from" -v b="$to" -v i="$i" -v n="$steps" 'BEGIN{x=i/n; e=x*x*(3-2*x); printf "%d", a+(b-a)*e}')
             pkill -x wlsunset 2>/dev/null || true
             nohup wlsunset -T "$t" -t "$t" -S 00:00 -s 23:59 >/dev/null 2>&1 9>&- &
-            sleep 0.12
+            sleep 0.11
         done
-        if [ "$to" -ge 6400 ]; then
+        if [ "$to" -ge 6500 ]; then
             pkill -x wlsunset 2>/dev/null || true
         fi
         rm -f "$RAMP_PID_FILE"
@@ -139,8 +136,8 @@ ramp_temp() {
 if [ "$IS_TURNING_ON" = "true" ]; then
     sleep 0.05
     ramp_temp 6500 "$EYECARE_TEMP"
-    notify-send -t 2000 "Eye Care : On"
+    notify-send -t 2000 -i weather-clear-night "Eye Care" "on · 5500K"
 else
-    ramp_temp "$EYECARE_TEMP" 6400
-    notify-send -t 2000 "Eye Care : Off"
+    ramp_temp "$EYECARE_TEMP" 6500
+    notify-send -t 2000 -i weather-clear "Eye Care" "off"
 fi
