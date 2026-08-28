@@ -16,6 +16,14 @@ GREETER_POLKIT_RULE = Path(f"/etc/polkit-1/rules.d/50-{GREETER_PKG}.rules")
 GREETER_STATE_DIR = Path("/var/lib") / GREETER_PKG
 FCITX_THEME = "nyxmellow"
 
+# Carries the update deploy flag across the post-update re-exec, so the
+# deploy runs on the freshly pulled code instead of modules already loaded
+# into the old process (mixed old/new imports would crash mid-deploy).
+PENDING_UPGRADE_ENV = "NYXNIRI_PENDING_UPGRADE"
+# Set alongside PENDING_UPGRADE_ENV when the update came from the interactive
+# menu: the fresh process returns to the menu after deploying instead of exiting.
+PENDING_UPGRADE_MENU_ENV = "NYXNIRI_PENDING_UPGRADE_MENU"
+
 # --- Directory Constants ---
 CONFIG_DIR_NAME = "configs"
 ASSETS_DIR_NAME = "assets"

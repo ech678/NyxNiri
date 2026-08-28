@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 
 from nyxniri.constants import Colors, FCITX_THEME, PROJECT_NAME, THEME_ENGINE
-from nyxniri.core import get_env, log_msg
+from nyxniri.core import get_env, log_msg, timed_run
 from nyxniri.i18n import msg, text
 
 
@@ -164,9 +164,9 @@ def fcitx_backup_quickphrase() -> None:
 def fcitx_restart() -> None:
     """Restart running fcitx5 daemon to load updated skin."""
     if fcitx5_installed():
-        res = subprocess.run(["pgrep", "-x", "fcitx5"], capture_output=True, check=False, timeout=5)
-        if res.returncode == 0:
-            subprocess.run(["pkill", "-x", "fcitx5"], check=False, timeout=5)
+        res = timed_run(["pgrep", "-x", "fcitx5"], 5, capture_output=True, check=False)
+        if res is not None and res.returncode == 0:
+            timed_run(["pkill", "-x", "fcitx5"], 5, check=False)
             time.sleep(1)
             subprocess.Popen(["fcitx5", "-d"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(msg("fcitx_restarted"))
@@ -174,9 +174,9 @@ def fcitx_restart() -> None:
 def fcitx_trigger_render() -> None:
     """Ask Noctalia daemon to render templates for current palette."""
     if noctalia_available():
-        subprocess.run([THEME_ENGINE, "msg", "config-reload"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=15)
-        res = subprocess.run([THEME_ENGINE, "msg", "templates-apply"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=30)
-        if res.returncode == 0:
+        timed_run([THEME_ENGINE, "msg", "config-reload"], 15, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        res = timed_run([THEME_ENGINE, "msg", "templates-apply"], 30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        if res is not None and res.returncode == 0:
             print(msg("fcitx_render_ok"))
         else:
             print(msg("fcitx_render_pending"))

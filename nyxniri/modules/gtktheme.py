@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from nyxniri.constants import Colors, THEME_ENGINE
-from nyxniri.core import get_env, log_msg
+from nyxniri.core import get_env, log_msg, timed_run
 from nyxniri.i18n import msg, text
 
 GTK_TEMPLATE_KEYS = ("nyxniri_gtk3", "nyxniri_gtk4")
@@ -62,15 +62,15 @@ def gtktheme_trigger_render() -> None:
         print(msg("gtk_render_pending"))
         return
 
-    subprocess.run(
-        [THEME_ENGINE, "msg", "config-reload"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=15,
+    timed_run(
+        [THEME_ENGINE, "msg", "config-reload"], 15,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
     )
-    res = subprocess.run(
-        [THEME_ENGINE, "msg", "templates-apply"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=30,
+    res = timed_run(
+        [THEME_ENGINE, "msg", "templates-apply"], 30,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
     )
-    if res.returncode == 0:
+    if res is not None and res.returncode == 0:
         print(msg("gtk_render_ok"))
     else:
         print(msg("gtk_render_pending"))

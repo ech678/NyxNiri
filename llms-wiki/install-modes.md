@@ -57,6 +57,21 @@ if run_mode == "system":
 知道上游有没有新版，要查就得调 AUR RPC / GitHub Releases API，违背纯标准库原则。诚实比
 花哨重要：直接提示 pacman 管更新，pacman 自己会告诉用户有没有更新。
 
+## update 交接（re-exec-first）
+
+pull 成功后**当前进程不做任何部署**：菜单路径与 `nyxniri update` 都立即 `os.execve` 重启，
+用 `PENDING_UPGRADE_ENV`（constants.py）把 deploy flag 带给新进程；`main()` 开头消费该
+标记，在**新代码**上跑 `offer_overwrite_upgrade` + 依赖检查。菜单来源额外带
+`PENDING_UPGRADE_MENU_ENV`，部署完回主菜单；CLI 来源部署完退出。
+
+为什么必须先换代码：pull 会改写磁盘上的引擎文件，旧进程内存里还是旧模块，任何懒加载
+导入（如 `_phase_post_install_services` 的 gtktheme）都会 ModuleNotFoundError——拆子包
+（16bfb89→fc9cad6）时真实崩过，部署走到一半死在 traceback 上。
+
+入口兜底：`__main__._run()` 捕获 `nyxniri.*` 的 ModuleNotFoundError（树混合/更新中断的
+残留状态），一句话指引重跑 install.sh；非 nyxniri 的缺模块原样抛出。`install.sh` 侧的
+`engine_is_complete` 只护住走引导的入口，直接 `python3 -m nyxniri` 靠这层兜底。
+
 ## AUR 包（`nyxniri/packaging/PKGBUILD`）
 
 - 单一 rolling 包 `nyxniri-git`，`source=("git+https://github.com/ech678/NyxNiri.git#branch=main")`
