@@ -195,13 +195,11 @@ def clone_repo_with_fallback(target_dir: Path, mirrors: Optional[List[Tuple[str,
     return False
 
 
-def fetch_raw_with_fallback(user_repo: str, branch: str, file_path: str, output_file: Path) -> bool:
-    """Download a raw asset via 3-tier mirror fallback (Official -> jsDelivr CDN -> gh-proxy)."""
+def fetch_raw_with_fallback(user_repo: str, branch: str, file_path: str, output_file: Path, expected_sha256: Optional[str] = None) -> bool:
     log_msg("INFO", f"Fetching raw file: {user_repo}/{file_path} ({branch})")
     sys.stdout.write(msg("net_download_asset", user_repo, file_path) + "\n")
     if sys.stdin.isatty():
         sys.stdout.write(msg("net_download_hint") + "\n")
-
     total = len(RAW_MIRROR_TEMPLATES)
     for idx, (tag, template) in enumerate(RAW_MIRROR_TEMPLATES, start=1):
         url = (
@@ -211,7 +209,6 @@ def fetch_raw_with_fallback(user_repo: str, branch: str, file_path: str, output_
         )
         sys.stdout.write(msg("net_download_node", idx, total, tag))
         sys.stdout.flush()
-
         tmp_fd, tmp_name = tempfile.mkstemp()
         os.close(tmp_fd)
         tmp_path = Path(tmp_name)
@@ -243,11 +240,16 @@ def fetch_raw_with_fallback(user_repo: str, branch: str, file_path: str, output_
                 continue
             http_code = attempt.stdout.strip() or "000"
             duration_ms = int((time.time() - start_time) * 1000)
-
             if http_code == "200" and tmp_path.stat().st_size > 0:
-                # Check for HTML 404 block page
                 first_lines = tmp_path.read_text(encoding="utf-8", errors="ignore")[:200].lower()
                 if "<html" not in first_lines:
+                    if expected_sha256:
+                        import hashlib
+                        actual_sha256 = hashlib.sha256(tmp_path.read_bytes()).hexdigest()
+                        if actual_sha256 != expected_sha256:
+                            sys.stdout.write(msg("net_download_fail", "checksum") + "\n")
+                            log_msg("WARN", f"Checksum mismatch for [{tag}] ({url}): expected {expected_sha256}, got {actual_sha256}")
+                            continue
                     sys.stdout.write(msg("net_download_ok", duration_ms) + "\n")
                     log_msg("INFO", f"Downloaded raw file via [{tag}] ({url}) - {duration_ms}ms")
                     output_file.parent.mkdir(parents=True, exist_ok=True)
