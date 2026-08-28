@@ -13,6 +13,7 @@ at build time, so the whole dialog follows the wallpaper-derived tonal scheme.
 
 import os
 import sys
+import time
 import random
 import threading
 import gi
@@ -27,7 +28,7 @@ from .lock import release_instance_lock
 from .config import (
     WIN_WIDTH, WIN_HEIGHT, WIN_RADIUS,
     GRID_COLS, CARD_WIDTH, THUMB_HEIGHT,
-    GAP_X, GAP_Y,
+    GAP_X, GAP_Y, CACHE_DIR,
 )
 from .scanner import WallpaperScanner
 from .backend import apply_wallpaper
@@ -86,9 +87,7 @@ def _build_m3_css(palette: dict) -> str:
         background-color: {_rgb(surface)};
         border-radius: {R}px;
         border: 1px solid {_rgba(outline, 0.20)};
-        box-shadow: 0 2px 8px rgba(0,0,0,0.18), 0 12px 36px rgba(0,0,0,0.10);
         padding: 24px 28px 20px 28px;
-        transition: opacity 220ms cubic-bezier(0.2, 0.0, 0, 1);
     }}
     .picker-dialog.dismissing {{ opacity: 0; }}
 
@@ -112,9 +111,6 @@ def _build_m3_css(palette: dict) -> str:
         padding: 6px 12px;
         color: {_rgb(on_surface)};
         font-size: 10pt;
-        caret-color: {_rgb(primary)};
-        box-shadow: none;
-        transition: border-color 160ms ease;
     }}
     .search:focus {{
         border-color: {_rgba(primary, 0.85)};
@@ -131,7 +127,6 @@ def _build_m3_css(palette: dict) -> str:
         font-size: 9.5pt;
         font-weight: 500;
         min-height: 20px;
-        transition: background-color 140ms ease, border-color 140ms ease;
     }}
     .chip:hover {{
         background-color: {chip_bg_hover};
@@ -153,11 +148,9 @@ def _build_m3_css(palette: dict) -> str:
         border-radius: {CR}px;
         border: 1px solid {_rgba(outline, 0.14)};
         padding: 0;
-        transition: background-color 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
     }}
     .card:hover {{
         background-color: {_rgba(surface_bright, 0.92)};
-        box-shadow: 0 4px 14px {_rgba(primary, 0.18)};
         border-color: {_rgba(primary, 0.45)};
     }}
     .card.current {{
@@ -202,9 +195,57 @@ def _build_m3_css(palette: dict) -> str:
     }}
     """
 
+def _split_css_blocks(css: str):
+    blocks, depth, buf = [], 0, []
+    for ch in css:
+        buf.append(ch)
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                blocks.append("".join(buf))
+                buf = []
+    tail = "".join(buf)
+    if tail.strip():
+        blocks.append(tail)
+    return blocks
+
 
 class WallpaperPickerWindow(Gtk.Window):
     """Material You wallpaper picker driven by native GTK widgets."""
+
+    def _apply_screen_css(self, css: str):
+        provider = Gtk.CssProvider()
+        try:
+            provider.load_from_data(css.encode())
+        except Exception:
+            failed = []
+            kept = []
+            for block in _split_css_blocks(css):
+                probe = Gtk.CssProvider()
+                try:
+                    probe.load_from_data(block.encode())
+                    kept.append(block)
+                except Exception as e:
+                    sel = block.strip().split("{", 1)[0].strip()[:60]
+                    failed.append(f"{sel} :: {e}")
+            try:
+                provider.load_from_data("".join(kept).encode())
+            except Exception as e:
+                print(f"CSS load error: {e}", file=sys.stderr)
+            if failed:
+                try:
+                    os.makedirs(CACHE_DIR, exist_ok=True)
+                    log = os.path.join(CACHE_DIR, "css-errors.log")
+                    with open(log, "a", encoding="utf-8") as f:
+                        f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}]\n" + "\n".join(failed) + "\n\n")
+                except Exception:
+                    pass
+        Gtk.StyleContext.add_provider_for_screen(
+            self.get_screen(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
 
     def __init__(self, lock_fd: int = None, pid_path: str = None):
         super().__init__(type=Gtk.WindowType.TOPLEVEL)
@@ -246,14 +287,7 @@ class WallpaperPickerWindow(Gtk.Window):
             self.set_app_paintable(False)
 
         # ── Material You CSS ──
-        try:
-            provider = Gtk.CssProvider()
-            provider.load_from_data(_build_m3_css(self.palette).encode())
-            Gtk.StyleContext.add_provider_for_screen(
-                self.get_screen(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-            )
-        except Exception as e:
-            print(f"CSS load error: {e}", file=sys.stderr)
+        self._apply_screen_css(_build_m3_css(self.palette))
 
         self._build_ui()
 
