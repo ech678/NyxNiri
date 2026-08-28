@@ -26,7 +26,13 @@ GIT_MIRROR_REGISTRY=(
 
 # NYXNIRI_REPO: 指定后单源直连(不回退官方),服务 fork 与内网镜像场景
 if [ -n "${NYXNIRI_REPO:-}" ]; then
-    GIT_MIRROR_REGISTRY=("Custom|${NYXNIRI_REPO}")
+    case "$NYXNIRI_REPO" in
+        https://*|git@*|ssh://*) GIT_MIRROR_REGISTRY=("Custom|${NYXNIRI_REPO}") ;;
+        *) GIT_MIRROR_REGISTRY=(
+            "Official|https://github.com/ech678/NyxNiri.git"
+            "gh-proxy.org|https://gh-proxy.org/https://github.com/ech678/NyxNiri.git"
+        ) ;;
+    esac
 fi
 
 git_clone_timeout() {
