@@ -1,5 +1,6 @@
 """Network operations: multi-mirror Git cloning, CDN downloads, and repo self-updates."""
 
+import hashlib
 import os
 import select
 import shutil
@@ -15,10 +16,12 @@ from typing import Any, List, Optional, Tuple
 
 from nyxniri.constants import (
     Colors,
+    CUSTOM_REPO_URL,
+    CUSTOM_REPO_URL_VALID,
     GIT_MIRROR_REGISTRY,
     RAW_MIRROR_TEMPLATES,
 )
-from nyxniri.core import get_env, log_msg, register_temp_path
+from nyxniri.core import get_env, log_msg, register_temp_path, timed_run
 from nyxniri.i18n import msg
 from nyxniri.tui import prompt_confirm
 
@@ -171,6 +174,12 @@ def git_clone_timeout(url: str, target_dir: Path, cancellable: bool = False) -> 
 def clone_repo_with_fallback(target_dir: Path, mirrors: Optional[List[Tuple[str, str]]] = None) -> bool:
     """Clone repository attempting each configured mirror in order."""
     if mirrors is None:
+        if CUSTOM_REPO_URL and not CUSTOM_REPO_URL_VALID:
+            # Single-source override means no official fallback by contract;
+            # a bogus address fails loudly instead of silently switching source.
+            sys.stderr.write(msg("net_custom_repo_invalid", CUSTOM_REPO_URL))
+            log_msg("ERROR", f"NYXNIRI_REPO rejected: {CUSTOM_REPO_URL}")
+            return False
         mirrors = GIT_MIRROR_REGISTRY
 
     log_msg("INFO", "Starting Git clone with fallback mirrors")
@@ -195,7 +204,7 @@ def clone_repo_with_fallback(target_dir: Path, mirrors: Optional[List[Tuple[str,
     return False
 
 
-def fetch_raw_with_fallback(user_repo: str, branch: str, file_path: str, output_file: Path) -> bool:
+def fetch_raw_with_fallback(user_repo: str, branch: str, file_path: str, output_file: Path, expected_sha256: Optional[str] = None) -> bool:
     """Download a raw asset via 3-tier mirror fallback (Official -> jsDelivr CDN -> gh-proxy)."""
     log_msg("INFO", f"Fetching raw file: {user_repo}/{file_path} ({branch})")
     sys.stdout.write(msg("net_download_asset", user_repo, file_path) + "\n")
@@ -247,13 +256,16 @@ def fetch_raw_with_fallback(user_repo: str, branch: str, file_path: str, output_
             if http_code == "200" and tmp_path.stat().st_size > 0:
                 # Check for HTML 404 block page
                 first_lines = tmp_path.read_text(encoding="utf-8", errors="ignore")[:200].lower()
-                if "<html" not in first_lines:
+                digest_ok = expected_sha256 is None or hashlib.sha256(tmp_path.read_bytes()).hexdigest() == expected_sha256
+                if "<html" not in first_lines and digest_ok:
                     sys.stdout.write(msg("net_download_ok", duration_ms) + "\n")
                     log_msg("INFO", f"Downloaded raw file via [{tag}] ({url}) - {duration_ms}ms")
                     output_file.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(tmp_path), str(output_file))
                     sys.stdout.write(msg("net_download_node_ok", tag))
                     return True
+                if not digest_ok:
+                    log_msg("WARN", f"Raw file digest mismatch via [{tag}] ({url})")
             sys.stdout.write(msg("net_download_fail", http_code) + "\n")
         except Exception as e:
             sys.stdout.write(f"{Colors.BOLD_RED}[✗] {e}{Colors.RESET}\n")
@@ -306,11 +318,12 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
             print(msg("update_cancelled_dirty"))
             log_msg("WARN", f"Skipped update for dirty cache (non-interactive): {target_dir}")
             return False
-        if not prompt_confirm("dirty_tree_confirm", "n"):
+        if not prompt_confirm("dirty_tree_confirm", "n", destructive=True):
             print(msg("update_cancelled_dirty"))
             return None
-        subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=target_dir, check=False, env=env, timeout=15)
-        subprocess.run(["git", "clean", "-fd"], cwd=target_dir, check=False, env=env, timeout=15)
+        # Best-effort cleanup: a stalled reset must not crash the update flow.
+        timed_run(["git", "reset", "--hard", "HEAD"], 15, cwd=target_dir, check=False, env=env)
+        timed_run(["git", "clean", "-fd"], 15, cwd=target_dir, check=False, env=env)
 
     # Fetch & pull
     sys.stdout.write(msg("checking_updates") + "\n")
@@ -334,16 +347,15 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         env=env,
     )
     if res_fetch.returncode == 0:
-        res_reset = subprocess.run(
-            ["git", "reset", "--hard", "origin/main"],
+        res_reset = timed_run(
+            ["git", "reset", "--hard", "origin/main"], 15,
             cwd=target_dir,
             capture_output=True,
             text=True,
             check=False,
             env=env,
-            timeout=15,
         )
-        return res_reset.returncode == 0
+        return res_reset is not None and res_reset.returncode == 0
     log_msg("ERROR", f"Failed to update repository: {target_dir}")
     return False
 

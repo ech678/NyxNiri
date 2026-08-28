@@ -11,9 +11,18 @@ THEME_ENGINE = "noctalia"
 GREETER_PKG = "noctalia-greeter"
 GREETER_SESSION_BIN = "noctalia-greeter-session"
 GREETER_ETC_CFG = Path("/etc/greetd/config.toml")
+GREETER_DM_STATE = GREETER_ETC_CFG.parent / "nyxniri-display-manager"
 GREETER_POLKIT_RULE = Path(f"/etc/polkit-1/rules.d/50-{GREETER_PKG}.rules")
 GREETER_STATE_DIR = Path("/var/lib") / GREETER_PKG
 FCITX_THEME = "nyxmellow"
+
+# Carries the update deploy flag across the post-update re-exec, so the
+# deploy runs on the freshly pulled code instead of modules already loaded
+# into the old process (mixed old/new imports would crash mid-deploy).
+PENDING_UPGRADE_ENV = "NYXNIRI_PENDING_UPGRADE"
+# Set alongside PENDING_UPGRADE_ENV when the update came from the interactive
+# menu: the fresh process returns to the menu after deploying instead of exiting.
+PENDING_UPGRADE_MENU_ENV = "NYXNIRI_PENDING_UPGRADE_MENU"
 
 # --- Directory Constants ---
 CONFIG_DIR_NAME = "configs"
@@ -29,6 +38,11 @@ else:
         ("Official", "https://github.com/ech678/NyxNiri.git"),
         ("gh-proxy.org", "https://gh-proxy.org/https://github.com/ech678/NyxNiri.git"),
     ]
+
+# Single-source override is user-configured, never silently replaced: an
+# address that isn't a git remote is refused loudly at the point of cloning.
+CUSTOM_REPO_URL = os.environ.get("NYXNIRI_REPO", "")
+CUSTOM_REPO_URL_VALID = CUSTOM_REPO_URL.startswith(("https://", "git@", "ssh://"))
 
 RAW_MIRROR_TEMPLATES = [
     ("Official", "https://raw.githubusercontent.com/{USER_REPO}/{BRANCH}/{FILE_PATH}"),

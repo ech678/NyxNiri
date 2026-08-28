@@ -26,7 +26,18 @@ GIT_MIRROR_REGISTRY=(
 
 # NYXNIRI_REPO: 指定后单源直连(不回退官方),服务 fork 与内网镜像场景
 if [ -n "${NYXNIRI_REPO:-}" ]; then
-    GIT_MIRROR_REGISTRY=("Custom|${NYXNIRI_REPO}")
+    case "$NYXNIRI_REPO" in
+        https://*|git@*|ssh://*)
+            GIT_MIRROR_REGISTRY=("Custom|${NYXNIRI_REPO}")
+            ;;
+        *)
+            printf '%s[✗] %s%s\n' "$RED" \
+                "$(say "NYXNIRI_REPO 指定的地址不受支持: ${NYXNIRI_REPO}" "Unsupported NYXNIRI_REPO address: ${NYXNIRI_REPO}")" \
+                "$OFF" >&2
+            printf '  %s\n' "$(say "仅接受 https:// 、 git@ 、 ssh:// 开头的仓库地址。" "Only https:// , git@ , ssh:// addresses are accepted.")" >&2
+            exit 1
+            ;;
+    esac
 fi
 
 git_clone_timeout() {
@@ -70,11 +81,16 @@ exec_python_engine() {
     local target_dir="$1"
     shift
 
+    cd -- "$target_dir" || return 1
+    # -I -S blocks PYTHON* and sitecustomize startup injection; the fixed
+    # launcher receives the validated tree and user arguments separately.
+    local python_launcher='import sys; target = sys.argv.pop(1); sys.path.insert(0, target); sys.argv[0] = "nyxniri"; from nyxniri.cli import main; main()'
+
     # Only reconnect to /dev/tty if stdin is piped (e.g. curl | bash) AND no subcommand args are given
     if [ "$#" -eq 0 ] && [ ! -t 0 ] && [ -t 1 ] && [ -r /dev/tty ]; then
-        PYTHONPATH="$target_dir${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m nyxniri "$@" < /dev/tty
+        exec python3 -I -S -c "$python_launcher" "$target_dir" "$@" < /dev/tty
     else
-        PYTHONPATH="$target_dir${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m nyxniri "$@"
+        exec python3 -I -S -c "$python_launcher" "$target_dir" "$@"
     fi
 }
 
@@ -157,7 +173,7 @@ main() {
         exit 1
     fi
     local python_version py_major py_minor
-    python_version="$(python3 -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')" || {
+    python_version="$(python3 -I -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')" || {
         printf '%s[✗] %s%s\n' "$RED" \
             "$(say "无法确定 Python 版本，请安装 Python 3.11+。" "Could not determine the Python version. Please install Python 3.11+.")" \
             "$OFF" >&2

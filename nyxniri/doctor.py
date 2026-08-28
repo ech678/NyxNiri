@@ -18,7 +18,7 @@ from nyxniri.constants import (
     PROJECT_NAME,
     THEME_ENGINE,
 )
-from nyxniri.core import get_env, get_pics_dir, log_msg
+from nyxniri.core import get_env, get_pics_dir, log_msg, timed_run
 from nyxniri.i18n import msg, text
 
 
@@ -260,54 +260,108 @@ def _check_preset_drift(env) -> None:
     without running update — the dest is frozen, but doctor surfaces it. §11
     """
     from nyxniri.deploy import discover_config_items
-    from nyxniri.deploy import read_active_preset
+    from nyxniri.deploy import InvalidActivePresetError, read_active_preset
+    from nyxniri.deploy.preset import _find_preset_src
     for app in discover_config_items():
-        active = read_active_preset(app)
+        try:
+            active = read_active_preset(app)
+        except InvalidActivePresetError:
+            print(msg("doctor_warn", text(
+                f"{app}: 活动预设状态无效，当前 ~/.config/{app} 已冻结，未重新部署",
+                f"{app}: active preset state is invalid; ~/.config/{app} is frozen, not redeployed",
+            )))
+            continue
         if active == "default":
             continue
-        official = env.configs_src / app / "presets" / active
-        user = env.presets_dir / app / active
-        if not official.is_dir() and not user.is_dir():
+        if _find_preset_src(app, active) is None:
             print(msg("doctor_warn", text(
                 f"{app}: 活动预设 '{active}' 已不在仓库（~/.config/{app} 已冻结，未重新部署）",
                 f"{app}: active preset '{active}' is gone from the repo (~/.config/{app} frozen, not redeployed)",
             )))
 
 
-# Ordered registry of all health checks.
-# Adding a check = write a function + append it here.
-DOCTOR_CHECKS = [
-    _check_compositor,
-    _check_wayland_session,
-    _check_noctalia,
-    _check_wallpapers,
-    _check_core_deps,
-    _check_scripts,
-    _check_eyecare,
-    _check_scratchpad,
-    _check_orbit,
-    _check_shell,
-    _check_fisher,
-    _check_audio,
-    _check_brightness,
-    _check_portal_active,
-    _check_portal_gtk,
-    _check_portal_config,
-    _check_disk_space,
-    _check_fcitx_skin,
-    _check_gtk_theme,
-    _check_vm,
-    _check_greeter,
-    _check_path_occlusion,
-    _check_preset_drift,
+# Ordered sections of health checks.
+# Adding a check = write a function + append to the appropriate section list.
+DOCTOR_SECTIONS = [
+    ("doctor_sec_desktop", [
+        _check_compositor,
+        _check_wayland_session,
+        _check_noctalia,
+        _check_wallpapers,
+    ]),
+    ("doctor_sec_core", [
+        _check_core_deps,
+        _check_scripts,
+        _check_shell,
+        _check_orbit,
+        _check_eyecare,
+        _check_scratchpad,
+    ]),
+    ("doctor_sec_hardware", [
+        _check_audio,
+        _check_brightness,
+        _check_vm,
+        _check_disk_space,
+    ]),
+    ("doctor_sec_services", [
+        _check_portal_active,
+        _check_portal_gtk,
+        _check_portal_config,
+    ]),
+    ("doctor_sec_extensions", [
+        _check_fisher,
+        _check_fcitx_skin,
+        _check_gtk_theme,
+        _check_greeter,
+        _check_path_occlusion,
+        _check_preset_drift,
+    ]),
 ]
+
+DOCTOR_CHECKS = [chk for _, checks in DOCTOR_SECTIONS for chk in checks]
+
+
+class _OutputTally:
+    """Lightweight stdout proxy to count diagnostics results without altering check signatures."""
+    def __init__(self, target):
+        self.target = target
+        self.ok = 0
+        self.warn = 0
+        self.err = 0
+
+    def write(self, s: str):
+        if "[✓]" in s:
+            self.ok += s.count("[✓]")
+        if "[!]" in s:
+            self.warn += s.count("[!]")
+        if "[✗]" in s:
+            self.err += s.count("[✗]")
+        return self.target.write(s)
+
+    def flush(self):
+        return self.target.flush()
+
 
 def run_doctor() -> bool:
     """Execute comprehensive system health diagnosis."""
     print(msg("running_doctor"))
     env = get_env()
-    for check in DOCTOR_CHECKS:
-        check(env)
+    tally = _OutputTally(sys.stdout)
+    orig_stdout = sys.stdout
+    sys.stdout = tally
+    try:
+        for sec_key, checks in DOCTOR_SECTIONS:
+            sys.stdout.write(f"{msg(sec_key)}\n")
+            for check in checks:
+                try:
+                    check(env)
+                except subprocess.TimeoutExpired:
+                    # One stalled probe must not kill the whole diagnosis.
+                    print(msg("doctor_warn", msg("check_probe_timeout")))
+    finally:
+        sys.stdout = orig_stdout
+
+    print(f"\n{msg('doctor_summary_tally', tally.ok, tally.warn, tally.err)}")
     print(msg("all_done"))
     print(msg("reboot_hint"))
     log_msg("INFO", "System Doctor executed")

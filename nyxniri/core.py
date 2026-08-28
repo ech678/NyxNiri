@@ -184,6 +184,7 @@ def get_version(target_dir: Path) -> str:
 # --- Single-Instance Lock (fcntl.flock — auto-releases on process death) ---
 _LOCK_FILE: Optional[Path] = None
 _LOCK_FD: Optional[int] = None
+_LOCK_ACQUIRED = False
 
 def acquire_lock() -> None:
     """Acquire single-instance lock via fcntl.flock.
@@ -192,14 +193,22 @@ def acquire_lock() -> None:
     SIGKILL), so there is no stale-lock healing to do and no check-then-write
     race. A PID is still written to the file for diagnostics only.
     """
-    global _LOCK_FILE, _LOCK_FD
+    global _LOCK_FILE, _LOCK_FD, _LOCK_ACQUIRED
     env = get_env()
     env.state_dir.mkdir(parents=True, exist_ok=True)
     _LOCK_FILE = env.state_dir / f"{CLI_CMD}.lock"
+    lock_fd: Optional[int] = None
     try:
-        _LOCK_FD = os.open(_LOCK_FILE, os.O_CREAT | os.O_RDWR, 0o644)
-        fcntl.flock(_LOCK_FD, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        lock_fd = os.open(_LOCK_FILE, os.O_CREAT | os.O_RDWR, 0o644)
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except (BlockingIOError, OSError):
+        if lock_fd is not None:
+            try:
+                os.close(lock_fd)
+            except OSError:
+                pass
+        _LOCK_FD = None
+        _LOCK_ACQUIRED = False
         # Another instance holds the lock — surface its PID if we can read it
         pid = "unknown"
         try:
@@ -211,6 +220,8 @@ def acquire_lock() -> None:
         from nyxniri.i18n import msg
         print(msg("err_already_running", pid), file=sys.stderr)
         sys.exit(1)
+    _LOCK_FD = lock_fd
+    _LOCK_ACQUIRED = True
     # Best-effort PID write for diagnostics (the lock itself is the source of truth)
     try:
         os.ftruncate(_LOCK_FD, 0)
@@ -219,20 +230,20 @@ def acquire_lock() -> None:
         pass
 
 def release_lock() -> None:
-    """Release the single-instance lock and remove the lock file."""
-    global _LOCK_FD, _LOCK_FILE
-    if _LOCK_FD is not None:
+    """Release the lock held by this process; keep the stable lock path."""
+    global _LOCK_FD, _LOCK_ACQUIRED
+    if _LOCK_ACQUIRED and _LOCK_FD is not None:
         try:
             fcntl.flock(_LOCK_FD, fcntl.LOCK_UN)
-            os.close(_LOCK_FD)
         except Exception:
             pass
-        _LOCK_FD = None
-    if _LOCK_FILE:
-        try:
-            _LOCK_FILE.unlink(missing_ok=True)
-        except Exception:
-            pass
+        finally:
+            try:
+                os.close(_LOCK_FD)
+            except Exception:
+                pass
+            _LOCK_FD = None
+            _LOCK_ACQUIRED = False
 
 atexit.register(release_lock)
 
@@ -276,7 +287,73 @@ def log_msg(level: str, message: str) -> None:
     except Exception:
         pass
 
+def timed_run(cmd: list, timeout: float, **kw) -> Optional[subprocess.CompletedProcess]:
+    """subprocess.run that degrades a timeout to None instead of raising.
+
+    Every external command with a timeout must go through here: a stalled
+    network call or unresponsive daemon is polish failing, not a reason to
+    crash the whole flow mid-deploy (v3.0.3 shipped timeouts but only
+    network.py caught the exception — everything else turned hang into crash).
+    """
+    try:
+        return subprocess.run(cmd, timeout=timeout, **kw)
+    except subprocess.TimeoutExpired:
+        log_msg("WARN", f"Command timed out after {timeout}s: {cmd[0]}")
+        return None
+
 # --- CLI Binary Symlink ---
+def _cli_link_marker() -> Path:
+    return get_env().state_dir / f"{CLI_CMD}.link"
+
+
+def _cli_link_record(path: Path) -> Optional[str]:
+    """Return the exact target and inode proof for a CLI symlink."""
+    if not path.is_symlink():
+        return None
+    try:
+        st = path.lstat()
+        return f"{path.resolve(strict=False)}\n{st.st_dev}:{st.st_ino}\n"
+    except (OSError, RuntimeError):
+        return None
+
+
+def _record_nyxniri_cli_symlink(path: Path) -> bool:
+    """Persist ownership of one exact CLI symlink."""
+    record = _cli_link_record(path)
+    marker = _cli_link_marker()
+    if record is None or marker.is_symlink() or (marker.exists() and not marker.is_file()):
+        return False
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(record, encoding="utf-8")
+        marker.chmod(0o600)
+        return True
+    except OSError:
+        return False
+
+
+def is_nyxniri_cli_symlink(path: Path) -> bool:
+    """Whether path matches NyxNiri's recorded CLI symlink exactly."""
+    record = _cli_link_record(path)
+    marker = _cli_link_marker()
+    if record is None or marker.is_symlink() or not marker.is_file():
+        return False
+    try:
+        return marker.read_text(encoding="utf-8") == record
+    except OSError:
+        return False
+
+
+def clear_nyxniri_cli_symlink_marker() -> None:
+    """Forget a CLI link only after its recorded link has been removed."""
+    marker = _cli_link_marker()
+    if marker.is_file() and not marker.is_symlink():
+        try:
+            marker.unlink()
+        except OSError:
+            pass
+
+
 def ensure_nyxniri_symlink() -> None:
     """Ensure ~/.local/bin/nyxniri points to install.sh.
 
@@ -301,10 +378,20 @@ def ensure_nyxniri_symlink() -> None:
             return
 
     try:
-        if not target_bin.is_symlink() or target_bin.resolve() != root_installer.resolve():
+        if target_bin.is_symlink():
+            if not is_nyxniri_cli_symlink(target_bin):
+                return
+            if target_bin.resolve(strict=False) == root_installer.resolve(strict=False):
+                root_installer.chmod(0o755)
+                return
             target_bin.unlink(missing_ok=True)
-            target_bin.symlink_to(root_installer)
-        root_installer.chmod(0o755)
+        elif target_bin.exists():
+            return
+        target_bin.symlink_to(root_installer)
+        if _record_nyxniri_cli_symlink(target_bin):
+            root_installer.chmod(0o755)
+        else:
+            target_bin.unlink(missing_ok=True)
     except Exception:
         pass
 

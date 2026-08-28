@@ -1,35 +1,70 @@
-# TUI Preset Switcher — 双栏、焦点分发、窄 deploy
+# TUI Preset Switcher — 树状折叠拓扑工作台、单一光标、原位无熵操作
 
-> CLI（`nyxniri preset <app> apply <name>`）之外，交互菜单里也能切预设。**双栏布局**，
-> 复用 Menu 的渲染骨架但双栏+双光标是新交互，自写焦点+按键分发。源码：`nyxniri/tui.py`（`PresetSwitcher`）。
+> CLI（`nyxniri preset <app> apply <name>`）之外，交互菜单提供自包含的 Preset Studio 工作台。
+> **单栏树状折叠拓扑（Accordion Tree）**，默认折叠，下方支持分行可折叠详情卡片。源码：`nyxniri/tui.py`（`PresetSwitcher`）。
 
-## 布局
+## 布局与视线设计
 
+```text
+  NYX NIRI  v3.0.3  ·  预设管理
+
+    ▸ fastfetch                 default
+    ▸ fish                      default
+  ▾ kitty
+      default                   ●
+    ❯ transparent
+      nord
+    ▸ niri                      default (2)
+    ▸ noctalia                  default
+
+  ────────────────────────────────────────────────────────────
+
+  源: configs/kitty/presets/transparent
+
+  ▸ 包含文件 (2)
+  ▸ 保留文件 (0)
+
+  [Enter] 展开/应用   [Tab] 详情   [s] 保存当前   [e] 编辑   [d] 删除   [q] 返回
 ```
-  预设切换            ←/→ 跳栏  ↑/↓ 栏内移动  Enter 应用  q 退
-  ──────────────────────────────────────────────────────────────
-  应用                预设 (niri)
-  ─────────────       ──────────────
-  kitty          →    default
-> niri           ←  > glass          ◄ 栏内光标
-  fish                compact
-  noctalia
+
+### 展开详情视图（按 `Tab` / `i` 或鼠标点击）：
+```text
+  ────────────────────────────────────────────────────────────
+
+  源: configs/kitty/presets/transparent
+
+  ▾ 包含文件 (2):
+      · current-theme.conf
+      · kitty.conf
+
+  ▾ 保留文件 (1):
+      · monitor.kdl
+
+  [Enter] 展开/应用   [Tab] 详情   [s] 保存当前   [e] 编辑   [d] 删除   [q] 返回
 ```
 
-- **左栏 = 应用**，右栏 = 当前聚焦应用的预设。活动预设前标 `>`。
-- **←/→**（+ `h`/`l`）跳栏（应用 ↔ 预设）。
-- **↑/↓**（+ `k`/`j`）栏内移动，循环。
-- **Enter / Space** = apply 当前 (应用, 预设) 组合。
-- **q / ESC / 0** = 退回（返回 None）。
-- 跳到新应用时右栏换显该应用的预设列表，栏内光标 `land_on_active` 停在该应用当前活动项。
+### 单一光标法则 (Single Cursor Rule)
+- **全屏唯一光标**：`❯`（青色粗体）在整个屏幕中永远只有 1 个，在 App 行与展开的预设行之间平滑流转。
+- **默认折叠**：所有应用默认折叠（`▸`），右侧灰色轻量展示当前活动预设名称与预设数量。
+- **下方独立多行折叠**：包含文件与保留文件各占独立一行，支持按 `[Tab]`（或 `[i]` / 鼠标点击）展开与收起。
+- **极致降噪状态指示**：去除冗余的 `[官方]` 标签，活动预设右侧以精致的绿色圆点 `●` 标识。
+- **零错位盒状线**：废除 `┼`、`┴`、`│` 盒状字符，使用 56 字符定宽底部分隔线，完全免疫终端字符公差错位。
 
-两轴两键集，永远知道在动哪个维度——ranger/mc 那套肌肉记忆。
+## 原位拓扑操作 (In-Place Interaction Flow)
 
-## 解耦设计
+所有操作均在 Studio 面板内完成，**零跳出控制台、零滚屏刷屏、不弹“按任意键继续”**：
 
-`PresetSwitcher(apps, presets_for)` 不碰 deploy：调用方（`cli.preset_switcher_loop`）传 app
-列表 + 一个 callback `presets_for(app) → [(name, is_active)]`。`run()` 返回选中的 `(app, preset)`
-或 None。caller 拿到后调 `apply_preset(app, name)`。组件是纯数据+渲染，副作用在 caller。
+- **`↑` / `↓`**（+ `k`/`j` / 滚轮 / `PageUp`/`PageDown`/`Home`/`End`）：在平铺树状列表中上下穿梭。
+- **`[Enter]` / `[Space]`**：
+  - 在 **App 行**：展开 / 折叠该 App，展开时光标自动滑入活动预设行。
+  - 在 **预设行**：窄路径原子部署，底部直接原位显示绿字通知 `[✓] 已应用 kitty 预设: transparent`，`●` 标记瞬时刷新到位。
+- **`[Tab]` / `[i]`**：展开 / 折叠分割线下方的包含文件与保留文件列表。
+- **`→` / `l`**：展开当前聚焦的 App 并聚焦其预设。
+- **`←` / `h`**：在预设行时返回所属 App 并折叠；在 App 行时折叠该 App。
+- **`[s]` 保存 (Save)**：底部原位唤起轻量单行输入 `▸ 新预设名称: `，确认后自动创建用户预设并展开高亮。
+- **`[e]` 编辑 (Edit)**：对选中的用户预设调起 `$EDITOR`，保存退出后原位返回当前面板。官方预设受保护提示不可直接修改。
+- **`[d]` 删除 (Delete)**：对选中的用户预设弹出确认 `▸ 确认删除用户预设 'my-nord'？[y/N]: `，确认后即刻移除。官方预设受保护禁止删除。
+- **`[q]` / `[Esc]`**：返回上一级菜单。
 
 ## apply 后的窄 deploy 路径
 
@@ -38,12 +73,8 @@
 `_phase_post_install_services`（fisher update / theme-sync / gtk 重渲染）。切个 kitty 预设
 不该顺带跑 fisher，无关副作用违反"无熵"。详见 [preset-mechanism](preset-mechanism.md)。
 
-## 反馈
-
-apply 完 `_render_preset_result` 打印"已切到 transparent，X 个文件更新，Y 个 `__custom__`
-保留"——和 install/update 一致的反馈风格，不静默。
-
 ## 光标保障
 
 `sys.stdout.write(Colors.CURSOR_HIDE)` 进入循环，`finally: CURSOR_SHOW`——光标恢复由 trap
 钩子绝对保障（崩溃也恢复），符合 TUI 宪章"光标恢复由 trap 钩子绝对保障"。
+

@@ -122,5 +122,28 @@ class TestI18nKeyIntegrity(unittest.TestCase):
                          f"Orphan i18n keys (defined in TRANSLATIONS but never referenced): {sorted(orphans)}")
 
 
+class TestTemplateSubstitution(unittest.TestCase):
+    """Runtime guard: templated entries must actually substitute their args.
+
+    Every placeholder entry is written as an f-string so the loader collapses
+    ``{{0}}`` -> ``{0}``; ``msg()`` then substitutes via ``.format()``. A plain
+    string accidentally carrying ``{{0}}`` survives as literal braces and
+    ``.format()`` emits a literal ``{0}`` (arg dropped). Asserts no runtime
+    value still contains ``{{`` or ``}}`` — catches that whole class of mistake.
+    """
+
+    def test_no_double_brace_residual(self):
+        from nyxniri.i18n import TRANSLATIONS
+        offenders = []
+        for key, entry in TRANSLATIONS.items():
+            for lang, val in entry.items():
+                if "{{" in val or "}}" in val:
+                    offenders.append(f"{key}[{lang}] = {val!r}")
+        self.assertEqual(
+            offenders, [],
+            f"Templated entries still carrying literal braces (forgot f-prefix?): {offenders}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

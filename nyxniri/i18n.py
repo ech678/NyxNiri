@@ -60,12 +60,12 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Software & Dependencies",
     },
     "menu_group_maint": {
-        "zh": f"\n  {Colors.BOLD_BLUE}管理{Colors.RESET}",
-        "en": f"\n  {Colors.BOLD_BLUE}Manage{Colors.RESET}",
+        "zh": f"  {Colors.BOLD_BLUE}管理{Colors.RESET}",
+        "en": f"  {Colors.BOLD_BLUE}Manage{Colors.RESET}",
     },
     "menu_group_system": {
-        "zh": f"\n  {Colors.BOLD_BLUE}诊断{Colors.RESET}",
-        "en": f"\n  {Colors.BOLD_BLUE}Diagnostics{Colors.RESET}",
+        "zh": f"  {Colors.BOLD_BLUE}诊断{Colors.RESET}",
+        "en": f"  {Colors.BOLD_BLUE}Diagnostics{Colors.RESET}",
     },
     "menu_opt3": {
         "zh": "快照管理",
@@ -677,6 +677,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "zh": "▸ 请选择要恢复的快照序号 (Ctrl+C 取消): ",
         "en": "▸ Select snapshot to restore (Ctrl+C to cancel): ",
     },
+    "rollback_select_title": {
+        "zh": f"\n  {Colors.BOLD_CYAN}── 选择要恢复的快照 ──{Colors.RESET}\n",
+        "en": f"\n  {Colors.BOLD_CYAN}── Select Snapshot to Restore ──{Colors.RESET}\n",
+    },
+    "rollback_select_hint": {
+        "zh": f"  {Colors.DARK_GRAY}[↑/↓/j/k] 移动  [Enter] 确认回滚  [Esc/q] 取消{Colors.RESET}",
+        "en": f"  {Colors.DARK_GRAY}[↑/↓/j/k] Move  [Enter] Confirm Rollback  [Esc/q] Cancel{Colors.RESET}",
+    },
     "delete_snapshot_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── 选择要删除的快照 ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_CYAN}── Select Snapshots to Delete ──{Colors.RESET}\n",
@@ -688,6 +696,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "rollback_invalid_num": {
         "zh": f"{Colors.BOLD_RED}[✗] 无效序号，已取消回滚{Colors.RESET}",
         "en": f"{Colors.BOLD_RED}[✗] Invalid selection{Colors.RESET}",
+    },
+    "rollback_source_missing": {
+        "zh": f"{Colors.BOLD_RED}[✗] 所选快照已不存在，已取消回滚: {{0}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[✗] Selected snapshot is no longer available; rollback cancelled: {{0}}{Colors.RESET}",
+    },
+    "rollback_no_items": {
+        "zh": f"{Colors.BOLD_RED}[✗] 所选快照没有可恢复的配置，已取消回滚{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[✗] Selected snapshot contains no restorable configuration; rollback cancelled{Colors.RESET}",
     },
     "rolling_back": {
         "zh": f"\n{Colors.BOLD_BLUE}:: 正在从快照 [{{0}}] 恢复配置…{Colors.RESET}",
@@ -854,8 +870,32 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_YELLOW}[!] Noctalia Greeter setup skipped{Colors.RESET}",
     },
     "greeter_dm_conflict": {
-        "zh": f"{Colors.BOLD_YELLOW}[!] 存在冲突的显示管理器 ({{0}})，请先手动将其禁用。{Colors.RESET}",
-        "en": f"{Colors.BOLD_YELLOW}[!] Conflicting display manager detected ({{0}}). Please disable it manually.{Colors.RESET}",
+        "zh": f"{Colors.BOLD_YELLOW}[!] 检测到已启用的显示管理器 ({{0}})，现在切换到 greetd{Colors.RESET}",
+        "en": f"{Colors.BOLD_YELLOW}[!] Enabled display manager detected ({{0}}); switching to greetd{Colors.RESET}",
+    },
+    "greeter_dm_disable_failed": {
+        "zh": f"{Colors.BOLD_RED}[!] 停用 {{0}} 失败，已取消切换{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] Failed to disable {{0}}; switch cancelled{Colors.RESET}",
+    },
+    "greeter_dm_restored": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已恢复原显示管理器 {{0}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] Restored the previous display manager: {{0}}{Colors.RESET}",
+    },
+    "greeter_dm_restore_failed": {
+        "zh": f"{Colors.BOLD_RED}[!] 无法恢复 {{0}}，重启前请运行: sudo systemctl disable greetd && sudo systemctl enable {{0}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] Could not restore {{0}}. Before reboot, run: sudo systemctl disable greetd && sudo systemctl enable {{0}}{Colors.RESET}",
+    },
+    "greeter_dm_record_invalid": {
+        "zh": f"{Colors.BOLD_RED}[!] 原显示管理器记录无效，未修改当前登录状态{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] Previous display manager record is invalid; login state left unchanged{Colors.RESET}",
+    },
+    "greeter_greetd_restore_failed": {
+        "zh": f"{Colors.BOLD_RED}[!] 无法恢复 greetd，重启前请手动启用一个显示管理器{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] Could not restore greetd; enable a display manager manually before reboot{Colors.RESET}",
+    },
+    "greeter_service_missing": {
+        "zh": f"{Colors.BOLD_RED}[!] 未找到 greetd 服务，显示管理器保持不变{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] greetd service not found; display manager left unchanged{Colors.RESET}",
     },
     "greeter_config_written": {
         "zh": f"{Colors.BOLD_GREEN}[✓] 已写入 greetd 配置: {{0}}{Colors.RESET}",
@@ -894,8 +934,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_GREEN}[✓] greetd service already enabled{Colors.RESET}",
     },
     "greeter_enable_failed": {
-        "zh": f"{Colors.BOLD_RED}[!] 启用 greetd 服务失败。请手动运行: sudo systemctl enable greetd{Colors.RESET}",
-        "en": f"{Colors.BOLD_RED}[!] Failed to enable greetd. Run manually: sudo systemctl enable greetd{Colors.RESET}",
+        "zh": f"{Colors.BOLD_RED}[!] greetd 启用后验证失败，正在恢复原登录状态{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] greetd did not verify as enabled; restoring the previous login state{Colors.RESET}",
     },
     "greeter_reboot_hint": {
         "zh": f"{Colors.BOLD_CYAN}重启后生效。主题同步: Noctalia 设置 → 安全 → Noctalia Greeter → Sync Now{Colors.RESET}",
@@ -932,6 +972,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "greeter_uninstall_polkit": {
         "zh": f"{Colors.BOLD_GREEN}[✓] 已移除 polkit 免密规则{Colors.RESET}",
         "en": f"{Colors.BOLD_GREEN}[✓] polkit rule removed{Colors.RESET}",
+    },
+    "greeter_uninstall_polkit_restored": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已恢复 polkit 规则{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] polkit rule restored{Colors.RESET}",
     },
     "greeter_uninstall_state_dir": {
         "zh": f"{Colors.BOLD_GREEN}[✓] 已清理状态目录: {{0}}{Colors.RESET}",
@@ -1061,6 +1105,30 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "zh": f"\n{Colors.BOLD_PURPLE}:: 正在诊断系统…{Colors.RESET}",
         "en": f"\n{Colors.BOLD_PURPLE}:: Running diagnostics…{Colors.RESET}",
     },
+    "doctor_sec_desktop": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: [1/5] 桌面与合成器{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: [1/5] Desktop & Compositor{Colors.RESET}",
+    },
+    "doctor_sec_core": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: [2/5] 核心依赖与脚本{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: [2/5] Core Tools & Scripts{Colors.RESET}",
+    },
+    "doctor_sec_hardware": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: [3/5] 音频、显示与外设{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: [3/5] Audio, Displays & Hardware{Colors.RESET}",
+    },
+    "doctor_sec_services": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: [4/5] 门户与系统服务{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: [4/5] Portals & System Services{Colors.RESET}",
+    },
+    "doctor_sec_extensions": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: [5/5] 扩展与环境健康{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: [5/5] Extensions & Health{Colors.RESET}",
+    },
+    "doctor_summary_tally": {
+        "zh": f"  {Colors.BOLD_GREEN}[✓] {{0}} 项正常{Colors.RESET}  {Colors.BOLD_YELLOW}[!] {{1}} 项提示{Colors.RESET}  {Colors.BOLD_RED}[✗] {{2}} 项异常{Colors.RESET}",
+        "en": f"  {Colors.BOLD_GREEN}[✓] {{0}} passed{Colors.RESET}  {Colors.BOLD_YELLOW}[!] {{1}} warnings{Colors.RESET}  {Colors.BOLD_RED}[✗] {{2}} errors{Colors.RESET}",
+    },
     "doctor_ok": {
         "zh": f"{Colors.BOLD_GREEN}[✓]{Colors.RESET} {{0}}",
         "en": f"{Colors.BOLD_GREEN}[✓]{Colors.RESET} {{0}}",
@@ -1102,6 +1170,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "err_root_denied": {
         "zh": f"\n{Colors.BOLD_RED}[✗] 请以普通用户身份运行 NyxNiri，不要使用 root。{Colors.RESET}",
         "en": f"\n{Colors.BOLD_RED}[✗] Run NyxNiri as a normal user, not root.{Colors.RESET}",
+    },
+    "err_engine_incomplete": {
+        "zh": f"{Colors.BOLD_RED}[✗] 引擎文件不完整或更新中途被打断。{Colors.RESET}\n    重新运行 install.sh 即可恢复；若仍失败，请重新克隆仓库。",
+        "en": f"{Colors.BOLD_RED}[✗] Engine files are incomplete or an update was interrupted.{Colors.RESET}\n    Rerun install.sh to recover; if it still fails, re-clone the repository.",
+    },
+    "check_probe_timeout": {
+        "zh": "检测项超时，已跳过",
+        "en": "Check timed out, skipped",
     },
     "err_unknown_command": {
         "zh": f"{Colors.BOLD_RED}[✗] 未知命令: {{0}}{Colors.RESET}",
@@ -1226,6 +1302,10 @@ Commands:
     "net_pull_all_fail": {
         "zh": f"{Colors.BOLD_RED}[✗] 所有镜像节点均拉取失败。请检查网络。{Colors.RESET}\n",
         "en": f"{Colors.BOLD_RED}[✗] All mirror nodes failed. Please check network.{Colors.RESET}\n",
+    },
+    "net_custom_repo_invalid": {
+        "zh": f"{Colors.BOLD_RED}[✗] NYXNIRI_REPO 指定的地址不受支持: {{0}}{Colors.RESET}\n  仅接受 https:// 、 git@ 、 ssh:// 开头的仓库地址，已按要求停止安装。\n",
+        "en": f"{Colors.BOLD_RED}[✗] Unsupported NYXNIRI_REPO address: {{0}}{Colors.RESET}\n  Only https:// , git@ , ssh:// addresses are accepted; aborting as configured.\n",
     },
     "net_download_asset": {
         "zh": f"{Colors.BOLD_BLUE}:: 下载资源 ({{0}}/{{1}})…{Colors.RESET}",
@@ -1557,25 +1637,69 @@ Commands:
         "zh": f"{Colors.BOLD_YELLOW}[!] {{0}}: 活动预设 '{{1}}' 已不在仓库中，当前 ~/.config/{{0}} 内容保持冻结，未重新部署{Colors.RESET}\n    {Colors.BOLD_CYAN}运行 `{Colors.RESET}nyxniri preset {{0}} list{Colors.BOLD_CYAN}` 选新预设{Colors.RESET}",
         "en": f"{Colors.BOLD_YELLOW}[!] {{0}}: active preset '{{1}}' is no longer in the repo; ~/.config/{{0}} is frozen, not redeployed{Colors.RESET}\n    {Colors.BOLD_CYAN}Run `{Colors.RESET}nyxniri preset {{0}} list{Colors.BOLD_CYAN}` to pick a new preset{Colors.RESET}",
     },
+    "preset_warn_invalid_active": {
+        "zh": f"{Colors.BOLD_YELLOW}[!] {{0}}: 活动预设状态无效，当前 ~/.config/{{0}} 内容保持冻结，未重新部署{Colors.RESET}",
+        "en": f"{Colors.BOLD_YELLOW}[!] {{0}}: active preset state is invalid; ~/.config/{{0}} is frozen, not redeployed{Colors.RESET}",
+    },
     "preset_switcher_title": {
-        "zh": f"\n  {Colors.BOLD_CYAN}── 预设切换 ──{Colors.RESET}\n",
-        "en": f"\n  {Colors.BOLD_CYAN}── Preset Switcher ──{Colors.RESET}\n",
+        "zh": "预设管理",
+        "en": "Preset Management",
     },
     "preset_switcher_hint": {
-        "zh": f"  {Colors.DARK_GRAY}←/→ 跳栏  ↑/↓ 栏内移动  Enter 应用  q 退{Colors.RESET}",
-        "en": f"  {Colors.DARK_GRAY}←/→ switch pane  ↑/↓ move  Enter apply  q back{Colors.RESET}",
+        "zh": f"  {Colors.DARK_GRAY}[Enter] 展开/应用   [Tab] 详情   [s] 保存当前   [e] 编辑   [d] 删除   [q] 返回{Colors.RESET}",
+        "en": f"  {Colors.DARK_GRAY}[Enter] Expand/Apply   [Tab] Details   [s] Save   [e] Edit   [d] Delete   [q] Back{Colors.RESET}",
     },
     "preset_switcher_hint_short": {
-        "zh": f"  {Colors.DARK_GRAY}←/→ 栏  ↑/↓ 移  Enter 应用  q 退{Colors.RESET}",
-        "en": f"  {Colors.DARK_GRAY}←/→ pane  ↑/↓ move  Enter apply  q{Colors.RESET}",
+        "zh": f"  {Colors.DARK_GRAY}[Enter] 选  [Tab] 详  [s] 存  [e] 改  [d] 删  [q] 退{Colors.RESET}",
+        "en": f"  {Colors.DARK_GRAY}[Enter] Select  [Tab] Info  [s] Save  [e] Edit  [d] Del  [q] Back{Colors.RESET}",
+    },
+    "preset_status_active": {
+        "zh": f"{Colors.BOLD_GREEN}●{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}●{Colors.RESET}",
+    },
+    "preset_prompt_save_name": {
+        "zh": "▸ 新预设名称 (Esc 取消): ",
+        "en": "▸ New preset name (Esc to cancel): ",
+    },
+    "preset_prompt_delete_confirm": {
+        "zh": "▸ 确认删除用户预设 '{0}'？[y/N]: ",
+        "en": "▸ Delete user preset '{0}'? [y/N]: ",
+    },
+    "preset_toast_applied": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已应用 {{0}} 预设: {{1}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] Applied {{0}} preset: {{1}}{Colors.RESET}",
+    },
+    "preset_toast_saved": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已保存 {{0}} 用户预设: {{1}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] Saved {{0}} user preset: {{1}}{Colors.RESET}",
+    },
+    "preset_toast_deleted": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已删除 {{0}} 用户预设: {{1}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] Deleted {{0}} user preset: {{1}}{Colors.RESET}",
+    },
+    "preset_info_source": {
+        "zh": "源",
+        "en": "Source",
+    },
+    "preset_info_files": {
+        "zh": "包含文件",
+        "en": "Included Files",
+    },
+    "preset_info_preserve": {
+        "zh": "保留文件",
+        "en": "Preserved Files",
+    },
+    "preset_info_none": {
+        "zh": "(无)",
+        "en": "(none)",
     },
     "preset_switcher_col_app": {
         "zh": "应用",
         "en": "App",
     },
     "preset_switcher_col_preset": {
-        "zh": "预设 ({{0}})",
-        "en": "Presets ({{0}})",
+        "zh": f"预设 ({{0}})",
+        "en": f"Presets ({{0}})",
     },
 }
 

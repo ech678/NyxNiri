@@ -33,7 +33,11 @@ def _deploy_ignore_factory(root_src: Path):
     return _ignore
 
 
-def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False, preserve: Optional[List[str]] = None) -> bool:
+def atomic_replace_item(
+    src: Path, dest: Path, preserved_log: Optional[List[str]] = None,
+    test_mode: bool = False, preserve: Optional[List[str]] = None,
+    preserve_custom: bool = True,
+) -> bool:
     """Atomic swap deployment via sibling temp directories with Dunder Protocol preservation.
 
     ``preserve`` injects manifest-declared files (e.g. monitor.kdl) into tmp_new
@@ -78,7 +82,8 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
             remove_path(tmp_new)
         shutil.copytree(src, tmp_new, symlinks=True, ignore=_deploy_ignore_factory(src))
 
-        if dest.is_dir():
+        # Dunder Protocol: Scan and inherit *__custom__* files and directories
+        if preserve_custom and dest.is_dir():
             preserve_entries = []
             for root, dirs, files in os.walk(dest):
                 custom_dirs = [d for d in dirs if "__custom__" in d]
@@ -112,16 +117,24 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
 
         # Manifest-declared preserve: inject into tmp_new before swap so the
         # renamed directory is already complete (no post-rename restore window).
+        # Symlinks are preserved as links (not dereferenced) so runtime link
+        # state — e.g. niri/effects.kdl → effects_normal.kdl|effects_eyecare.kdl,
+        # whose target encodes the EyeCare on/off state — survives deploys.
         if preserve and dest.is_dir():
             for rel in preserve:
                 src_p = dest / rel
-                if src_p.is_file():
-                    tgt_p = tmp_new / rel
-                    tgt_p.parent.mkdir(parents=True, exist_ok=True)
+                tgt_p = tmp_new / rel
+                tgt_p.parent.mkdir(parents=True, exist_ok=True)
+                if src_p.is_symlink():
+                    tgt_p.unlink(missing_ok=True)
+                    tgt_p.symlink_to(os.readlink(src_p))
+                elif src_p.is_file():
                     shutil.copy2(src_p, tgt_p)
-                    print(msg("log_keep_preserved_file", dest.name, rel))
-                    if preserved_log is not None:
-                        preserved_log.append(f"~/.config/{dest.name}/{rel}")
+                else:
+                    continue
+                print(msg("log_keep_preserved_file", dest.name, rel))
+                if preserved_log is not None:
+                    preserved_log.append(f"~/.config/{dest.name}/{rel}")
 
         if dest.exists() or dest.is_symlink():
             old_dest = dest.with_name(f"{dest.name}.old.{pid}")

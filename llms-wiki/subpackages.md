@@ -9,7 +9,7 @@
 nyxniri/
 ├── __init__.py · __main__.py          包入口
 ├── constants.py                        路径 / 包名 / ANSI 色阶常量
-├── core.py                             Environment（run_mode、路径）、锁、日志、path 原语（remove_path/copy_path）、CLI 软链、PATH 遮蔽
+├── core.py                             Environment（run_mode、路径）、锁、日志、path 原语（remove_path/copy_path）、CLI 软链、PATH 遮蔽、timed_run
 ├── i18n.py                             msg() + TRANSLATIONS（zh/en，test_i18n 自动校验）
 ├── tui.py                              Menu / CheckboxList / PresetSwitcher / 原语
 ├── network.py                          git pull / curl（带 connect-timeout + 容错）
@@ -83,6 +83,15 @@ patch("nyxniri.deploy.hardware._phase_hardware_patches")
 CLI 的 `greeter`/`fcitx`/`gtk` 命令经 `_module_handler(module_name, triad_name)` 工厂分发，
 懒加载 `importlib.import_module(f"nyxniri.modules.{module_name}")`——这样测试 `patch` 能命中
 （架构 §13：`_module_handler` 动态 import 改 `nyxniri.modules.{name}`，一处）。
+
+## 外部命令超时（timed_run，铁律）
+
+所有带 `timeout=` 的 `subprocess.run` 必须走 `core.timed_run`：超时降级为返回
+`None` + WARN 日志，**不抛** `TimeoutExpired`。背景：v3.0.3 给外部命令加了超时
+防卡死，但只有 network.py 自己接了异常——fisher install 弱网 60s 超时直接炸穿
+整个部署（真实事故：配置已部署完，完成界面没渲染，用户拿到裸 traceback）。
+原则：外部命令是"锦上添花"，超时 = 跳过该步继续走，绝不阻断主流程。调用方
+拿到 `None` 按各处语义降级（探测失败/未运行/依赖未知）。
 
 ## install.sh 完整性校验
 

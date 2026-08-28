@@ -2,6 +2,9 @@
 # dir name = package = binary = "niri" → no repo override needed.
 # monitor.kdl is referenced by name in config.kdl (include "monitor.kdl"),
 # so it cannot be renamed to a __custom__ dunder name — declare it preserved.
+# effects.kdl is a runtime symlink (→ effects_normal.kdl / effects_eyecare.kdl)
+# created by toggle-eyecare.sh; preserve keeps the link itself (and the
+# EyeCare on/off state it encodes) across deploys and preset switches.
 [packages]
-preserve = ["monitor.kdl"]
+preserve = ["monitor.kdl", "effects.kdl"]
 chmod = ["scripts/*.sh"]

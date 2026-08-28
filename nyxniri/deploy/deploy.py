@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from nyxniri.constants import Colors, MAIN_WM, REPO_URL, THEME_ENGINE
-from nyxniri.core import get_env, log_msg
+from nyxniri.core import get_env, log_msg, timed_run
 from nyxniri.i18n import msg
 from nyxniri.tui import read_key, responsive_hint, show_logo, raw_input_mode, _drain_pending
 
@@ -25,7 +25,12 @@ from nyxniri.deploy.atomic import (
 from nyxniri.deploy.assets import WallpaperDeployResult, deploy_wallpapers, wallpapers_pack_present
 from nyxniri.deploy.hardware import _phase_hardware_patches
 from nyxniri.deploy.manifest import discover_deployable_apps, load_manifest
-from nyxniri.deploy.preset import read_active_preset, resolve_preset_src, write_active_preset
+from nyxniri.deploy.preset import (
+    InvalidActivePresetError,
+    read_active_preset,
+    resolve_preset_src,
+    write_active_preset,
+)
 from nyxniri.deploy.templates import _phase_render_templates
 
 _CONFIG_ITEMS_CACHE: List[str] = []
@@ -63,7 +68,12 @@ def _phase_atomic_deployment(
 
         # Resolve which source tree to deploy: default config, an official
         # preset, or a user preset — based on the app's active state file.
-        active = read_active_preset(item)
+        try:
+            active = read_active_preset(item)
+        except InvalidActivePresetError:
+            print(msg("preset_warn_invalid_active", item))
+            log_msg("WARN", f"Invalid active preset state for {item}; dest frozen, skipped")
+            continue
         result = resolve_preset_src(item, active, dest)
         for w in result.warnings:
             print(w)
@@ -128,14 +138,14 @@ def _phase_post_install_services() -> None:
     sync_script = config_dir / THEME_ENGINE / "theme-sync.sh"
     if sync_script.is_file():
         sync_script.chmod(0o755)
-        subprocess.run(["bash", str(sync_script)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=30)
+        timed_run(["bash", str(sync_script)], 30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
         print(msg("log_gtk_theme_init"))
 
     if shutil.which(THEME_ENGINE):
         from nyxniri.modules.gtktheme import gtktheme_trigger_render
         gtktheme_trigger_render()
         print(msg("log_enable_mpvpaper"))
-        subprocess.run([THEME_ENGINE, "msg", "plugins", "enable", f"{THEME_ENGINE}/mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=15)
+        timed_run([THEME_ENGINE, "msg", "plugins", "enable", f"{THEME_ENGINE}/mpvpaper"], 15, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
 
     if shutil.which("fish"):
         from nyxniri.modules.fisher import fisher_install
@@ -249,7 +259,7 @@ def render_completion_screen(
                 elif focus == 1:
                     star_url = REPO_URL.removesuffix(".git")
                     if shutil.which("xdg-open"):
-                        subprocess.run(["xdg-open", star_url], check=False, timeout=5)
+                        timed_run(["xdg-open", star_url], 5, check=False)
                     print(msg("msg_star_opened", star_url))
                     time.sleep(1.2)
                 elif focus == 2:
