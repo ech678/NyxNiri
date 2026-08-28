@@ -346,7 +346,6 @@ class OrbitLauncher(Gtk.Window):
         url = item.get("url", "")
         cmd = item.get("cmd") or item.get("id") or item.get("name", "").lower()
         target_url = url if url else (cmd if cmd.startswith(("http://", "https://", "www.")) else "")
-
         if target_url:
             if target_url.startswith("www."):
                 target_url = "https://" + target_url
@@ -356,11 +355,14 @@ class OrbitLauncher(Gtk.Window):
                 print(f"Error opening URL: {e}", file=sys.stderr)
             self.dismiss_menu()
             return
-
-        # 3. Local Scratchpad / App Command
+        import shlex
         script_path = os.path.expanduser("~/.config/niri/scripts/niri-scratch-toggle.sh")
         if not os.path.isfile(script_path):
             script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "niri-scratch-toggle.sh")
+        if not cmd or any(c in cmd for c in (";", "|", "&", "`", "$", "(", ")", "{", "}", "<", ">", "\n", "\r")):
+            print(f"Rejected unsafe command: {cmd}", file=sys.stderr)
+            self.dismiss_menu()
+            return
         try:
             subprocess.Popen(["/bin/bash", script_path, cmd])
         except Exception as e:
