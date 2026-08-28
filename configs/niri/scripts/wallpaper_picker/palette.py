@@ -67,3 +67,35 @@ def load_material_palette() -> dict:
     sr, sg, sb = palette["surface"]
     palette["is_dark"] = (0.299 * sr + 0.587 * sg + 0.114 * sb < 0.5)
     return palette
+
+
+TONE_COLORS = {
+    "Red": "#e5484d",
+    "Orange": "#f76b15",
+    "Yellow": "#ffb224",
+    "Green": "#46a758",
+    "Teal": "#12a594",
+    "Blue": "#0090ff",
+    "Purple": "#8e4ec6",
+    "Pink": "#d6409f",
+    "Mono": "#9a9aa5",
+}
+
+
+def hue_to_tone(h: float) -> str:
+    deg = (h % 1.0) * 360.0
+    if deg >= 345.0 or deg < 15.0:
+        return "Red"
+    if deg < 45.0:
+        return "Orange"
+    if deg < 70.0:
+        return "Yellow"
+    if deg < 165.0:
+        return "Green"
+    if deg < 205.0:
+        return "Teal"
+    if deg < 260.0:
+        return "Blue"
+    if deg < 300.0:
+        return "Purple"
+    return "Pink"

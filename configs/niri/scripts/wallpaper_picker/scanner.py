@@ -9,19 +9,56 @@ cost nothing and releasing happens automatically when the card scrolls away.
 
 import os
 import sys
-import hashlib
-import subprocess
+import math
 import uuid
+import hashlib
+import colorsys
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 import gi
 gi.require_version("GLib", "2.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GLib, GdkPixbuf
 
+from .palette import TONE_COLORS, hue_to_tone
 from .config import (
     STATIC_EXTENSIONS, VIDEO_EXTENSIONS, ALL_SUPPORTED_EXTENSIONS,
     CACHE_DIR, get_wallpaper_search_roots
 )
+
+
+def analyze_image_tone(thumb_path: str):
+    try:
+        pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(thumb_path, 64, 36, True)
+        data = pix.get_pixels()
+        n_ch = 4 if pix.get_has_alpha() else max(pix.get_n_channels(), 3)
+        rowstride = pix.get_rowstride()
+        w, h = pix.get_width(), pix.get_height()
+        sin_sum = cos_sum = weight_sum = 0.0
+        sampled = 0
+        for y in range(h):
+            row_off = y * rowstride
+            for x in range(w):
+                o = row_off + x * n_ch
+                r = data[o] / 255.0
+                g = data[o + 1] / 255.0
+                b = data[o + 2] / 255.0
+                hue, sat, val = colorsys.rgb_to_hsv(r, g, b)
+                sampled += 1
+                if sat < 0.14 or val < 0.06:
+                    continue
+                weight = sat * (0.3 + 0.7 * val)
+                angle = hue * 6.283185307179586
+                sin_sum += math.sin(angle) * weight
+                cos_sum += math.cos(angle) * weight
+                weight_sum += weight
+        if sampled == 0:
+            return None
+        if weight_sum < sampled * 0.18:
+            return "Mono"
+        return hue_to_tone(math.atan2(sin_sum, cos_sum) / 6.283185307179586)
+    except Exception:
+        return None
 
 
 class WallpaperItem:
@@ -48,6 +85,8 @@ class WallpaperItem:
         self.hash_id = hashlib.md5(raw_key).hexdigest()
         self.thumb_path = os.path.join(CACHE_DIR, f"{self.hash_id}.jpg")
         self.is_loading = False
+        self.tone = None
+        self.tone_queued = False
 
 
 class WallpaperScanner:
@@ -56,11 +95,13 @@ class WallpaperScanner:
     def __init__(self, on_thumb_ready_cb=None):
         self.on_thumb_ready_cb = on_thumb_ready_cb
         self.items = []
-        self.categories = ["All", "Static", "Live"]
-        self.category_items = {"All": [], "Static": [], "Live": []}
+        self.categories = ["All", "Static", "Live"] + list(TONE_COLORS)
+        self.category_items = {cat: [] for cat in self.categories}
+        self.tone_items = {tone: [] for tone in TONE_COLORS}
         self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="wp_thumb")
         os.makedirs(CACHE_DIR, exist_ok=True)
         self._lazy_loaded = False
+        self.on_tone_assigned_cb = None
 
     def scan(self) -> list:
         """Scan all resolved search roots and subdirectories."""
@@ -106,7 +147,7 @@ class WallpaperScanner:
 
         # Build categories list: primary tabs + actual custom user subfolders
         sorted_subfolders = sorted(list(custom_subfolders), key=lambda x: x.lower())
-        self.categories = ["All", "Static", "Live"] + sorted_subfolders
+        self.categories = ["All", "Static", "Live"] + list(TONE_COLORS) + sorted_subfolders
         self.category_items = {cat: [] for cat in self.categories}
 
         for item in self.items:
@@ -160,6 +201,36 @@ class WallpaperScanner:
         """Notify the UI (on main thread) that a thumbnail file is available."""
         if self.on_thumb_ready_cb:
             self.on_thumb_ready_cb(item)
+        if item.tone is None and not item.tone_queued:
+            item.tone_queued = True
+            self.executor.submit(self._tone_worker, item)
+
+    def _tone_assigned(self, item: WallpaperItem):
+        if self.on_tone_assigned_cb:
+            self.on_tone_assigned_cb(item)
+        return GLib.SOURCE_REMOVE
+
+    def analyze_all_tones(self):
+        """Queue tone analysis for every item that still lacks one (tone-tab click)."""
+        for item in self.items:
+            if item.tone is None and not item.tone_queued:
+                item.tone_queued = True
+                self.executor.submit(self._tone_worker, item)
+
+    def _tone_worker(self, item: WallpaperItem):
+        try:
+            if item.tone is not None:
+                return
+            if not os.path.isfile(item.thumb_path):
+                self._generate_thumbnail_worker(item)
+            if item.tone is None and os.path.isfile(item.thumb_path):
+                tone = analyze_image_tone(item.thumb_path)
+                item.tone = tone or ""
+                if tone:
+                    self.tone_items[tone].append(item)
+                GLib.idle_add(self._tone_assigned, item)
+        except Exception:
+            item.tone = ""
 
     def _generate_thumbnail_worker(self, item: WallpaperItem):
         item.is_loading = True

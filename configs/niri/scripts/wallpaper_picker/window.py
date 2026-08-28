@@ -22,7 +22,7 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("Pango", "1.0")
 from gi.repository import Gtk, Gdk, GtkLayerShell, GLib, Pango
 
-from .palette import load_material_palette
+from .palette import load_material_palette, TONE_COLORS
 from .lock import release_instance_lock
 from .config import (
     WIN_WIDTH, WIN_HEIGHT, WIN_RADIUS,
@@ -117,6 +117,16 @@ def _build_m3_css(palette: dict) -> str:
 
     /* ── M3 filter chips ── */
     .chips {{ spacing: 8px; }}
+    .chips-scroll {{
+        background-color: transparent;
+        border: none;
+    }}
+    .chips-scroll scrollbar slider {{
+        background-color: {_rgba(primary, 0.45)};
+        border-radius: 2px;
+        min-height: 3px;
+        min-width: 28px;
+    }}
     .chip {{
         background-color: {chip_bg_idle};
         border: 1px solid {outline_idle};
@@ -184,7 +194,17 @@ def _build_m3_css(palette: dict) -> str:
         font-size: 9.5pt;
         margin-right: 4px;
     }}
-
+    .tone-dot {{
+        min-width: 8px;
+        min-height: 8px;
+        border-radius: 4px;
+        margin-left: 6px;
+        border: 1px solid {_rgba(outline, 0.30)};
+    }}
+""" + "".join(
+        f"\n    .tone-dot.{tone} {{ background-color: {color}; }}"
+        for tone, color in TONE_COLORS.items()
+    ) + f"""
     /* ── M3 scrollbar ── */
     .grid-scroll {{ background-color: transparent; border: none; }}
     .grid-scroll scrollbar {{ background-color: transparent; }}
@@ -216,10 +236,12 @@ class WallpaperPickerWindow(Gtk.Window):
         self.is_dismissing = False
         self._dismiss_timer = None
         self.thumb_widgets = {}      # hash_id -> thumb Gtk.Box
+        self.tone_dots = {}
         self._applied_thumbs = set() # hash_ids that already got a CSS provider
 
         # Scanner and data
         self.scanner = WallpaperScanner(on_thumb_ready_cb=self.on_thumb_ready)
+        self.scanner.on_tone_assigned_cb = self.on_tone_assigned
         self.scanner.scan()
         self.current_wp_path = self.scanner.get_current_wallpaper()
 
@@ -303,6 +325,10 @@ class WallpaperPickerWindow(Gtk.Window):
         dialog.pack_start(header, False, False, 0)
 
         # Category chips (M3 filter chips, single-active radio group)
+        chips_scroll = Gtk.ScrolledWindow()
+        chips_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
+        chips_scroll.set_min_content_height(36)
+        chips_scroll.get_style_context().add_class("chips-scroll")
         chips = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         chips.get_style_context().add_class("chips")
         self.chip_buttons = []
@@ -314,7 +340,8 @@ class WallpaperPickerWindow(Gtk.Window):
             btn.connect("toggled", self.on_chip_toggled, idx)
             chips.pack_start(btn, False, False, 0)
             self.chip_buttons.append(btn)
-        dialog.pack_start(chips, False, False, 0)
+        chips_scroll.add(chips)
+        dialog.pack_start(chips_scroll, False, False, 0)
 
         # Card grid (native FlowBox: lazy render + kinetic scroll + arrow nav)
         self.flowbox = Gtk.FlowBox()
@@ -372,6 +399,14 @@ class WallpaperPickerWindow(Gtk.Window):
         title_lbl.set_ellipsize(Pango.EllipsizeMode.END)
         title_lbl.set_max_width_chars(28)
         info.pack_start(title_lbl, False, False, 0)
+        tone_dot = Gtk.Box()
+        tone_dot.get_style_context().add_class("tone-dot")
+        tone_dot.set_valign(Gtk.Align.CENTER)
+        tone_dot.set_halign(Gtk.Align.END)
+        tone_dot.set_hexpand(True)
+        tone_dot.set_no_show_all(True)
+        self.tone_dots[item.hash_id] = tone_dot
+        info.pack_end(tone_dot, False, False, 0)
         inner.pack_start(info, False, False, 0)
 
         child.add(inner)
@@ -411,6 +446,8 @@ class WallpaperPickerWindow(Gtk.Window):
             return not item.is_video
         if cat == "Live":
             return item.is_video
+        if cat in self.scanner.tone_items:
+            return item.tone == cat
         return item.category == cat
 
     def _visible_children(self):
@@ -462,6 +499,32 @@ class WallpaperPickerWindow(Gtk.Window):
         cat = self.scanner.categories[idx]
         if cat != "All":
             self.scanner.load_category_thumbnails(cat)
+        if cat in self.scanner.tone_items:
+            self.scanner.analyze_all_tones()
+            self._sync_visible_tone_dots()
+
+    def on_tone_assigned(self, item):
+        self._show_tone_dot(item)
+        if self.scanner.categories[self.active_cat_idx] in self.scanner.tone_items:
+            self.flowbox.invalidate_filter()
+            self._refresh_count()
+
+    def _show_tone_dot(self, item):
+        dot = self.tone_dots.get(item.hash_id)
+        if not dot or not item.tone:
+            return
+        sc = dot.get_style_context()
+        for cls in list(TONE_COLORS) + ["unknown"]:
+            sc.remove_class(cls)
+        sc.add_class(item.tone)
+        dot.set_tooltip_text(item.tone)
+        dot.show()
+
+    def _sync_visible_tone_dots(self):
+        for child in self.flowbox.get_children():
+            item = child.item
+            if item.tone:
+                self._show_tone_dot(item)
 
     def on_child_activated(self, box, child):
         self.select_and_apply(child.item)
