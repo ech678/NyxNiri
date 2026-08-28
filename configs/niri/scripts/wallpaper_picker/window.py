@@ -51,6 +51,11 @@ def _on_primary(primary_rgb):
     return "#0b0c10" if lum > 0.55 else "#f5f6f9"
 
 
+def _gdk_rgba(rgb, a=1.0):
+    r, g, b = rgb
+    return Gdk.RGBA(red=r, green=g, blue=b, alpha=a)
+
+
 def _build_m3_css(palette: dict) -> str:
     p = palette
     on_surface = p["on_surface"]
@@ -277,6 +282,7 @@ class WallpaperPickerWindow(Gtk.Window):
         dialog = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         dialog.set_size_request(int(WIN_WIDTH), int(WIN_HEIGHT))
         dialog.get_style_context().add_class("picker-dialog")
+        dialog.override_background_color(Gtk.StateFlags.NORMAL, _gdk_rgba(self.palette["surface"]))
         self.dialog = dialog
 
         # Header: title + count + search
@@ -359,6 +365,7 @@ class WallpaperPickerWindow(Gtk.Window):
         thumb = Gtk.Box()
         thumb.get_style_context().add_class("thumb")
         thumb.set_size_request(int(CARD_WIDTH), int(THUMB_HEIGHT))
+        thumb.override_background_color(Gtk.StateFlags.NORMAL, _gdk_rgba(self.palette["surface_dim"]))
         inner.pack_start(thumb, False, False, 0)
         self.thumb_widgets[item.hash_id] = thumb
         # Thumbnail is applied later via on_thumb_ready (single path, dedup'd),
