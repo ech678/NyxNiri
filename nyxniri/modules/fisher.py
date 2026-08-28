@@ -75,7 +75,8 @@ def fisher_install() -> bool:
 
     msg_install = msg("log_install_fish_plugins")
     msg_skip = msg("log_fisher_update_skipped")
-    if fetch_raw_with_fallback("jorgebucaran/fisher", "main", "functions/fisher.fish", fisher_path):
+    known_sha256 = os.environ.get("NYXNIRI_FISHER_SHA256", "")
+    if fetch_raw_with_fallback("jorgebucaran/fisher", "main", "functions/fisher.fish", fisher_path, expected_sha256=known_sha256 or None):
         fish_code = (
             f"if not functions -q fisher; source '{fisher_path}' && fisher install jorgebucaran/fisher; end; "
             f"if test -f ~/.config/fish/fish_plugins && functions -q fisher; "
