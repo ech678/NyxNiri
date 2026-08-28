@@ -21,9 +21,9 @@ ASSETS_DIR_NAME = "assets"
 
 # --- Repository & Network Mirrors ---
 REPO_URL = "https://github.com/ech678/NyxNiri.git"
-
-if os.environ.get("NYXNIRI_REPO"):
-    GIT_MIRROR_REGISTRY = [("Custom", os.environ["NYXNIRI_REPO"])]
+_custom_repo = os.environ.get("NYXNIRI_REPO", "")
+if _custom_repo and (_custom_repo.startswith("https://") or _custom_repo.startswith("git@") or _custom_repo.startswith("ssh://")) and "://" in _custom_repo:
+    GIT_MIRROR_REGISTRY = [("Custom", _custom_repo)]
 else:
     GIT_MIRROR_REGISTRY = [
         ("Official", "https://github.com/ech678/NyxNiri.git"),
