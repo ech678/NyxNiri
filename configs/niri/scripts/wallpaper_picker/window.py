@@ -1,18 +1,6 @@
-"""
-NyxNiri Wallpaper Picker — Material You native widget edition.
-
-A Wayland Layer-Shell dialog built from Gtk.FlowBox / Gtk.SearchEntry / M3 CSS,
-replacing the Cairo hand-draw pipeline. Thumbnails are loaded on-demand via
-CSS background-image, so off-screen cards hold no pixbufs in memory and
-scrolling past a card releases its decoded image automatically.
-
-The dynamic Material You palette is read from Noctalia's starship cache
-(.cache/noctalia/starship-palette.toml) and injected into a CSS provider
-at build time, so the whole dialog follows the wallpaper-derived tonal scheme.
-"""
-
 import os
 import sys
+import time
 import random
 import threading
 import gi
@@ -20,20 +8,19 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("GtkLayerShell", "0.1")
 gi.require_version("Gdk", "3.0")
 gi.require_version("Pango", "1.0")
-from gi.repository import Gtk, Gdk, GtkLayerShell, GLib, Pango
+from gi.repository import Gtk, Gdk, GtkLayerShell, GLib, Pango, GdkPixbuf
 
 from .palette import load_material_palette, TONE_COLORS
 from .lock import release_instance_lock
 from .config import (
-    WIN_WIDTH, WIN_HEIGHT, WIN_RADIUS,
+    WIN_WIDTH, WIN_HEIGHT,
     GRID_COLS, CARD_WIDTH, THUMB_HEIGHT,
-    GAP_X, GAP_Y,
+    GAP_X, GAP_Y, CACHE_DIR,
 )
 from .scanner import WallpaperScanner
 from .backend import apply_wallpaper
 
 
-# ── M3 color helpers ────────────────────────────────────────────────────────
 def _rgb(rgb):
     r, g, b = rgb
     return f"rgb({int(r * 255)},{int(g * 255)},{int(b * 255)})"
@@ -45,14 +32,34 @@ def _rgba(rgb, a):
 
 
 def _on_primary(primary_rgb):
-    """Pick black or white text on a primary fill via relative luminance (WCAG)."""
     pr, pg, pb = primary_rgb
     lum = 0.299 * pr + 0.587 * pg + 0.114 * pb
     return "#0b0c10" if lum > 0.55 else "#f5f6f9"
 
 
-def _build_m3_css(palette: dict) -> str:
-    p = palette
+def _gdk(rgb, a=1.0):
+    r, g, b = rgb
+    return Gdk.RGBA(red=r, green=g, blue=b, alpha=a)
+
+
+def _split_css_blocks(css):
+    blocks, depth, buf = [], 0, []
+    for ch in css:
+        buf.append(ch)
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                blocks.append("".join(buf))
+                buf = []
+    tail = "".join(buf)
+    if tail.strip():
+        blocks.append(tail)
+    return blocks
+
+
+def _build_m3_css(p):
     on_surface = p["on_surface"]
     on_surface_var = p["on_surface_var"]
     surface = p["surface"]
@@ -65,7 +72,7 @@ def _build_m3_css(palette: dict) -> str:
     on_primary = _on_primary(primary)
 
     R = int(WIN_RADIUS)
-    CR = 16  # card corner radius (M3 medium shape)
+    CR = 16
     chip_bg_idle = _rgba(surface_bright, 0.12 if is_dark else 0.22)
     chip_bg_hover = _rgba(surface_bright, 0.25 if is_dark else 0.40)
     outline_idle = _rgba(outline, 0.25 if is_dark else 0.35)
@@ -76,14 +83,11 @@ def _build_m3_css(palette: dict) -> str:
         background-color: transparent;
     }}
 
-    /* ── M3 dialog (elevated, extra-large shape) ── */
     .picker-dialog {{
         background-color: {_rgb(surface)};
         border-radius: {R}px;
         border: 1px solid {_rgba(outline, 0.20)};
-        box-shadow: 0 2px 8px rgba(0,0,0,0.18), 0 12px 36px rgba(0,0,0,0.10);
         padding: 24px 28px 20px 28px;
-        transition: opacity 220ms cubic-bezier(0.2, 0.0, 0, 1);
     }}
     .picker-dialog.dismissing {{ opacity: 0; }}
 
@@ -99,7 +103,6 @@ def _build_m3_css(palette: dict) -> str:
         font-size: 11pt;
     }}
 
-    /* ── M3 search bar (pill, surface-container-high) ── */
     .search {{
         background-color: {_rgba(surface_bright, 0.55 if is_dark else 0.85)};
         border-radius: 18px;
@@ -107,15 +110,11 @@ def _build_m3_css(palette: dict) -> str:
         padding: 6px 12px;
         color: {_rgb(on_surface)};
         font-size: 10pt;
-        caret-color: {_rgb(primary)};
-        box-shadow: none;
-        transition: border-color 160ms ease;
     }}
     .search:focus {{
         border-color: {_rgba(primary, 0.85)};
     }}
 
-    /* ── M3 filter chips ── */
     .chips {{ spacing: 8px; }}
     .chips-scroll {{
         background-color: transparent;
@@ -136,7 +135,6 @@ def _build_m3_css(palette: dict) -> str:
         font-size: 9.5pt;
         font-weight: 500;
         min-height: 20px;
-        transition: background-color 140ms ease, border-color 140ms ease;
     }}
     .chip:hover {{
         background-color: {chip_bg_hover};
@@ -148,21 +146,17 @@ def _build_m3_css(palette: dict) -> str:
         color: {on_primary};
     }}
 
-    /* ── Card grid ── */
     .grid {{ background-color: transparent; }}
     .grid row {{ background-color: transparent; }}
 
-    /* ── M3 card (filled, medium shape, state-layer on hover) ── */
     .card {{
         background-color: {_rgb(surface_bright)};
         border-radius: {CR}px;
         border: 1px solid {_rgba(outline, 0.14)};
         padding: 0;
-        transition: background-color 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
     }}
     .card:hover {{
         background-color: {_rgba(surface_bright, 0.92)};
-        box-shadow: 0 4px 14px {_rgba(primary, 0.18)};
         border-color: {_rgba(primary, 0.45)};
     }}
     .card.current {{
@@ -171,7 +165,6 @@ def _build_m3_css(palette: dict) -> str:
     }}
     .card-inner {{ background-color: transparent; spacing: 0; }}
 
-    /* thumbnail: rounded top corners, image clipped to border-radius */
     .thumb {{
         background-color: {_rgb(surface_dim)};
         border-radius: {CR}px {CR}px 0 0;
@@ -205,7 +198,6 @@ def _build_m3_css(palette: dict) -> str:
         f"\n    .tone-dot.{tone} {{ background-color: {color}; }}"
         for tone, color in TONE_COLORS.items()
     ) + f"""
-    /* ── M3 scrollbar ── */
     .grid-scroll {{ background-color: transparent; border: none; }}
     .grid-scroll scrollbar {{ background-color: transparent; }}
     .grid-scroll trough {{ background-color: {_rgba(outline, 0.08)}; border-radius: 2px; }}
@@ -219,33 +211,23 @@ def _build_m3_css(palette: dict) -> str:
 
 
 class WallpaperPickerWindow(Gtk.Window):
-    """Material You wallpaper picker driven by native GTK widgets."""
-
-    def __init__(self, lock_fd: int = None, pid_path: str = None):
+    def __init__(self, lock_fd=None, pid_path=None):
         super().__init__(type=Gtk.WindowType.TOPLEVEL)
         self.set_name("NyxNiriWallpaperPicker")
 
         self.lock_fd = lock_fd
         self.pid_path = pid_path
         self.palette = load_material_palette()
-
-        # View state — must be initialized BEFORE scanner.scan(), whose
-        # pre-warm fires on_thumb_ready synchronously for cached thumbs.
-        self.active_cat_idx = 0
-        self.search_query = ""
         self.is_dismissing = False
         self._dismiss_timer = None
-        self.thumb_widgets = {}      # hash_id -> thumb Gtk.Box
+        self.thumb_widgets = {}
         self.tone_dots = {}
-        self._applied_thumbs = set() # hash_ids that already got a CSS provider
+        self.chip_buttons = []
+        self._applied_thumbs = set()
+        self.active_cat_idx = 0
+        self.search_query = ""
+        self._gdk_dim = _gdk(self.palette["surface_dim"])
 
-        # Scanner and data
-        self.scanner = WallpaperScanner(on_thumb_ready_cb=self.on_thumb_ready)
-        self.scanner.on_tone_assigned_cb = self.on_tone_assigned
-        self.scanner.scan()
-        self.current_wp_path = self.scanner.get_current_wallpaper()
-
-        # ── Wayland Layer-Shell overlay (unchanged from Cairo version) ──
         GtkLayerShell.init_for_window(self)
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.EXCLUSIVE)
@@ -255,22 +237,19 @@ class WallpaperPickerWindow(Gtk.Window):
             GtkLayerShell.set_anchor(self, edge, True)
             GtkLayerShell.set_margin(self, edge, 0)
 
-        self.set_app_paintable(True)
-        visual = self.get_screen().get_rgba_visual()
-        if visual:
-            self.set_visual(visual)
-        else:
-            self.set_app_paintable(False)
+        self._has_rgba = self.get_screen().get_rgba_visual() is not None
+        self.set_app_paintable(self._has_rgba)
+        if self._has_rgba:
+            self.set_visual(self.get_screen().get_rgba_visual())
+            self.override_background_color(Gtk.StateFlags.NORMAL, _gdk((0.0, 0.0, 0.0), 0.0))
+        self.connect("draw", self._on_window_draw)
 
-        # ── Material You CSS ──
-        try:
-            provider = Gtk.CssProvider()
-            provider.load_from_data(_build_m3_css(self.palette).encode())
-            Gtk.StyleContext.add_provider_for_screen(
-                self.get_screen(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-            )
-        except Exception as e:
-            print(f"CSS load error: {e}", file=sys.stderr)
+        self._apply_css(_build_m3_css(self.palette))
+
+        self.scanner = WallpaperScanner(on_thumb_ready_cb=self.on_thumb_ready)
+        self.scanner.on_tone_assigned_cb = self.on_tone_assigned
+        self.scanner.scan()
+        self.current_wp_path = self.scanner.get_current_wallpaper()
 
         self._build_ui()
 
@@ -283,15 +262,49 @@ class WallpaperPickerWindow(Gtk.Window):
         self.show_all()
         self.search_entry.grab_focus()
         self.scanner.load_thumbnails_async()
-        scrolled = self.dialog.get_children()
-        if scrolled:
-            for c in scrolled:
-                if isinstance(c, Gtk.ScrolledWindow):
-                    adj = c.get_vadjustment()
-                    adj.connect("value-changed", self._on_scroll)
-                    break
+        self._connect_scroll()
 
-    # ── UI construction ──────────────────────────────────────────────────────
+    def _on_window_draw(self, widget, cr):
+        if self._has_rgba:
+            cr.save()
+            cr.set_source_rgba(0.0, 0.0, 0.0, 0.0)
+            cr.set_operator(0)
+            cr.paint()
+            cr.restore()
+            return True
+        return False
+
+    def _apply_css(self, css):
+        provider = Gtk.CssProvider()
+        try:
+            provider.load_from_data(css.encode())
+        except Exception:
+            failed = []
+            kept = []
+            for block in _split_css_blocks(css):
+                probe = Gtk.CssProvider()
+                try:
+                    probe.load_from_data(block.encode())
+                    kept.append(block)
+                except Exception as e:
+                    sel = block.strip().split("{", 1)[0].strip()[:60]
+                    failed.append(f"{sel} :: {e}")
+            try:
+                provider.load_from_data("".join(kept).encode())
+            except Exception as e:
+                print(f"CSS load error: {e}", file=sys.stderr)
+            if failed:
+                try:
+                    os.makedirs(CACHE_DIR, exist_ok=True)
+                    log = os.path.join(CACHE_DIR, "css-errors.log")
+                    with open(log, "a", encoding="utf-8") as f:
+                        f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}]\n" + "\n".join(failed) + "\n\n")
+                except Exception:
+                    pass
+        Gtk.StyleContext.add_provider_for_screen(
+            self.get_screen(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
     def _build_ui(self):
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
                         halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
@@ -299,9 +312,9 @@ class WallpaperPickerWindow(Gtk.Window):
         dialog = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         dialog.set_size_request(int(WIN_WIDTH), int(WIN_HEIGHT))
         dialog.get_style_context().add_class("picker-dialog")
+        dialog.override_background_color(Gtk.StateFlags.NORMAL, _gdk(self.palette["surface"]))
         self.dialog = dialog
 
-        # Header: title + count + search
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         header.get_style_context().add_class("header")
         title = Gtk.Label(label="Wallpapers")
@@ -326,14 +339,13 @@ class WallpaperPickerWindow(Gtk.Window):
 
         dialog.pack_start(header, False, False, 0)
 
-        # Category chips (M3 filter chips, single-active radio group)
         chips_scroll = Gtk.ScrolledWindow()
         chips_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         chips_scroll.set_min_content_height(36)
         chips_scroll.get_style_context().add_class("chips-scroll")
+        chips_scroll.override_background_color(Gtk.StateFlags.NORMAL, _gdk(self.palette["surface"]))
         chips = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         chips.get_style_context().add_class("chips")
-        self.chip_buttons = []
         for idx, cat in enumerate(self.scanner.categories):
             btn = Gtk.ToggleButton(label=cat)
             btn.get_style_context().add_class("chip")
@@ -345,7 +357,6 @@ class WallpaperPickerWindow(Gtk.Window):
         chips_scroll.add(chips)
         dialog.pack_start(chips_scroll, False, False, 0)
 
-        # Card grid (native FlowBox: lazy render + kinetic scroll + arrow nav)
         self.flowbox = Gtk.FlowBox()
         self.flowbox.set_min_children_per_line(GRID_COLS)
         self.flowbox.set_max_children_per_line(GRID_COLS)
@@ -362,6 +373,7 @@ class WallpaperPickerWindow(Gtk.Window):
         scroll.get_style_context().add_class("grid-scroll")
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroll.set_min_content_height(494)
+        scroll.override_background_color(Gtk.StateFlags.NORMAL, _gdk(self.palette["surface"]))
         scroll.add(self.flowbox)
         dialog.pack_start(scroll, True, True, 0)
 
@@ -373,9 +385,17 @@ class WallpaperPickerWindow(Gtk.Window):
         self.flowbox.set_filter_func(self._filter_func)
         self._refresh_count()
 
+    def _connect_scroll(self):
+        for c in self.dialog.get_children():
+            if isinstance(c, Gtk.ScrolledWindow):
+                adj = c.get_vadjustment()
+                adj.connect("value-changed", self._on_scroll)
+                break
+
     def _make_card(self, item):
         child = Gtk.FlowBoxChild()
         child.get_style_context().add_class("card")
+        child.override_background_color(Gtk.StateFlags.NORMAL, _gdk(self.palette.get("surface_bright", self.palette["surface"])))
         if item.path == self.current_wp_path:
             child.get_style_context().add_class("current")
         child.item = item
@@ -386,10 +406,11 @@ class WallpaperPickerWindow(Gtk.Window):
         thumb = Gtk.Box()
         thumb.get_style_context().add_class("thumb")
         thumb.set_size_request(int(CARD_WIDTH), int(THUMB_HEIGHT))
+        thumb.set_app_paintable(True)
+        thumb.connect("draw", self._on_thumb_draw)
+        thumb.thumb_item = item
         inner.pack_start(thumb, False, False, 0)
         self.thumb_widgets[item.hash_id] = thumb
-        # Thumbnail is applied later via on_thumb_ready (single path, dedup'd),
-        # so cached and async-generated thumbs both flow through the same gate.
 
         info = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         info.get_style_context().add_class("info")
@@ -415,35 +436,50 @@ class WallpaperPickerWindow(Gtk.Window):
         child.add(inner)
         return child
 
+    def _on_thumb_draw(self, widget, cr):
+        item = widget.thumb_item
+        alloc = widget.get_allocation()
+        w, h = alloc.width, alloc.height
+        if w <= 0 or h <= 0:
+            return True
+        rcr = 16.0
+        pi = 3.141592653589793
+        cr.save()
+        cr.move_to(rcr, 0.0)
+        cr.line_to(w - rcr, 0.0)
+        cr.arc(w - rcr, rcr, rcr, -pi / 2.0, 0.0)
+        cr.line_to(w, h)
+        cr.line_to(0.0, h)
+        cr.arc(rcr, rcr, rcr, pi, pi * 1.5)
+        cr.close_path()
+        cr.clip()
+        Gdk.cairo_set_source_rgba(cr, self._gdk_dim)
+        cr.paint()
+        if item and item.thumb_path and os.path.isfile(item.thumb_path):
+            try:
+                src = GdkPixbuf.Pixbuf.new_from_file(item.thumb_path)
+                sw, sh = src.get_width(), src.get_height()
+                if sw > 0 and sh > 0:
+                    scale = max(w / sw, h / sh)
+                    dw, dh = sw * scale, sh * scale
+                    ox, oy = (w - dw) / 2.0, (h - dh) / 2.0
+                    Gdk.cairo_set_source_pixbuf(cr, src, ox, oy)
+                    cr.paint()
+            except Exception:
+                pass
+        cr.restore()
+        return True
+
     def _apply_thumb(self, thumb_box, thumb_path):
-        """Render a thumbnail via CSS background-image (rounded-top, cover).
+        thumb_box.queue_draw()
 
-        Off-screen cards never decode this; GTK releases the decoded pixbuf
-        when the widget leaves the viewport. This is the lazy-load/release
-        memory model that the Cairo version lacked.
-        """
-        provider = Gtk.CssProvider()
-        uri = "file://" + thumb_path.replace('"', "")
-        css = (
-            f'.thumb {{ background-image: url("{uri}");'
-            f' background-size: cover; background-position: center; }}'
-        )
-        try:
-            provider.load_from_data(css.encode())
-            thumb_box.get_style_context().add_provider(
-                provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1
-            )
-        except Exception as e:
-            print(f"thumb apply error: {e}", file=sys.stderr)
-
-    # ── Filtering ────────────────────────────────────────────────────────────
     def _filter_func(self, child):
         item = child.item
         q = self.search_query.strip().lower()
         if q:
             return q in item.title.lower() or q in item.filename.lower()
         if self.active_cat_idx == 0:
-            return True  # All
+            return True
         cat = self.scanner.categories[self.active_cat_idx]
         if cat == "Static":
             return not item.is_video
@@ -459,7 +495,6 @@ class WallpaperPickerWindow(Gtk.Window):
     def _refresh_count(self):
         self.count_label.set_text(str(len(self._visible_children())))
 
-    # ── Signal handlers ───────────────────────────────────────────────────────
     def on_search_changed(self, entry):
         self.search_query = entry.get_text()
         self.flowbox.invalidate_filter()
@@ -469,7 +504,6 @@ class WallpaperPickerWindow(Gtk.Window):
         )
 
     def on_stop_search(self, entry):
-        # SearchEntry emits stop-search on Esc-with-empty-text
         if not self.search_query:
             self.dismiss_window()
 
@@ -516,10 +550,6 @@ class WallpaperPickerWindow(Gtk.Window):
         dot = self.tone_dots.get(item.hash_id)
         if not dot or not item.tone:
             return
-        sc = dot.get_style_context()
-        for cls in list(TONE_COLORS) + ["unknown"]:
-            sc.remove_class(cls)
-        sc.add_class(item.tone)
         dot.set_tooltip_text(item.tone)
         dot.show()
 
@@ -533,7 +563,6 @@ class WallpaperPickerWindow(Gtk.Window):
         self.select_and_apply(child.item)
 
     def on_grid_key_press(self, box, event):
-        # Up at the top row → hand focus back to the search bar
         if event.keyval == Gdk.KEY_Up:
             sel = self.flowbox.get_selected_children()
             visible = self._visible_children()
@@ -545,14 +574,12 @@ class WallpaperPickerWindow(Gtk.Window):
     def on_button_press(self, widget, event):
         if self.is_dismissing:
             return True
-        # Right / middle click → clear search, or dismiss if already empty
         if event.button in (2, 3):
             if self.search_query:
                 self.search_entry.set_text("")
             else:
                 self.dismiss_window()
             return True
-        # Left click outside the dialog → dismiss
         if event.button == 1 and self._click_outside_dialog(event.x, event.y):
             self.dismiss_window()
             return True
@@ -563,7 +590,6 @@ class WallpaperPickerWindow(Gtk.Window):
         da = self.dialog.get_allocation()
         if da.width == 0 or da.height == 0 or wa.width == 0:
             return False
-        # dialog is centered in the (fullscreen) window
         dx = (wa.width - da.width) // 2
         dy = (wa.height - da.height) // 2
         return not (dx <= x <= dx + da.width and dy <= y <= dy + da.height)
@@ -573,13 +599,9 @@ class WallpaperPickerWindow(Gtk.Window):
             return True
         keyval = event.keyval
         ctrl = bool(event.state & Gdk.ModifierType.CONTROL_MASK)
-
-        # Ctrl+R → apply a random wallpaper from the visible set
         if ctrl and keyval in (Gdk.KEY_r, Gdk.KEY_R):
             self._apply_random()
             return True
-
-        # Esc outside the search bar → clear search, or dismiss if already empty
         if keyval == Gdk.KEY_Escape:
             if self.search_query:
                 self.search_entry.set_text("")
@@ -587,10 +609,8 @@ class WallpaperPickerWindow(Gtk.Window):
             else:
                 self.dismiss_window()
             return True
-
         return False
 
-    # ── Apply ─────────────────────────────────────────────────────────────────
     def select_and_apply(self, item):
         self.dismiss_window()
         threading.Thread(target=apply_wallpaper, args=(item,), daemon=False).start()
@@ -600,7 +620,6 @@ class WallpaperPickerWindow(Gtk.Window):
         if items:
             self.select_and_apply(random.choice(items))
 
-    # ── Thumbnail callback ────────────────────────────────────────────────────
     def _on_scroll(self, adj):
         if self.is_dismissing:
             return
@@ -622,7 +641,6 @@ class WallpaperPickerWindow(Gtk.Window):
             self._applied_thumbs.add(item.hash_id)
             self._apply_thumb(thumb, item.thumb_path)
 
-    # ── Dismiss (fade out + release lock + quit) ──────────────────────────────
     def dismiss_window(self):
         if self.is_dismissing:
             return
