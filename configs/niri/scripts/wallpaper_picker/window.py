@@ -259,6 +259,8 @@ class WallpaperPickerWindow(Gtk.Window):
         visual = self.get_screen().get_rgba_visual()
         if visual:
             self.set_visual(visual)
+        else:
+            self.set_app_paintable(False)
 
         # ── Material You CSS ──
         try:
@@ -383,6 +385,7 @@ class WallpaperPickerWindow(Gtk.Window):
 
         thumb = Gtk.Box()
         thumb.get_style_context().add_class("thumb")
+        thumb.set_size_request(int(CARD_WIDTH), int(THUMB_HEIGHT))
         inner.pack_start(thumb, False, False, 0)
         self.thumb_widgets[item.hash_id] = thumb
         # Thumbnail is applied later via on_thumb_ready (single path, dedup'd),
