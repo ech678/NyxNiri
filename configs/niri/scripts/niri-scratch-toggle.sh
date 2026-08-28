@@ -112,21 +112,18 @@ case "$TARGET_APP" in
 
 
     *)
-        # Custom command or script execution
         if [[ "$TARGET_APP" =~ ^~.* ]]; then
             TARGET_APP="${TARGET_APP/#\~/$HOME}"
         fi
         if [ "$TARGET_APP" = "clean-cache" ] && [ -x "$HOME/.config/fish/clean-cache" ]; then
             TARGET_APP="$HOME/.config/fish/clean-cache"
         fi
-
-        # If it is clean-cache or interactive terminal tool, launch inside floating scratchpad terminal
         if [ "$TARGET_APP" = "$HOME/.config/fish/clean-cache" ] || [[ "$TARGET_APP" == *clean-cache* ]]; then
             niri msg action spawn -- kitty --app-id "scratchpad" -e /bin/bash "$TARGET_APP"
         elif [ -x "$TARGET_APP" ] || command -v "$TARGET_APP" >/dev/null 2>&1; then
             niri msg action spawn -- "$TARGET_APP"
         else
-            niri msg action spawn -- bash -c "$TARGET_APP"
+            echo "Rejected untrusted command: $TARGET_APP" >&2
         fi
         ;;
 esac
