@@ -24,6 +24,8 @@ EYECARE_EFFECTS="$NIRI_DIR/effects_eyecare.kdl"
 
 # Desired EyeCare warm color temperature (in Kelvin: 5500K for subtle natural warmth)
 EYECARE_TEMP=5500
+RAMP_SECONDS=1.5
+RAMP_PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/nyxniri-eyecare-ramp.pid"
 
 # Log for reload failures / self-healing events (empty on success)
 LOG_FILE="${XDG_RUNTIME_DIR:-/tmp}/nyxniri-eyecare.log"
@@ -89,7 +91,7 @@ if [ "${1:-}" = "--sync" ]; then
     pkill -x wlsunset 2>/dev/null || true
     if [ "$CURRENTLY_ON" = "true" ]; then
         if command -v wlsunset >/dev/null 2>&1; then
-            nohup wlsunset -T 6500 -t "$EYECARE_TEMP" -d 0.3 -S 00:00 -s 00:00 >/dev/null 2>&1 9>&- &
+            nohup wlsunset -T 6500 -t "$EYECARE_TEMP" -d "$RAMP_SECONDS" -S 00:00 -s 00:00 >/dev/null 2>&1 9>&- &
         fi
     fi
     exit 0
@@ -100,6 +102,10 @@ if [ "$HAS_NOCTALIA" = "true" ]; then
     noctalia msg nightlight-disable 2>/dev/null || true
 fi
 pkill -x wlsunset 2>/dev/null || true
+if [ -f "$RAMP_PID_FILE" ]; then
+    kill "$(cat "$RAMP_PID_FILE" 2>/dev/null)" 2>/dev/null || true
+    rm -f "$RAMP_PID_FILE"
+fi
 
 IS_TURNING_ON=false
 
@@ -112,15 +118,29 @@ else
     IS_TURNING_ON=true
 fi
 
-# 3. Smoothly ramp color temperature over 0.3s without GPU pipeline tearing
+ramp_temp() {
+    local from="$1" to="$2"
+    local steps=12 i t
+    (
+        echo $$ > "$RAMP_PID_FILE"
+        for i in $(seq 1 "$steps"); do
+            t=$(( from + (to - from) * i / steps ))
+            pkill -x wlsunset 2>/dev/null || true
+            nohup wlsunset -T "$t" -t "$t" -S 00:00 -s 23:59 >/dev/null 2>&1 9>&- &
+            sleep 0.12
+        done
+        if [ "$to" -ge 6400 ]; then
+            pkill -x wlsunset 2>/dev/null || true
+        fi
+        rm -f "$RAMP_PID_FILE"
+    ) &
+}
+
 if [ "$IS_TURNING_ON" = "true" ]; then
     sleep 0.05
-    nohup wlsunset -T 6500 -t "$EYECARE_TEMP" -d 0.3 -S 00:00 -s 00:00 >/dev/null 2>&1 9>&- &
-fi
-
-# 4. Visual Notification
-if [ "$IS_TURNING_ON" = "true" ]; then
+    ramp_temp 6500 "$EYECARE_TEMP"
     notify-send -t 2000 "Eye Care : On"
 else
+    ramp_temp "$EYECARE_TEMP" 6400
     notify-send -t 2000 "Eye Care : Off"
 fi
