@@ -211,7 +211,6 @@ class WallpaperScanner:
         return GLib.SOURCE_REMOVE
 
     def analyze_all_tones(self):
-        """Queue tone analysis for every item that still lacks one (tone-tab click)."""
         for item in self.items:
             if item.tone is None and not item.tone_queued:
                 item.tone_queued = True
