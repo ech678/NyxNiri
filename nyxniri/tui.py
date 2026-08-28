@@ -477,13 +477,7 @@ def press_any_key() -> None:
         sys.stdout.write("\n")
 
 def prompt_confirm(prompt_key: str, default: str = "y") -> bool:
-    """Bilingual prompt confirmation (True for Yes, False for No).
-
-    Single-key raw read (y/n/Enter=default/Esc/Ctrl+C=No). Only the first char
-    ever mattered under the old readline path (``line.lower().startswith('y')``),
-    so raw single-key is equivalent — and it can't echo a stale buffered Enter.
-    """
-    if os.environ.get("NYXNIRI_AUTO_YES", "0") == "1":
+    if os.environ.get("NYXNIRI_AUTO_YES", "0") == "1" and prompt_key not in ("purge_prompt", "delete_prompt", "dirty_tree_confirm"):
         return True
 
     sys.stdout.write(msg(prompt_key))
