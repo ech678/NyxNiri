@@ -28,12 +28,6 @@ def fisher_status_label() -> str:
     return msg("status_enabled") if fisher_installed() else msg("status_not_installed")
 
 def fisher_install() -> bool:
-    """Bootstrap fisher + run plugin update; auto-invoked by deploy post-install.
-
-    No-op (returns False) when fish isn't installed — fisher needs the fish host.
-    ``fisher update`` only runs when fish_plugins changed since last call (mtime
-    probe), avoiding a network round-trip on every install.
-    """
     if not shutil.which("fish"):
         return False
     print(msg("log_check_fisher"))
@@ -63,7 +57,10 @@ def fisher_install() -> bool:
                     pass
         if need_update:
             log_msg("INFO", "Fisher installed, running update")
-            subprocess.run(["fish", "-c", "fisher update"], check=False, timeout=60)
+            try:
+                subprocess.run(["fish", "-c", "fisher update"], check=False, timeout=60)
+            except subprocess.TimeoutExpired:
+                log_msg("WARN", "Fisher update timed out, skipping")
         else:
             log_msg("INFO", "Fisher installed, fish_plugins unchanged")
         return True
@@ -72,16 +69,19 @@ def fisher_install() -> bool:
     os.close(tfd)
     fisher_path = Path(tname)
     register_temp_path(fisher_path)
-
     msg_install = msg("log_install_fish_plugins")
     msg_skip = msg("log_fisher_update_skipped")
-    if fetch_raw_with_fallback("jorgebucaran/fisher", "main", "functions/fisher.fish", fisher_path):
+    known_sha256 = os.environ.get("NYXNIRI_FISHER_SHA256", "")
+    if fetch_raw_with_fallback("jorgebucaran/fisher", "main", "functions/fisher.fish", fisher_path, expected_sha256=known_sha256 or None):
         fish_code = (
             f"if not functions -q fisher; source '{fisher_path}' && fisher install jorgebucaran/fisher; end; "
             f"if test -f ~/.config/fish/fish_plugins && functions -q fisher; "
             f"echo '{msg_install}'; fisher update || echo '{msg_skip}'; end"
         )
-        subprocess.run(["fish", "-c", fish_code], check=False, timeout=60)
+        try:
+            subprocess.run(["fish", "-c", fish_code], check=False, timeout=60)
+        except subprocess.TimeoutExpired:
+            log_msg("WARN", "Fisher bootstrap timed out")
         return True
     print(msg("log_fisher_install_skipped"))
     log_msg("WARN", "Fisher auto-install skipped (network unreachable)")
