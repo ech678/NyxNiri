@@ -171,6 +171,79 @@ def fcitx_restart() -> None:
             subprocess.Popen(["fcitx5", "-d"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(msg("fcitx_restarted"))
 
+def fcitx_configure_trigger_key() -> bool:
+    """Auto-configure Ctrl+Space as fcitx5 trigger key on first fcitx install.
+
+    Skips silently if:
+    - fcitx5 config doesn't exist (user hasn't initialised fcitx5 yet)
+    - [Hotkey/TriggerKeys] 0= is already set (respect user's existing choice)
+    - niri config.kdl already binds Ctrl+space or Super+space
+
+    Mod+space is intentionally NOT treated as a conflict — nyxniri's own
+    Mod+Space is used for switch-preset-column-width, but niri intercepts
+    that binding so Ctrl+Space still reaches fcitx5 untouched.
+
+    Returns:
+        True if configured, False if skipped/failed (caller should not raise).
+    """
+    env = get_env()
+    config_path = env.config_dir / "fcitx5" / "config"
+    niri_config = env.config_dir / "niri" / "config.kdl"
+
+    target = "Ctrl+space"
+    base_key = "space"
+
+    if not config_path.is_file():
+        log_msg("INFO", "fcitx5 config 不存在，跳过触发键配置（用户尚未首次启动 fcitx5）")
+        return False
+
+    # 1. Key-conflict detection: scan niri binds for Ctrl+Space only
+    if niri_config.is_file():
+        try:
+            content = niri_config.read_text(encoding="utf-8", errors="ignore")
+            # 仅检测 Ctrl+space（freedesktop 默认 IME 触发键；Mod+space 不冲突）
+            patterns = [
+                rf"\bCtrl\+{re.escape(base_key)}\b",
+            ]
+            for pat in patterns:
+                if re.search(pat, content, re.IGNORECASE):
+                    log_msg("INFO", f"niri config 已绑定 {pat}，跳过 fcitx5 触发键自动配置")
+                    return False
+        except Exception as e:
+            log_msg("WARN", f"读取 niri config 失败：{e}")
+
+    # 2. Respect existing user choice
+    try:
+        content = config_path.read_text(encoding="utf-8", errors="ignore")
+    except OSError as e:
+        log_msg("WARN", f"读取 fcitx5 config 失败：{e}")
+        return False
+
+    # If [Hotkey/TriggerKeys] section already has any 0=/1=/2= line, skip
+    if re.search(r"\[Hotkey/TriggerKeys\][^\[]*?\b\d+=\S+", content, re.DOTALL):
+        log_msg("INFO", "fcitx5 触发键已存在用户配置，跳过自动写入")
+        return False
+
+    # 3. Write Ctrl+Space as 0=
+    if "[Hotkey/TriggerKeys]" in content:
+        new_content = re.sub(
+            r"(\[Hotkey/TriggerKeys\]\s*\n)",
+            rf"\g<1>0={target}\n",
+            content,
+            count=1,
+        )
+    else:
+        sep = "\n\n" if content and not content.rstrip().endswith("\n") else "\n"
+        new_content = content.rstrip() + sep + f"[Hotkey/TriggerKeys]\n0={target}\n"
+
+    try:
+        config_path.write_text(new_content, encoding="utf-8")
+        log_msg("INFO", f"已自动配置 fcitx5 触发键为 {target}")
+        return True
+    except OSError as e:
+        log_msg("WARN", f"写入 fcitx5 config 失败：{e}")
+        return False
+
 def fcitx_trigger_render() -> None:
     """Ask Noctalia daemon to render templates for current palette."""
     if noctalia_available():
@@ -245,6 +318,7 @@ def fcitx_install() -> bool:
         fcitx_register_templates()
         fcitx_set_theme_conf()
         fcitx_configure_quickphrase()
+        fcitx_configure_trigger_key()
         fcitx_trigger_render()
         fcitx_restart()
         enabled_marker.parent.mkdir(parents=True, exist_ok=True)
