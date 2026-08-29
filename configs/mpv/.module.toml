@@ -1,0 +1,4 @@
+[packages]
+repo = ["mpv"]
+detect = "mpv"
+label = "mpv"

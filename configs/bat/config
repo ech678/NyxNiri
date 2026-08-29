@@ -1,0 +1,16 @@
+--background=#131318
+--foreground=#e5e1e9
+--selection-background=#c4c0ff
+--selection-foreground=#131318
+--paging=auto
+--style=plain
+--theme="base16"
+--italic-text=always
+--decorations=always
+--color=always
+--map-syntax
+--no-config
+--theme=131318:e5e1e9
+--nonprintable-notation=unicode
+
+--colors=plain:auto:plain:auto

@@ -1,0 +1,4 @@
+[packages]
+repo = ["btop"]
+detect = "btop"
+label = "btop"

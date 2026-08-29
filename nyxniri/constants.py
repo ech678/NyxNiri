@@ -76,6 +76,9 @@ CORE_DEPS = [
     "ttf-jetbrains-mono",
     "ttf-jetbrains-mono-nerd",
     "noto-fonts-cjk",
+    "bat",
+    "btop",
+    "mpv",
 ]
 
 AUR_DEPS = [

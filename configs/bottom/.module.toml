@@ -1,0 +1,4 @@
+[packages]
+repo = ["bottom"]
+detect = "btm"
+label = "bottom"

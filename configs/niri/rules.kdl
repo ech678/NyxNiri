@@ -153,6 +153,8 @@ window-rule {
     match app-id="kazumi"
     match app-id="celluloid"
     match app-id="virt-manager"
+    match app-id="btm"
+    match app-id="btop"
     opacity 1.0
 }
 

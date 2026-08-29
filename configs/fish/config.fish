@@ -126,6 +126,8 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             set_color -o yellow; echo -n "    se [关键字]              "; set_color green; echo "-> 模糊搜索软件包 (支持 aur/pac 前缀) 并 fzf 交互安装"; set_color normal
             set_color -o yellow; echo -n "    un [关键字]              "; set_color green; echo "-> 模糊搜索已安装包并 fzf 交互卸载"; set_color normal
             set_color -o yellow; echo -n "    clean [--auto]           "; set_color green; echo "-> 扫描并清理大缓存与日志垃圾"; set_color normal
+            set_color -o yellow; echo -n "    cat / catp               "; set_color green; echo "-> bat 彩色 cat 替代 (带行号和分页)"; set_color normal
+            set_color -o yellow; echo -n "    top                      "; set_color green; echo "-> btop 或 btm 系统资源监视"; set_color normal
             return
         case keys bind keybindings
             set_color -o magenta; echo "  Niri 桌面核心快捷键"; set_color normal
@@ -346,7 +348,16 @@ if status is-interactive
         end
     end
 
-    alias clean='~/.config/fish/clean-cache'      # 运行一键缓存清理脚本
+    alias clean='~/.config/fish/clean-cache'
+    if command -v bat &>/dev/null
+        alias cat='bat --paging=never'
+        alias catp='bat --plain --paging=never'
+    end
+    if command -v btop &>/dev/null
+        alias top='btop'
+    else if command -v btm &>/dev/null
+        alias top='btm'
+    end
 
     # se：模糊搜索软件包 (支持 aur <kw> / pac <kw> 前缀) 并用 fzf 交互安装 (无 fzf 时自动降级)
     function se --description "模糊搜索并安装软件包 (支持 aur <kw> / pac <kw> 前缀)"

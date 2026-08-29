@@ -3,9 +3,6 @@
 # data-driven, no hardcoded dict). Independent of config dirs (§2 the two-axis
 # design): an app here stays "optional" even if a configs/<app>/ dir is later
 # added — then it's optional AND has config, both true at once.
-#
-# Field defaults mirror .module.toml: repo defaults to [name], aur/label/detect
-# default to [] / name / name. Add an [[app]] block per optional app.
 
 [[app]]
 name = "nautilus"
@@ -20,3 +17,24 @@ detect = "mission-center"
 name = "fcitx5-rime"
 repo = ["fcitx5", "fcitx5-gtk", "fcitx5-qt", "fcitx5-configtool", "fcitx5-rime"]
 aur = ["rime-ice-git"]
+
+[[app]]
+name = "btop"
+repo = ["btop"]
+
+[[app]]
+name = "mpv"
+repo = ["mpv"]
+
+[[app]]
+name = "yazi"
+repo = ["yazi"]
+aur = ["ffmpeg", "poppler", "fd", "ripgrep", "fzf", "zoxide", "imagemagick"]
+
+[[app]]
+name = "bat"
+repo = ["bat"]
+
+[[app]]
+name = "bottom"
+repo = ["bottom"]

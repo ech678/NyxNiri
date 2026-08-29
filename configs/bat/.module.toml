@@ -1,0 +1,4 @@
+[packages]
+repo = ["bat"]
+detect = "bat"
+label = "bat"

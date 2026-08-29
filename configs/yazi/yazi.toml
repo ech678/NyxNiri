@@ -1,0 +1,64 @@
+[manager]
+ratio = [1, 3, 5]
+sort_by = "natural"
+sort_dir_first = true
+show_hidden = false
+show_symlink = true
+linemode = "size"
+
+[preview]
+max_width = 1200
+max_height = 900
+cache_dir = "~/.cache/yazi"
+image_filter = "triangle"
+image_quality = 75
+
+[opener]
+edit = [{ exec = '$EDITOR "$@"', desc = "Edit", block = true }]
+open = [{ exec = 'xdg-open "$@"', desc = "Open" }]
+play = [{ exec = 'mpv "$@"', desc = "Play" }]
+
+[plugin]
+prepend_fetcher = [{ id = "git", name = "*", run = "git" }]
+prepend_previewers = [
+    { name = "*/", run = "ls-preview" },
+    { mime = "image/*", run = "image" },
+    { mime = "video/*", run = "video" },
+    { mime = "application/pdf", run = "pdf" },
+]
+
+[input]
+cursor_blink = true
+
+[manager.theme]
+manager_cwd = { fg = "#c4c0ff", bold = true }
+hovered = { fg = "#e5e1e9", bg = "#474551" }
+preview_hovered = { fg = "#e5e1e9", bg = "#474551" }
+count = { fg = "#c6c3e9" }
+
+[manager.theme.find]
+keyword = { fg = "#c4c0ff", bold = true }
+position = { fg = "#928f9c" }
+
+[manager.theme.border]
+selected = { fg = "#c4c0ff", bold = true }
+header = { fg = "#928f9c" }
+
+[status]
+separator_left_open = ""
+separator_left_close = ""
+separator_right_open = ""
+separator_right_close = ""
+
+[status.theme]
+mode_normal = { fg = "#131318", bg = "#c4c0ff", bold = true }
+mode_select = { fg = "#131318", bg = "#ffb4ab", bold = true }
+mode_unset = { fg = "#131318", bg = "#c6c3e9", bold = true }
+permissions_s = { fg = "#c4c0ff" }
+permissions_r = { fg = "#ffb4ab" }
+permissions_w = { fg = "#ffb4ab" }
+permissions_x = { fg = "#c6c3e9" }
+separator = { fg = "#474551" }
+progress_label = { fg = "#e5e1e9" }
+progress_normal = { fg = "#c4c0ff", bg = "#474551" }
+progress_error = { fg = "#ffb4ab", bg = "#474551" }

@@ -1,0 +1,25 @@
+[theme]
+background = "#131318"
+foreground = "#e5e1e9"
+selection-bg = "#474551"
+selection-fg = "#e5e1e9"
+primary = "#c4c0ff"
+secondary = "#c6c3e9"
+
+[style]
+border_color = "#474551"
+highlight_color = "#c4c0ff"
+table_header_fg = "#928f9c"
+table_header_bg = "#131318"
+tree_color = "#c6c3e9"
+
+[style.selection]
+fg = "#131318"
+bg = "#c4c0ff"
+
+[components]
+cpu_color = "#c6c3e9"
+memory_color = "#feacef"
+network_color = "#c4c0ff"
+disk_color = "#ffb4ab"
+temperature_color = "#ffb4ab"
