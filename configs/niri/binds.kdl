@@ -42,6 +42,8 @@ binds {
     // 切换 Noctalia 电源/会话菜单 / Toggle Noctalia power/session menu
     Mod+X { spawn "noctalia" "msg" "panel-toggle" "session"; }
 
+    Mod+H repeat=false { spawn "~/.config/niri/scripts/cheatsheet/cheatsheet.py"; }
+
     // 切换 Noctalia 系统设置面板 / Toggle Noctalia system settings panel
     Mod+I { spawn "noctalia" "msg" "settings-toggle"; }
 
