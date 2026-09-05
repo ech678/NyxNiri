@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from nyxniri.constants import PROJECT_NAME, Colors
-from nyxniri.core import get_env, log_msg
+from nyxniri.core import get_env, log_msg, timed_run
 from nyxniri.i18n import msg
 
 
@@ -505,6 +505,10 @@ def apply_preset(app: str, name: str) -> bool:
         log_msg("ERROR", f"Deployed preset '{name}' to {app} but recording active state failed: {e}")
         return False
     _render_preset_result(app, name, preserved_log)
+    if app == "niri" and shutil.which("niri"):
+        timed_run(["niri", "msg", "action", "load-config-file"], 2, check=False)
+    elif app == "kitty" and shutil.which("pkill"):
+        timed_run(["pkill", "-SIGUSR1", "-x", "kitty"], 2, check=False)
     return True
 
 
