@@ -1,0 +1,23 @@
+gestures {
+    hot-corners {
+        off
+    }
+}
+
+input {
+    keyboard {
+        xkb
+
+        numlock
+    }
+    touchpad {
+        tap
+        natural-scroll
+        dwt  // 打字时禁用触摸板,强烈建议加
+        dwtp // 打字时也禁用触摸板指针移动
+    }
+    mouse {
+        accel-speed -0.72
+    }
+    trackpoint
+}

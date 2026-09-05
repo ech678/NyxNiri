@@ -221,6 +221,21 @@ class TestPresetOperations(unittest.TestCase):
         self.assertTrue(conf.is_file())
         self.assertIn("0.75", conf.read_text())  # the transparent variant
 
+    def test_list_includes_niri_glow_preset(self):
+        entries = preset.collect_presets("niri")
+        names = [n for n, _, _ in entries]
+        self.assertIn("default", names)
+        self.assertIn("glow", names)
+
+    def test_apply_niri_glow_writes_active_and_deploys_variant(self):
+        ok = preset.apply_preset("niri", "glow")
+        self.assertTrue(ok)
+        self.assertEqual(preset.read_active_preset("niri"), "glow")
+        layout = self.env.config_dir / "niri" / "layout.kdl"
+        self.assertTrue(layout.is_file())
+        self.assertIn("width 2", layout.read_text())
+        self.assertIn("shadow", layout.read_text())
+
     def test_apply_default_resets(self):
         preset.write_active_preset("kitty", "transparent")
         ok = preset.apply_preset("kitty", "default")
