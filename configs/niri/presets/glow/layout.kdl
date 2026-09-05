@@ -22,17 +22,17 @@ layout {
     default-column-width { proportion 0.5; }
     focus-ring {
         width 2
-        active-color "#b6c7e7"
+        active-color "#1a73e8"
         inactive-color "transparent"
         urgent-color "#ffb4ab"
     }
     shadow {
         on
-        softness 30
+        softness 28
         spread 6
         offset x=0 y=0
         draw-behind-window false
-        color "#b6c7e785"
+        color "#1a73e895"
         inactive-color "#00000045"
     }
 
