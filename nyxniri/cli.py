@@ -30,6 +30,7 @@ from nyxniri.deploy import (
     discover_manifest_apps,
     discover_optional_apps,
     render_completion_screen,
+    run_user_hooks,
     test_deploy,
     wallpapers_pack_present,
 )
@@ -283,6 +284,8 @@ def install_configs_workflow(mode: str = "full") -> bool:
         if not greeter_install():
             return False
 
+    hook_diagnostics = run_user_hooks()
+
     # Completion
     render_completion_screen(
         mode=mode,
@@ -291,6 +294,7 @@ def install_configs_workflow(mode: str = "full") -> bool:
         wallpaper_result=wallpaper_result,
         do_fcitx=do_fcitx,
         do_greeter=do_greeter,
+        hook_diagnostics=hook_diagnostics,
     )
     return True
 
@@ -311,7 +315,10 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
         except Exception as e:
             log_msg("WARN", f"Greeter install skipped during --force update: {e}")
             return False
-        render_completion_screen("update", wallpaper_result=wallpaper_result)
+        hook_diagnostics = run_user_hooks()
+        render_completion_screen(
+            "update", wallpaper_result=wallpaper_result, hook_diagnostics=hook_diagnostics,
+        )
         return True
     elif flag == "--no-deploy":
         return True
@@ -323,7 +330,10 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
             return False
         wallpaper_result = deploy_wallpapers(do_download=False)
         if fcitx_enabled(): fcitx_install()
-        render_completion_screen("update", wallpaper_result=wallpaper_result)
+        hook_diagnostics = run_user_hooks()
+        render_completion_screen(
+            "update", wallpaper_result=wallpaper_result, hook_diagnostics=hook_diagnostics,
+        )
         return True
 
     # Interactive choice menu
@@ -356,11 +366,13 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
             if chosen["greeter"]:
                 if not greeter_install():
                     return False
+            hook_diagnostics = run_user_hooks()
             render_completion_screen(
                 "update",
                 chosen_items=chosen["configs"],
                 preserved_lines=preserved,
                 wallpaper_result=wallpaper_result,
+                hook_diagnostics=hook_diagnostics,
             )
             return True
     elif choice == 1:

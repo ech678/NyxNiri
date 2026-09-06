@@ -165,7 +165,7 @@ def uninstall_nyxniri(mode: str = "") -> bool:
         if archive_dir is not None:
             print(msg("uninstall_archived", str(archive_dir)))
 
-    # 3. nyx_dir (~/.config/NyxNiri/: snapshots + presets) + legacy ~/.config/ snapshots.
+    # 3. nyx_dir (~/.config/NyxNiri/: snapshots, presets, active state, hooks) + legacy snapshots.
     if "nyx_dir" in selected:
         for backup in get_all_backups():
             remove_path(backup)

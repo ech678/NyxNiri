@@ -180,6 +180,127 @@ class TestUpdateForcePath(unittest.TestCase):
         render.assert_not_called()
 
 
+class TestUserHookEntrypoints(unittest.TestCase):
+    """Hooks run once at each successful CLI deployment boundary."""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    @staticmethod
+    def _all_components():
+        return {
+            "configs": ["niri"], "wallpapers": True, "fcitx": True,
+            "greeter": True, "backup": False,
+        }
+
+    def test_install_runs_hooks_after_all_builtin_actions(self):
+        from nyxniri.cli import install_configs_workflow
+
+        events = []
+        with patch("sys.stdin.isatty", return_value=True), \
+             patch("nyxniri.cli.run_master_component_menu", return_value=self._all_components()), \
+             patch("nyxniri.cli._phase_preflight_check"), \
+             patch("nyxniri.cli.deploy_selected_configs", side_effect=lambda **_: events.append("configs") or []), \
+             patch("nyxniri.cli.deploy_wallpapers", side_effect=lambda **_: events.append("wallpapers")), \
+             patch("nyxniri.cli.fcitx_install", side_effect=lambda: events.append("fcitx")), \
+             patch("nyxniri.cli.greeter_install", side_effect=lambda: events.append("greeter") or True), \
+             patch("nyxniri.cli.run_user_hooks", side_effect=lambda: events.append("hooks")), \
+             patch("nyxniri.cli.render_completion_screen", side_effect=lambda *_, **__: events.append("completion")):
+            self.assertTrue(install_configs_workflow("config"))
+
+        self.assertEqual(events, ["configs", "wallpapers", "fcitx", "greeter", "hooks", "completion"])
+
+    def test_force_update_runs_hooks_after_all_builtin_actions(self):
+        from nyxniri.cli import offer_overwrite_upgrade
+
+        events = []
+        with patch("nyxniri.cli.deploy_selected_configs", side_effect=lambda **_: events.append("configs") or []), \
+             patch("nyxniri.cli.deploy_wallpapers", side_effect=lambda **_: events.append("wallpapers")), \
+             patch("nyxniri.cli.fcitx_enabled", return_value=True), \
+             patch("nyxniri.cli.fcitx_install", side_effect=lambda: events.append("fcitx")), \
+             patch("nyxniri.cli.greeter_install", side_effect=lambda: events.append("greeter") or True), \
+             patch("nyxniri.cli.run_user_hooks", side_effect=lambda: events.append("hooks")), \
+             patch("nyxniri.cli.render_completion_screen", side_effect=lambda *_, **__: events.append("completion")):
+            self.assertTrue(offer_overwrite_upgrade("--force"))
+
+        self.assertEqual(events, ["configs", "wallpapers", "fcitx", "greeter", "hooks", "completion"])
+
+    def test_noninteractive_update_runs_hooks_after_builtin_actions(self):
+        from nyxniri.cli import offer_overwrite_upgrade
+
+        events = []
+        with patch("sys.stdin.isatty", return_value=False), \
+             patch("nyxniri.cli.deploy_selected_configs", side_effect=lambda **_: events.append("configs") or []), \
+             patch("nyxniri.cli.deploy_wallpapers", side_effect=lambda **_: events.append("wallpapers")), \
+             patch("nyxniri.cli.fcitx_enabled", return_value=True), \
+             patch("nyxniri.cli.fcitx_install", side_effect=lambda: events.append("fcitx")), \
+             patch("nyxniri.cli.run_user_hooks", side_effect=lambda: events.append("hooks")), \
+             patch("nyxniri.cli.render_completion_screen", side_effect=lambda *_, **__: events.append("completion")):
+            self.assertTrue(offer_overwrite_upgrade())
+
+        self.assertEqual(events, ["configs", "wallpapers", "fcitx", "hooks", "completion"])
+
+    def test_interactive_update_runs_hooks_after_all_builtin_actions(self):
+        from nyxniri.cli import offer_overwrite_upgrade
+
+        events = []
+        with patch("sys.stdin.isatty", return_value=True), \
+             patch("nyxniri.cli.Menu") as menu, \
+             patch("nyxniri.cli.run_master_component_menu", return_value=self._all_components()), \
+             patch("nyxniri.cli.deploy_selected_configs", side_effect=lambda **_: events.append("configs") or []), \
+             patch("nyxniri.cli.deploy_wallpapers", side_effect=lambda **_: events.append("wallpapers")), \
+             patch("nyxniri.cli.fcitx_install", side_effect=lambda: events.append("fcitx")), \
+             patch("nyxniri.cli.greeter_install", side_effect=lambda: events.append("greeter") or True), \
+             patch("nyxniri.cli.run_user_hooks", side_effect=lambda: events.append("hooks")), \
+             patch("nyxniri.cli.render_completion_screen", side_effect=lambda *_, **__: events.append("completion")):
+            menu.return_value.run.return_value = 0
+            self.assertTrue(offer_overwrite_upgrade())
+
+        self.assertEqual(events, ["configs", "wallpapers", "fcitx", "greeter", "hooks", "completion"])
+
+    def test_failure_and_no_deploy_skip_hooks(self):
+        from nyxniri.cli import offer_overwrite_upgrade
+
+        with patch("nyxniri.cli.deploy_selected_configs", return_value=["niri"]), \
+             patch("nyxniri.cli.render_completion_screen"), \
+             patch("nyxniri.cli.run_user_hooks") as hooks:
+            self.assertFalse(offer_overwrite_upgrade("--force"))
+        hooks.assert_not_called()
+
+        with patch("nyxniri.cli.run_user_hooks") as hooks:
+            self.assertTrue(offer_overwrite_upgrade("--no-deploy"))
+        hooks.assert_not_called()
+
+    def test_greeter_failure_skips_hooks(self):
+        from nyxniri.cli import offer_overwrite_upgrade
+
+        with patch("nyxniri.cli.deploy_selected_configs", return_value=[]), \
+             patch("nyxniri.cli.deploy_wallpapers"), \
+             patch("nyxniri.cli.fcitx_enabled", return_value=False), \
+             patch("nyxniri.cli.greeter_install", return_value=False), \
+             patch("nyxniri.cli.run_user_hooks") as hooks:
+            self.assertFalse(offer_overwrite_upgrade("--force"))
+        hooks.assert_not_called()
+
+    def test_force_update_passes_hook_diagnostics_to_completion(self):
+        from nyxniri.cli import offer_overwrite_upgrade
+
+        diagnostics = ["User deploy hook 20-failure.sh exited with 7; continuing"]
+        with patch("nyxniri.cli.deploy_selected_configs", return_value=[]), \
+             patch("nyxniri.cli.deploy_wallpapers"), \
+             patch("nyxniri.cli.fcitx_enabled", return_value=False), \
+             patch("nyxniri.cli.greeter_install", return_value=True), \
+             patch("nyxniri.cli.run_user_hooks", return_value=diagnostics), \
+             patch("nyxniri.cli.render_completion_screen") as completion:
+            self.assertTrue(offer_overwrite_upgrade("--force"))
+
+        self.assertEqual(completion.call_args.kwargs["hook_diagnostics"], diagnostics)
+
+
 class TestGreeterWorkflowFailure(unittest.TestCase):
     """Install and interactive update must not report a failed greeter as complete."""
 

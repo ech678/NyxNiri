@@ -582,8 +582,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "~/.config/<{0} app configs>",
     },
     "uninstall_item_nyx_dir": {
-        "zh": "~/.config/NyxNiri/  (快照 + 预设)",
-        "en": "~/.config/NyxNiri/  (snapshots + presets)",
+        "zh": "~/.config/NyxNiri/  (快照 + 预设 + 钩子)",
+        "en": "~/.config/NyxNiri/  (snapshots + presets + hooks)",
     },
     "uninstall_item_archives": {
         "zh": "~/.config/NyxNiri_archive_*  (历史归档)",
@@ -650,8 +650,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_GREEN}[✓] Uninstall complete{Colors.RESET}",
     },
     "purge_warning": {
-        "zh": f"\n{Colors.BOLD_RED}[!] 将清空配置、快照、缓存与壁纸。不可撤销。{Colors.RESET}",
-        "en": f"\n{Colors.BOLD_RED}[!] This clears configs, snapshots, cache, and wallpapers. It cannot be undone.{Colors.RESET}",
+        "zh": f"\n{Colors.BOLD_RED}[!] 将清空配置、NyxNiri 用户数据、缓存与壁纸。不可撤销。{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_RED}[!] This clears configs, NyxNiri user data, cache, and wallpapers. It cannot be undone.{Colors.RESET}",
     },
     "purge_prompt": {
         "zh": "▸ 确认深度清理？[y/N]: ",
@@ -1192,6 +1192,18 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "log_deploy_config_failed": {
         "zh": f"  {Colors.BOLD_RED}[✗]{Colors.RESET} 配置安装失败: {{0}}",
         "en": f"  {Colors.BOLD_RED}[✗]{Colors.RESET} Config install failed: {{0}}",
+    },
+    "user_hook_timeout": {
+        "zh": f"{Colors.BOLD_YELLOW}[!]{Colors.RESET} 用户部署钩子 {{0}} 在 {{1}} 秒后超时，继续执行后续钩子",
+        "en": f"{Colors.BOLD_YELLOW}[!]{Colors.RESET} User deploy hook {{0}} timed out after {{1}}s; continuing",
+    },
+    "user_hook_failed": {
+        "zh": f"{Colors.BOLD_YELLOW}[!]{Colors.RESET} 用户部署钩子 {{0}} 退出码为 {{1}}，继续执行后续钩子",
+        "en": f"{Colors.BOLD_YELLOW}[!]{Colors.RESET} User deploy hook {{0}} exited with {{1}}; continuing",
+    },
+    "summary_section_hooks": {
+        "zh": "部署钩子提示",
+        "en": "Post-deploy hook notices",
     },
 
     # Doctor

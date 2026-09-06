@@ -45,7 +45,7 @@ fisher.fish 存在），旁边显示实际路径（§8.4"每项旁边显示实�
 1. 模块卸载器 FIRST   fcitx/gtk/greeter/fisher 各自 *_uninstall
                        （fcitx 读 state_dir 的 .prev 备份；greeter 的 sudo 在这步）
 2. configs            归档后删（交互）/ 直接删（purge）
-3. nyx_dir            ~/.config/NyxNiri/（快照 + 预设 + active）
+3. nyx_dir            ~/.config/NyxNiri/（快照 + 预设 + active + hooks）
 4. archives           只删预存的 NyxNiri_archive_*（保护 step 2 刚建的归档）
 5. wallpapers         ~/Pictures/Wallpapers/
 6. cli                ~/.local/bin/nyxniri

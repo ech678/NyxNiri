@@ -26,7 +26,7 @@ nyxniri/
 │   ├── preset.py                       预设切换（active 状态、src 四分支、apply 窄路径）
 │   └── deploy.py                       编排器：discover_config_items、_phase_atomic_deployment、
 │                                       _phase_post_install_services、
-│                                       render_completion_screen、deploy_selected_configs、test_deploy
+│                                       run_user_hooks、render_completion_screen、deploy_selected_configs、test_deploy
 │
 ├── state/                              状态子包
 │   ├── backup.py                       快照 / 回滚 / 删除（path 原语 copy_path/remove_path 在 core.py）
