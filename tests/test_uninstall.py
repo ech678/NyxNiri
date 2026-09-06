@@ -170,8 +170,8 @@ class TestUninstallHookPreservation(unittest.TestCase):
         run_hooks.assert_not_called()
         self.assertTrue(result)
 
-    def test_non_tty_default_and_standard_preserve_hooks(self):
-        for mode in ("", "standard"):
+    def test_non_tty_standard_modes_preserve_hooks(self):
+        for mode in ("", "standard", "1", "safe", "--safe"):
             with self.subTest(mode=mode):
                 hook = self._write_hook()
                 self._uninstall_non_interactive(mode)
@@ -183,6 +183,22 @@ class TestUninstallHookPreservation(unittest.TestCase):
                 hook = self._write_hook()
                 self._uninstall_non_interactive(mode)
                 self.assertFalse(hook.exists())
+
+    def test_interactive_nyx_dir_selection_removes_hooks(self):
+        from nyxniri.state.uninstall import CheckboxList, uninstall_nyxniri
+
+        hook = self._write_hook()
+        with patch("sys.stdin.isatty", return_value=True), patch("builtins.print"), \
+             patch.object(CheckboxList, "run", return_value=["nyx_dir"]), \
+             patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=False), \
+             patch("nyxniri.modules.gtktheme.gtktheme_registered", return_value=False), \
+             patch("nyxniri.modules.greeter.greeter_installed", return_value=False), \
+             patch("nyxniri.modules.fisher.fisher_installed", return_value=False), \
+             patch("nyxniri.deploy.deploy.run_user_hooks") as run_hooks:
+            self.assertTrue(uninstall_nyxniri(""))
+
+        run_hooks.assert_not_called()
+        self.assertFalse(hook.exists())
 
 
 class TestFisherOwnership(unittest.TestCase):
