@@ -109,7 +109,7 @@ class Environment:
 
         self.configs_src = self.repo_dir / CONFIG_DIR_NAME
         self.assets_src = self.repo_dir / ASSETS_DIR_NAME
-        # NyxNiri's own home under ~/.config: backups, presets, active state.
+        # NyxNiri's own home under ~/.config: backups, presets, active state, hooks.
         # (state_dir holds runtime transient; nyx_dir holds user data — §10.4)
         self.nyx_dir = self.config_dir / PROJECT_NAME
         self.presets_dir = self.nyx_dir / "presets"

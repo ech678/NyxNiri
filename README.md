@@ -117,6 +117,10 @@ Any file or folder containing `__custom__` survives updates and preset switches:
 
 </details>
 
+### Post-deploy hooks
+
+Put shell scripts in `~/.config/NyxNiri/hooks/` to run your own finishing work after every normal config deploy. Scripts ending in `.sh` run in filename order with a 30-second limit; a failed or timed-out script is reported without blocking the rest. This directory is user data and NyxNiri never deploys over it. `nyxniri test` skips these hooks.
+
 ## Presets
 
 Some apps ship flavor variants — presets layer between defaults and your `__custom__` files, so switching never touches your own tweaks.

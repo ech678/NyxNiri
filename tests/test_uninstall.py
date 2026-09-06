@@ -124,17 +124,81 @@ class TestUninstallArchiveGlob(unittest.TestCase):
         (self.env.config_dir / "niri").mkdir(parents=True, exist_ok=True)
         (self.env.config_dir / "niri" / "config.kdl").write_text("current")
 
-        with patch("sys.stdin.isatty", return_value=False), patch("builtins.print"), \
+        with patch("sys.stdin.isatty", return_value=True), patch("builtins.print"), \
+             patch("nyxniri.state.uninstall.CheckboxList") as checklist, \
              patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=False), \
              patch("nyxniri.modules.gtktheme.gtktheme_registered", return_value=False), \
              patch("nyxniri.modules.greeter.greeter_installed", return_value=False):
-            uninstall_nyxniri("")  # non-TTY → all selected, configs archived
+            checklist.return_value.run.return_value = ["configs", "archives"]
+            uninstall_nyxniri("")
 
         # Old archive cleaned (gap #1), but the freshly-created config archive survives.
         self.assertFalse(old.exists(), "Pre-existing archive must be cleaned")
         new_archives = list(self.env.config_dir.glob(f"{PROJECT_NAME}_archive_*"))
         self.assertEqual(len(new_archives), 1, "Only the freshly-created archive remains")
         self.assertTrue((new_archives[0] / "niri" / "config.kdl").exists())
+
+
+class TestUninstallHookPreservation(unittest.TestCase):
+    """Standard uninstall preserves hooks; explicit all-selection removes them."""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        self.env = self._ctx.env
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def _write_hook(self):
+        hook = self.env.nyx_dir / "hooks" / "keep.sh"
+        hook.parent.mkdir(parents=True, exist_ok=True)
+        hook.write_text("#!/bin/sh\n", encoding="utf-8")
+        return hook
+
+    def _uninstall_non_interactive(self, mode):
+        from nyxniri.state.uninstall import uninstall_nyxniri
+
+        with patch("sys.stdin.isatty", return_value=False), patch("builtins.print"), \
+             patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=False), \
+             patch("nyxniri.modules.gtktheme.gtktheme_registered", return_value=False), \
+             patch("nyxniri.modules.greeter.greeter_installed", return_value=False), \
+             patch("nyxniri.modules.fisher.fisher_installed", return_value=False), \
+             patch("nyxniri.deploy.deploy.run_user_hooks") as run_hooks:
+            result = uninstall_nyxniri(mode)
+
+        run_hooks.assert_not_called()
+        self.assertTrue(result)
+
+    def test_non_tty_standard_modes_preserve_hooks(self):
+        for mode in ("", "standard", "1", "safe", "--safe"):
+            with self.subTest(mode=mode):
+                hook = self._write_hook()
+                self._uninstall_non_interactive(mode)
+                self.assertTrue(hook.exists())
+
+    def test_explicit_all_modes_remove_hooks(self):
+        for mode in ("purge", "--all", "all", "3", "--purge"):
+            with self.subTest(mode=mode):
+                hook = self._write_hook()
+                self._uninstall_non_interactive(mode)
+                self.assertFalse(hook.exists())
+
+    def test_interactive_nyx_dir_selection_removes_hooks(self):
+        from nyxniri.state.uninstall import CheckboxList, uninstall_nyxniri
+
+        hook = self._write_hook()
+        with patch("sys.stdin.isatty", return_value=True), patch("builtins.print"), \
+             patch.object(CheckboxList, "run", return_value=["nyx_dir"]), \
+             patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=False), \
+             patch("nyxniri.modules.gtktheme.gtktheme_registered", return_value=False), \
+             patch("nyxniri.modules.greeter.greeter_installed", return_value=False), \
+             patch("nyxniri.modules.fisher.fisher_installed", return_value=False), \
+             patch("nyxniri.deploy.deploy.run_user_hooks") as run_hooks:
+            self.assertTrue(uninstall_nyxniri(""))
+
+        run_hooks.assert_not_called()
+        self.assertFalse(hook.exists())
 
 
 class TestFisherOwnership(unittest.TestCase):

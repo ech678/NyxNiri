@@ -8,9 +8,12 @@ load-bearing; a timeout must skip the step and move on.
 """
 
 import subprocess
+import sys
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from subprocess import CompletedProcess
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from tests.utils import TempEnv
 
@@ -60,6 +63,121 @@ class TestPostInstallHooksIndependence(unittest.TestCase):
             _phase_post_install_services()
 
         mock_fisher.assert_called_once()
+
+
+class TestUserPostDeployHooks(unittest.TestCase):
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        self.hooks_dir = self._ctx.env.nyx_dir / "hooks"
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_missing_or_empty_directory_is_silent(self):
+        from nyxniri.deploy.deploy import run_user_hooks
+
+        with patch("nyxniri.deploy.deploy.timed_run") as run, patch("builtins.print") as output:
+            self.assertEqual(run_user_hooks(), [])
+            self.hooks_dir.mkdir(parents=True)
+            self.assertEqual(run_user_hooks(), [])
+
+        run.assert_not_called()
+        output.assert_not_called()
+
+    def test_runs_scripts_in_filename_order_with_bash_argv(self):
+        from nyxniri.deploy.deploy import USER_HOOK_TIMEOUT, run_user_hooks
+
+        self.hooks_dir.mkdir(parents=True)
+        first = self.hooks_dir / "10-first.sh"
+        second = self.hooks_dir / "20-second.sh"
+        second.touch()
+        first.touch()
+        (self.hooks_dir / "ignored.txt").touch()
+        (self.hooks_dir / "directory.sh").mkdir()
+
+        with patch("nyxniri.deploy.deploy.timed_run", return_value=_cp(0)) as run:
+            self.assertEqual(run_user_hooks(), [])
+
+        self.assertEqual(run.call_args_list, [
+            call(["bash", str(first)], USER_HOOK_TIMEOUT, check=False),
+            call(["bash", str(second)], USER_HOOK_TIMEOUT, check=False),
+        ])
+
+    def test_timeout_and_failure_are_reported_without_stopping_later_hooks(self):
+        from nyxniri.deploy.deploy import run_user_hooks
+
+        self.hooks_dir.mkdir(parents=True)
+        first = self.hooks_dir / "10-timeout.sh"
+        second = self.hooks_dir / "20-failure.sh"
+        third = self.hooks_dir / "30-later.sh"
+        for hook in (first, second, third):
+            hook.touch()
+
+        with patch("nyxniri.deploy.deploy.timed_run", side_effect=[None, _cp(7), _cp(0)]) as run, \
+             patch("nyxniri.deploy.deploy.log_msg") as log, \
+             patch("builtins.print") as output:
+            returned = run_user_hooks()
+
+        self.assertEqual(run.call_args_list, [
+            call(["bash", str(first)], 30, check=False),
+            call(["bash", str(second)], 30, check=False),
+            call(["bash", str(third)], 30, check=False),
+        ])
+        diagnostics = "\n".join(str(entry.args[0]) for entry in output.call_args_list)
+        self.assertIn(first.name, diagnostics)
+        self.assertIn(second.name, diagnostics)
+        self.assertIn("30", diagnostics)
+        self.assertIn("7", diagnostics)
+        self.assertNotIn(third.name, diagnostics)
+        self.assertTrue(all(entry.kwargs == {"file": sys.stderr} for entry in output.call_args_list))
+        self.assertEqual(returned, [
+            output.call_args_list[0].args[0],
+            output.call_args_list[1].args[0],
+        ])
+        log.assert_has_calls([
+            call("WARN", f"User deploy hook {first.name} timed out after 30s"),
+            call("WARN", f"User deploy hook {second.name} exited with 7"),
+        ])
+
+    def test_builtin_post_install_does_not_run_user_hooks(self):
+        from nyxniri.deploy.deploy import _phase_post_install_services
+
+        with patch("nyxniri.deploy.deploy.shutil.which", side_effect=lambda name: name == "fish"), \
+             patch("nyxniri.modules.fisher.fisher_install") as fisher, \
+             patch("nyxniri.deploy.deploy.run_user_hooks") as hooks:
+            _phase_post_install_services()
+
+        fisher.assert_called_once()
+        hooks.assert_not_called()
+
+    def test_completion_keeps_hook_diagnostics_after_clear_screen(self):
+        from nyxniri.deploy.deploy import render_completion_screen
+
+        output = StringIO()
+        diagnostic = "User deploy hook 10-timeout.sh timed out after 30s; continuing"
+        with patch("sys.stdin.isatty", return_value=False), \
+             patch("nyxniri.deploy.deploy.show_logo"), \
+             redirect_stdout(output):
+            render_completion_screen(chosen_items=[], hook_diagnostics=[diagnostic])
+
+        final_frame = output.getvalue().rsplit("\033[H\033[J", 1)[-1]
+        self.assertIn("10-timeout.sh", final_frame)
+        self.assertIn("30s", final_frame)
+
+    def test_test_deploy_never_runs_user_hooks(self):
+        from nyxniri.deploy.deploy import test_deploy
+
+        with patch("nyxniri.deploy.deploy._phase_atomic_deployment", return_value=[]), \
+             patch("nyxniri.deploy.deploy._phase_render_templates"), \
+             patch("nyxniri.deploy.deploy._phase_hardware_patches"), \
+             patch("nyxniri.deploy.deploy.deploy_wallpapers"), \
+             patch("nyxniri.deploy.deploy.render_completion_screen"), \
+             patch("nyxniri.deploy.deploy.run_user_hooks") as hooks:
+            self.assertTrue(test_deploy())
+
+        hooks.assert_not_called()
 
 
 class TestDepsTimeout(unittest.TestCase):

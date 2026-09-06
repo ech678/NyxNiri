@@ -87,7 +87,7 @@ pull 成功后**当前进程不做任何部署**：菜单路径与 `nyxniri upda
 
 无论哪种方式，用户数据都在两处、与方法无关：
 - `~/.config/<app>/` — 部署的配置 + `__custom__` 覆盖
-- `~/.config/NyxNiri/` — backups / presets / active 状态
+- `~/.config/NyxNiri/` — backups / presets / active 状态 / hooks
 
 curl → AUR 迁移 = 装包 + 删 `~/.cache/NyxNiri`，用户数据零迁移。**切换安装方式 = 换代码来源，
 不换用户数据**。

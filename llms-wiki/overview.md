@@ -48,6 +48,10 @@ xdg-desktop-portal、zed（`starship.toml` 是文件型 app，其余是目录）
 每层可选。只要默认 = 只跑 install。想要风味 = 用 preset。要私有 = 编辑 `__custom__`。
 `nyxniri install` = 读 active 预设 + 对账到 `~/.config` + 跑命令式副作用（deps、主题、fcitx）。
 
+### 部署后用户钩子
+
+`~/.config/NyxNiri/hooks/*.sh` 是独立于仓库配置的用户数据。正常部署在全部内置收尾完成后按文件名字典序用 `bash` 运行这些脚本，每个最多 30 秒；超时或非零退出会诊断并继续，完成界面会保留提示。`nyxniri test` 不运行它们，因此测试部署不触发用户副作用。
+
 ## 两个动作动词
 
 - `install`：repo → `~/.config` 的原子对账（Dunder 保留）+ deps + 壁纸 + 模块流水线。
