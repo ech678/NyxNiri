@@ -1,0 +1,5 @@
+[packages]
+chmod = [
+    "random_logo.sh",
+    "random_quote.sh",
+]
