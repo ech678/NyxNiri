@@ -268,6 +268,9 @@ end
 if status is-interactive
     # No greeting
     set fish_greeting
+    
+    # 显示自定义 fastfetch 信息
+    fastfetch
 
     # Tab 智能自动补全：优先采纳灰色历史建议，无建议时触发 Tab 列表补全
     # 注：必须用 commandline --showing-suggestion 判断，不能用 -f accept-autosuggestion
