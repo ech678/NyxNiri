@@ -22,7 +22,7 @@ fisher.fish 存在），旁边显示实际路径（§8.4"每项旁边显示实�
 
 - `nyxniri uninstall`（无参）→ 交互勾选清单（默认 standard 范围）
 - `nyxniri purge` / `uninstall --all` → 跳过勾选、全选 + 确认（等价旧 purge 但补全 5 处遗漏）
-- 非交互式（管道，非 TTY）→ 默认全选 + 归档配置
+- 非交互式（管道，非 TTY）→ standard 默认勾选 + 归档配置，保留 `~/.config/NyxNiri/` 用户数据（含 hooks）
 - 检测到 system 模式 → 清单末尾提示"源码包归 pacman 管，完全卸载请再跑 `sudo pacman -R nyxniri-git`"
 
 ## 5 处历史 [gap]（全修）
