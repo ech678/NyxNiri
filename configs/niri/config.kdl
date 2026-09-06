@@ -29,13 +29,16 @@ environment {
     QT_QPA_PLATFORMTHEME "gtk3"
     QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
 
-    // NVIDIA environment variables (uncommented automatically by install.sh if NVIDIA GPU is detected)
+    // NVIDIA env: deploy enables these only when NVIDIA is the display GPU
+    // (not when it is only a 3D controller next to an AMD/Intel iGPU)
     // GBM_BACKEND "nvidia-drm"
     // __GLX_VENDOR_LIBRARY_NAME "nvidia"
     // LIBVA_DRIVER_NAME "nvidia"
 }
 
-spawn-at-startup "noctalia"
+spawn-at-startup "~/.config/niri/scripts/start-noctalia.sh"
+// niri does not consume /etc/xdg/autostart entries on its own.
+spawn-at-startup "sh" "-c" "command -v fcitx5 >/dev/null 2>&1 && exec fcitx5 -d"
 spawn-at-startup "~/.config/niri/scripts/toggle-eyecare.sh" "--sync"
 // Re-render GTK M3 templates after Noctalia palette is ready (~8s on cold start)
 spawn-at-startup "bash" "-c" "sleep 8; noctalia msg config-reload && noctalia msg templates-apply"

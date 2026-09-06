@@ -2,9 +2,11 @@
 NyxNiri Wallpaper Picker Scanner Engine
 Recursive directory traversal, asynchronous thumbnail generation, and active wallpaper detection.
 
-Thumbnails are kept on disk only; no pixbuf/cairo surface is held in memory.
-The UI reads thumb_path lazily via CSS background-image, so off-screen cards
-cost nothing and releasing happens automatically when the card scrolls away.
+Thumbnails live on disk; the UI mounts each one lazily as a CSS
+background-image (window.py). Note GTK3 keeps the decoded bitmap of every
+painted background cached until process exit — scrolling away does NOT
+release it — so runtime memory grows with the thumbs actually viewed,
+not with library size.
 """
 
 import os
@@ -34,6 +36,8 @@ class WallpaperItem:
         self.is_video = self.ext in VIDEO_EXTENSIONS
         self.title = os.path.splitext(self.filename)[0].replace("_", " ").replace("-", " ").strip()
         self.category = category
+        # Lowercase once; the filter runs against every item per keystroke
+        self.search_key = f"{self.title}\n{self.filename}".lower()
 
         try:
             stat = os.stat(self.path)
@@ -57,10 +61,10 @@ class WallpaperScanner:
         self.on_thumb_ready_cb = on_thumb_ready_cb
         self.items = []
         self.categories = ["All", "Static", "Live"]
-        self.category_items = {"All": [], "Static": [], "Live": []}
         self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="wp_thumb")
         os.makedirs(CACHE_DIR, exist_ok=True)
-        self._lazy_loaded = False
+        self._thumb_queue = []
+        self._thumb_queue_pos = 0
 
     def scan(self) -> list:
         """Scan all resolved search roots and subdirectories."""
@@ -107,54 +111,45 @@ class WallpaperScanner:
         # Build categories list: primary tabs + actual custom user subfolders
         sorted_subfolders = sorted(list(custom_subfolders), key=lambda x: x.lower())
         self.categories = ["All", "Static", "Live"] + sorted_subfolders
-        self.category_items = {cat: [] for cat in self.categories}
-
-        for item in self.items:
-            self.category_items["All"].append(item)
-            if item.is_video:
-                self.category_items["Live"].append(item)
-            else:
-                self.category_items["Static"].append(item)
-            if item.category in self.category_items and item.category not in ("All", "Static", "Live"):
-                self.category_items[item.category].append(item)
 
         for it in self.items[:6]:
             if os.path.isfile(it.thumb_path):
                 self._thumb_ready(it)
             else:
-                self.executor.submit(self._generate_thumbnail_worker, it)
+                self._submit_thumb_job(it)
 
         return self.items
 
-    def load_thumbnails_async(self):
-        """Fire callback for already-cached thumbs, submit background jobs for the rest."""
-        for item in self.items[:24]:
-            if os.path.isfile(item.thumb_path):
-                self._thumb_ready(item)
-            else:
-                self.executor.submit(self._generate_thumbnail_worker, item)
+    def set_thumb_queue(self, items: list):
+        """Set the display-order queue that drives incremental thumbnail loading."""
+        self._thumb_queue = list(items)
+        self._thumb_queue_pos = 0
 
-    def load_visible_thumbnails(self, items_slice: list):
-        for item in items_slice:
-            if os.path.isfile(item.thumb_path):
-                self._thumb_ready(item)
-            elif not item.is_loading:
-                self.executor.submit(self._generate_thumbnail_worker, item)
+    def has_pending_thumbs(self) -> bool:
+        """True while the display-order queue still has unloaded items."""
+        return self._thumb_queue_pos < len(self._thumb_queue)
 
-    def load_category_thumbnails(self, cat_name: str):
-        items = self.category_items.get(cat_name, [])
-        for item in items:
+    def load_next_thumb_batch(self, count: int = 24):
+        """Load the next queue batch: cached thumbs notify now, the rest get jobs."""
+        batch = self._thumb_queue[self._thumb_queue_pos:self._thumb_queue_pos + count]
+        self._thumb_queue_pos += len(batch)
+        for item in batch:
             if os.path.isfile(item.thumb_path):
                 self._thumb_ready(item)
             elif not item.is_loading:
-                self.executor.submit(self._generate_thumbnail_worker, item)
+                self._submit_thumb_job(item)
 
-    def _ensure_thumbnail(self, item: WallpaperItem):
-        """Ensure a thumbnail file exists for an item (synchronous, used for pre-warm)."""
-        if os.path.isfile(item.thumb_path):
-            self._thumb_ready(item)
-        else:
-            self._generate_thumbnail_worker(item)
+    def _submit_thumb_job(self, item: WallpaperItem):
+        """Queue thumbnail generation, marking in-flight at submit time.
+
+        The guard must live here, not inside the worker: between submit and
+        worker pickup there is a window where is_loading would still read
+        False, letting the pre-warm in scan() and the first queue batch
+        double-submit the same item (two threads racing savev onto one
+        file, ffmpeg running twice).
+        """
+        item.is_loading = True
+        self.executor.submit(self._generate_thumbnail_worker, item)
 
     def _thumb_ready(self, item: WallpaperItem):
         """Notify the UI (on main thread) that a thumbnail file is available."""
@@ -162,31 +157,39 @@ class WallpaperScanner:
             self.on_thumb_ready_cb(item)
 
     def _generate_thumbnail_worker(self, item: WallpaperItem):
-        item.is_loading = True
         try:
-            if item.is_video:
-                tmp_thumb = f"{item.thumb_path}.tmp.{os.getpid()}.{uuid.uuid4().hex[:6]}.jpg"
-                cmd = [
-                    "ffmpeg", "-y", "-ss", "00:00:01", "-i", item.path,
-                    "-vframes", "1", "-vf", "scale=480:-2", tmp_thumb
-                ]
-                res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=4)
-                if res.returncode != 0 or not os.path.isfile(tmp_thumb):
-                    # Fallback for very short videos
+            if not os.path.isfile(item.thumb_path):
+                if item.is_video:
+                    tmp_thumb = f"{item.thumb_path}.tmp.{os.getpid()}.{uuid.uuid4().hex[:6]}.jpg"
                     cmd = [
-                        "ffmpeg", "-y", "-ss", "00:00:00.1", "-i", item.path,
+                        "ffmpeg", "-y", "-ss", "00:00:01", "-i", item.path,
                         "-vframes", "1", "-vf", "scale=480:-2", tmp_thumb
                     ]
                     res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=4)
+                    if res.returncode != 0 or not os.path.isfile(tmp_thumb):
+                        # Fallback for very short videos
+                        cmd = [
+                            "ffmpeg", "-y", "-ss", "00:00:00.1", "-i", item.path,
+                            "-vframes", "1", "-vf", "scale=480:-2", tmp_thumb
+                        ]
+                        res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=4)
 
-                if res.returncode == 0 and os.path.isfile(tmp_thumb):
-                    os.replace(tmp_thumb, item.thumb_path)
-                elif os.path.isfile(tmp_thumb):
-                    os.remove(tmp_thumb)
-            else:
-                if not os.path.isfile(item.thumb_path):
+                    if res.returncode == 0 and os.path.isfile(tmp_thumb):
+                        os.replace(tmp_thumb, item.thumb_path)
+                    elif os.path.isfile(tmp_thumb):
+                        os.remove(tmp_thumb)
+                else:
                     try:
                         pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(item.path, 480, 270, True)
+                        # JPEG 不支持 alpha 通道（glycin 编码器会拒绝 Rgba8），
+                        # 带透明的图先合成到不透明黑底上再存
+                        if pix.get_has_alpha():
+                            flat = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, False, 8,
+                                                        pix.get_width(), pix.get_height())
+                            flat.fill(0x000000)
+                            pix.composite(flat, 0, 0, flat.get_width(), flat.get_height(),
+                                          0, 0, 1, 1, GdkPixbuf.InterpType.BILINEAR, 255)
+                            pix = flat
                         pix.savev(item.thumb_path, "jpeg", ["quality"], ["85"])
                     except Exception as e:
                         print(f"Thumbnail generation error on {item.filename}: {e}", file=sys.stderr)

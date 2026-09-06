@@ -156,5 +156,191 @@ class TestMpvpaperDetection(unittest.TestCase):
                          "Should not check regular mpvpaper when git version is installed")
 
 
+class TestFlatpakApps(unittest.TestCase):
+    """Flatpak apps must install via the flatpak CLI; IDs never touch pacman."""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        import nyxniri.deps as deps_mod
+        deps_mod._FLATPAK_LIST_CACHE = None
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_flatpak_ids_never_leak_into_pacman(self):
+        """Selecting qq+wechat: pacman gets only 'flatpak'; IDs go to the flatpak CLI."""
+        from nyxniri.deps import FLATHUB_REMOTE_URL, install_optional_apps
+
+        captured_cmds = []
+
+        def fake_run(cmd, **kwargs):
+            captured_cmds.append(list(cmd))
+            return MagicMock(returncode=0)
+
+        with patch("subprocess.run", side_effect=fake_run):
+            with patch("nyxniri.deps.get_preferred_pkg_manager", return_value=["sudo", "pacman"]):
+                with patch("nyxniri.deps.aur_helper_usable", return_value=None):
+                    with patch("nyxniri.deps.ensure_aur_helper", return_value=None):
+                        with patch("shutil.which", side_effect=lambda x: "/usr/bin/flatpak" if x == "flatpak" else None):
+                            with patch("builtins.print"):
+                                install_optional_apps(["qq", "wechat"])
+
+        repo_cmds = [c for c in captured_cmds if c[:2] == ["sudo", "pacman"]]
+        self.assertEqual(len(repo_cmds), 1, "exactly one repo batch expected")
+        self.assertIn("flatpak", repo_cmds[0], "flatpak runtime must be provisioned")
+        for leaked in ("qq", "wechat", "com.qq.QQ", "com.tencent.WeChat"):
+            self.assertNotIn(leaked, repo_cmds[0], f"{leaked} must not reach pacman")
+
+        remote_cmds = [c for c in captured_cmds if c[:2] == ["flatpak", "remote-add"]]
+        self.assertEqual(
+            remote_cmds,
+            [["flatpak", "remote-add", "--if-not-exists", "flathub", FLATHUB_REMOTE_URL]],
+        )
+
+        install_cmds = [c for c in captured_cmds if c[:2] == ["flatpak", "install"]]
+        self.assertEqual(
+            install_cmds,
+            [["flatpak", "install", "--system", "--noninteractive", "com.qq.QQ", "com.tencent.WeChat"]],
+        )
+
+        import nyxniri.deps as deps_mod
+        self.assertIsNone(deps_mod._FLATPAK_LIST_CACHE, "install must invalidate the flatpak probe cache")
+
+    def test_missing_flatpak_binary_skips_flatpak_cli(self):
+        """Without the flatpak binary the runtime is still provisioned, but no CLI call."""
+        from nyxniri.deps import install_optional_apps
+
+        captured_cmds = []
+
+        def fake_run(cmd, **kwargs):
+            captured_cmds.append(list(cmd))
+            return MagicMock(returncode=0)
+
+        with patch("subprocess.run", side_effect=fake_run):
+            with patch("nyxniri.deps.get_preferred_pkg_manager", return_value=["sudo", "pacman"]):
+                with patch("nyxniri.deps.aur_helper_usable", return_value=None):
+                    with patch("nyxniri.deps.ensure_aur_helper", return_value=None):
+                        with patch("shutil.which", return_value=None):
+                            with patch("builtins.print"):
+                                install_optional_apps(["spotify"])
+
+        self.assertFalse(
+            any(c[:2] == ["flatpak", "install"] for c in captured_cmds),
+            "flatpak CLI must not run without the binary",
+        )
+        repo_cmd = next(c for c in captured_cmds if c[:2] == ["sudo", "pacman"])
+        self.assertIn("flatpak", repo_cmd)
+
+    def test_flatpak_detection_uses_list_columns(self):
+        """Detection probes `flatpak list --system --app --columns=application` with LC_ALL=C."""
+        from nyxniri.deps import is_flatpak_installed
+
+        captured_cmds = []
+
+        def fake_timed_run(cmd, timeout, **kwargs):
+            captured_cmds.append((list(cmd), kwargs))
+            result = MagicMock(returncode=0)
+            result.stdout = "com.spotify.Client\ncom.qq.QQ\n"
+            return result
+
+        with patch("shutil.which", return_value="/usr/bin/flatpak"):
+            with patch("nyxniri.deps.timed_run", side_effect=fake_timed_run):
+                self.assertTrue(is_flatpak_installed("com.qq.QQ"))
+                self.assertFalse(is_flatpak_installed("com.tencent.WeChat"))
+
+        self.assertEqual(len(captured_cmds), 1, "probe must be cached across calls")
+        cmd, kwargs = captured_cmds[0]
+        self.assertEqual(cmd, ["flatpak", "list", "--system", "--app", "--columns=application"])
+        self.assertEqual(kwargs.get("env", {}).get("LC_ALL"), "C")
+
+
+class TestAurBootstrapFailsClosed(unittest.TestCase):
+    """AUR bootstrap must not execute mutable source builds."""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_missing_repo_package_never_builds_from_aur(self):
+        from nyxniri.deps import ensure_aur_helper
+
+        commands = []
+
+        def fake_run(cmd, **kwargs):
+            commands.append(cmd)
+            result = MagicMock(returncode=0, stdout="")
+            if cmd[:2] == ["pacman", "-Qq"] or cmd == ["pacman", "-Si", "paru"]:
+                result.returncode = 1
+            return result
+
+        with patch("subprocess.run", side_effect=fake_run), \
+             patch("nyxniri.deps.aur_helper_usable", return_value=None), \
+             patch("nyxniri.deps.prompt_confirm", return_value=True), \
+             patch("shutil.which", side_effect=lambda name: "/usr/bin/pacman" if name == "pacman" else None), \
+             patch("builtins.print"):
+            self.assertIsNone(ensure_aur_helper())
+
+        self.assertEqual(commands, [
+            ["pacman", "-Qq", "paru-bin"],
+            ["pacman", "-Qq", "paru-bin-debug"],
+            ["pacman", "-Si", "paru"],
+        ])
+        self.assertFalse(any(cmd[0] in ("git", "makepkg") for cmd in commands))
+
+
+class TestAurHelperCacheInvalidation(unittest.TestCase):
+    """装完 paru 后必须重新探测：首查缓存的「不可用」不得盖住新装的结果。"""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        import nyxniri.deps as deps_mod
+        deps_mod._AUR_HELPER_CACHE = None
+
+    def tearDown(self):
+        import nyxniri.deps as deps_mod
+        deps_mod._AUR_HELPER_CACHE = None
+        self._ctx.__exit__()
+
+    def test_freshly_installed_paru_is_rediscovered_not_uninstalled(self):
+        import nyxniri.deps as deps_mod
+        from nyxniri.deps import ensure_aur_helper
+
+        state = {"installed": False}
+        removed = []
+
+        def fake_which(name):
+            if name == "pacman":
+                return "/usr/bin/pacman"
+            if name == "paru":
+                return "/usr/bin/paru" if state["installed"] else None
+            return None
+
+        def fake_run(cmd, **kwargs):
+            result = MagicMock(returncode=1, stdout="")
+            if cmd == ["pacman", "-Si", "paru"]:
+                result.returncode = 0
+            elif cmd[:3] == ["sudo", "pacman", "-S"]:
+                state["installed"] = True
+                result.returncode = 0
+            elif len(cmd) == 2 and cmd[1] == "--version":
+                result.returncode = 0
+            elif cmd[:3] == ["sudo", "pacman", "-Rdd"]:
+                removed.append(cmd)
+            return result
+
+        with patch("shutil.which", side_effect=fake_which), \
+             patch("nyxniri.deps.subprocess.run", side_effect=fake_run), \
+             patch("nyxniri.deps.prompt_confirm", return_value=True), \
+             patch("builtins.print"):
+            self.assertEqual(ensure_aur_helper(), "paru")
+
+        self.assertEqual(removed, [], "freshly installed paru must not be removed")
+
+
 if __name__ == "__main__":
     unittest.main()

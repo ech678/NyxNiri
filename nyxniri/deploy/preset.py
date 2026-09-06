@@ -13,51 +13,209 @@ file. The dest-missing reset is the only sanctioned write-before-deploy (dest is
 empty, so a half-written state self-heals next run).
 """
 
+import fnmatch
 import os
+import secrets
 import shutil
+import stat
 import subprocess
 import sys
+import unicodedata
+from contextlib import ExitStack
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from nyxniri.constants import Colors
-from nyxniri.core import get_env
+from nyxniri.constants import PROJECT_NAME, Colors
+from nyxniri.core import get_env, log_msg, timed_run
 from nyxniri.i18n import msg
 
 
-def _active_path(app: str) -> Path:
-    return get_env().presets_dir / f"{app}.active"
+_DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+_READ_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
+
+
+class InvalidActivePresetError(ValueError):
+    """The active preset slot is present but cannot be safely used."""
+
+
+def _is_safe_component(value: str) -> bool:
+    if not isinstance(value, str) or not value or value != value.strip():
+        return False
+    if value in (".", "..") or Path(value).is_absolute():
+        return False
+    if os.sep in value or (os.altsep and os.altsep in value):
+        return False
+    try:
+        return len(os.fsencode(value)) <= 255 and all(
+            unicodedata.category(char) not in ("Cc", "Cs") for char in value
+        )
+    except UnicodeEncodeError:
+        return False
+
+
+def _safe_child(root: Path, *parts: str) -> Optional[Path]:
+    """Return a non-symlink child contained below root, if it is safe."""
+    if not all(_is_safe_component(part) for part in parts):
+        return None
+    try:
+        if root.exists() and root.is_symlink():
+            return None
+        candidate = root.joinpath(*parts)
+        candidate.resolve(strict=False).relative_to(root.resolve(strict=False))
+        current = root
+        for part in parts:
+            current /= part
+            if current.exists() and current.is_symlink():
+                return None
+        return candidate
+    except (OSError, RuntimeError, ValueError):
+        return None
+
+
+def _is_deployable_app(app: str) -> bool:
+    if not _is_safe_component(app):
+        return False
+    from nyxniri.deploy.manifest import discover_deployable_apps
+
+    source = _safe_child(get_env().configs_src, app)
+    try:
+        return source is not None and app in discover_deployable_apps() and (
+            source.is_dir() or source.is_file()
+        )
+    except OSError:
+        return False
+
+
+def _open_dir(path: Path, *, create: bool = False) -> int:
+    try:
+        return os.open(path, _DIR_FLAGS)
+    except FileNotFoundError:
+        if not create:
+            raise
+    path.mkdir(parents=True, exist_ok=True)
+    return os.open(path, _DIR_FLAGS)
+
+
+def _open_child_dir(parent_fd: int, name: str, *, create: bool = False) -> int:
+    try:
+        return os.open(name, _DIR_FLAGS, dir_fd=parent_fd)
+    except FileNotFoundError:
+        if not create:
+            raise
+    os.mkdir(name, mode=0o700, dir_fd=parent_fd)
+    return os.open(name, _DIR_FLAGS, dir_fd=parent_fd)
+
+
+def _open_presets_dir(*, create: bool = False) -> int:
+    config_fd = _open_dir(get_env().config_dir, create=create)
+    try:
+        nyx_fd = _open_child_dir(config_fd, PROJECT_NAME, create=create)
+    finally:
+        os.close(config_fd)
+    try:
+        return _open_child_dir(nyx_fd, "presets", create=create)
+    finally:
+        os.close(nyx_fd)
+
+
+def _remove_tree_at(parent_fd: int, name: str) -> None:
+    info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    if not stat.S_ISDIR(info.st_mode):
+        raise OSError("unsafe preset target")
+    child_fd = os.open(name, _DIR_FLAGS, dir_fd=parent_fd)
+    try:
+        child_info = os.fstat(child_fd)
+        if (child_info.st_dev, child_info.st_ino) != (info.st_dev, info.st_ino):
+            raise OSError("preset target changed while binding")
+        for entry in os.listdir(child_fd):
+            entry_info = os.stat(entry, dir_fd=child_fd, follow_symlinks=False)
+            if stat.S_ISDIR(entry_info.st_mode):
+                _remove_tree_at(child_fd, entry)
+            else:
+                os.unlink(entry, dir_fd=child_fd)
+        current = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        if (current.st_dev, current.st_ino) != (info.st_dev, info.st_ino):
+            raise OSError("preset target changed while deleting")
+        os.rmdir(name, dir_fd=parent_fd)
+    finally:
+        os.close(child_fd)
 
 
 def read_active_preset(app: str) -> str:
-    """Return the app's active preset name, or 'default' if unset/unreadable."""
+    """Return the active preset or raise instead of silently deploying defaults."""
+    if not _is_deployable_app(app):
+        raise InvalidActivePresetError("invalid preset app")
+    presets_fd: Optional[int] = None
     try:
-        content = _active_path(app).read_text(encoding="utf-8").strip()
-        return content or "default"
-    except Exception:
+        presets_fd = _open_presets_dir()
+    except FileNotFoundError:
         return "default"
+    except OSError as exc:
+        raise InvalidActivePresetError("invalid active preset state") from exc
+    try:
+        fd = os.open(f"{app}.active", _READ_FLAGS, dir_fd=presets_fd)
+    except FileNotFoundError:
+        os.close(presets_fd)
+        return "default"
+    except OSError as exc:
+        os.close(presets_fd)
+        raise InvalidActivePresetError("invalid active preset state") from exc
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise InvalidActivePresetError("invalid active preset state")
+        content = os.read(fd, 4097)
+    finally:
+        os.close(fd)
+        if presets_fd is not None:
+            os.close(presets_fd)
+    try:
+        name = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise InvalidActivePresetError("invalid active preset state") from exc
+    if len(content) > 4096 or not _is_safe_component(name):
+        raise InvalidActivePresetError("invalid active preset state")
+    return name
 
 
 def write_active_preset(app: str, name: str) -> None:
     """Atomically write the active preset file (temp + rename).
 
-    A half-written (empty) file would be read as 'default' and silently switch
-    the user back to defaults — atomic write blocks that failure path (§3.2).
+    Atomic replacement prevents a half-written state file from freezing a
+    deployment (§3.2).
     """
-    env = get_env()
-    env.presets_dir.mkdir(parents=True, exist_ok=True)
-    final = _active_path(app)
-    tmp = final.with_suffix(f".{final.suffix}.tmp.{os.getpid()}")
+    if not _is_deployable_app(app):
+        raise ValueError("invalid preset app")
+    if not _is_safe_component(name):
+        raise ValueError("invalid preset name")
+    presets_fd = _open_presets_dir(create=True)
+    tmp = f".{app}.active.{secrets.token_hex(16)}"
     try:
-        tmp.write_text(name, encoding="utf-8")
-        os.replace(tmp, final)
-    except Exception:
         try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
+            current = os.stat(f"{app}.active", dir_fd=presets_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            current = None
+        if current is not None and not stat.S_ISREG(current.st_mode):
+            raise OSError("unsafe active preset target")
+        fd = os.open(
+            tmp,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+            0o600,
+            dir_fd=presets_fd,
+        )
+        try:
+            os.write(fd, name.encode("utf-8"))
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        os.replace(tmp, f"{app}.active", src_dir_fd=presets_fd, dst_dir_fd=presets_fd)
+    finally:
+        try:
+            os.unlink(tmp, dir_fd=presets_fd)
+        except FileNotFoundError:
             pass
-        raise
+        finally:
+            os.close(presets_fd)
 
 
 @dataclass
@@ -67,6 +225,47 @@ class PresetSrcResult:
     src: Optional[Path]          # None → freeze dest, skip deploy (preset not found)
     reset_active: Optional[str]  # write this before deploy (dest-missing reset to default)
     warnings: List[str] = field(default_factory=list)
+    base_src: Optional[Path] = None
+    base_include: List[str] = field(default_factory=list)
+    base_exclude: List[str] = field(default_factory=list)
+
+
+def resolve_preset_inheritance(
+    app: str, name: str
+) -> Tuple[Optional[Path], List[str], List[str]]:
+    """Determine whether preset `name` of `app` inherits from `configs/<app>`.
+
+    Returns (base_src, include_patterns, exclude_patterns).
+    If inheritance is not applicable or not enabled, returns (None, [], []).
+    Simultaneously enforces blacklist veto and whitelist match.
+    """
+    if name == "default":
+        return None, [], []
+
+    env = get_env()
+    app_root = _safe_child(env.configs_src, app)
+    if app_root is None or not (app_root.is_dir() and not app_root.is_symlink()):
+        return None, [], []
+
+    try:
+        from nyxniri.deploy.manifest import load_manifest_for
+        manifest = load_manifest_for(app)
+    except Exception:
+        return None, [], []
+
+    # 1. Blacklist has absolute veto power
+    if manifest.preset_standalone:
+        if any(fnmatch.fnmatch(name, pat.strip()) for pat in manifest.preset_standalone if pat.strip()):
+            return None, [], []
+
+    # 2. Whitelist requirement (if declared)
+    if manifest.preset_allow:
+        if not any(fnmatch.fnmatch(name, pat.strip()) for pat in manifest.preset_allow if pat.strip()):
+            return None, [], []
+    elif not manifest.preset_inherit:
+        return None, [], []
+
+    return app_root, list(manifest.preset_include), list(manifest.preset_exclude)
 
 
 def resolve_preset_src(app: str, active: str, dest: Path) -> PresetSrcResult:
@@ -77,9 +276,27 @@ def resolve_preset_src(app: str, active: str, dest: Path) -> PresetSrcResult:
     silently fall back to default, which would wipe the user's frozen state.
     """
     env = get_env()
-    app_root = env.configs_src / app
-    repo_presets = app_root / "presets"
-    user_presets = env.presets_dir / app
+    app_root = _safe_child(env.configs_src, app)
+    repo_presets = _safe_child(app_root, "presets") if app_root else None
+    user_presets = _safe_child(env.presets_dir, app)
+    expected_dest = _safe_child(env.config_dir, app)
+    if (
+        not _is_deployable_app(app)
+        or not _is_safe_component(active)
+        or app_root is None
+        or repo_presets is None
+        or user_presets is None
+        or expected_dest is None
+        or dest != expected_dest
+    ):
+        return PresetSrcResult(
+            src=None,
+            reset_active=None,
+            warnings=[msg("preset_warn_frozen", app, active)],
+        )
+
+    def is_safe_dir(path: Path) -> bool:
+        return path.is_dir() and not path.is_symlink()
 
     # Boundary: user rm -rf'd ~/.config/<app> but the active file still points
     # at a (possibly upstream-removed) preset. Nothing to freeze — reset to
@@ -87,7 +304,11 @@ def resolve_preset_src(app: str, active: str, dest: Path) -> PresetSrcResult:
     # also gone from repo+user, surface an extra warning (upstream rename/remove
     # info must not be swallowed by the dest-missing rule).
     if not dest.exists() and active != "default":
-        upstream_removed = not (repo_presets / active).is_dir() and not (user_presets / active).is_dir()
+        official = _safe_child(repo_presets, active)
+        user = _safe_child(user_presets, active)
+        upstream_removed = not (
+            official is not None and is_safe_dir(official)
+        ) and not (user is not None and is_safe_dir(user))
         warnings: List[str] = []
         if upstream_removed:
             warnings.append(msg("preset_warn_upstream_removed", app, active))
@@ -96,13 +317,27 @@ def resolve_preset_src(app: str, active: str, dest: Path) -> PresetSrcResult:
     if active == "default":
         return PresetSrcResult(src=app_root, reset_active=None)
 
-    official = repo_presets / active
-    if official.is_dir():
-        return PresetSrcResult(src=official, reset_active=None)
+    official = _safe_child(repo_presets, active)
+    if official is not None and is_safe_dir(official):
+        base_src, base_inc, base_exc = resolve_preset_inheritance(app, active)
+        return PresetSrcResult(
+            src=official,
+            reset_active=None,
+            base_src=base_src,
+            base_include=base_inc,
+            base_exclude=base_exc,
+        )
 
-    user = user_presets / active
-    if user.is_dir():
-        return PresetSrcResult(src=user, reset_active=None)
+    user = _safe_child(user_presets, active)
+    if user is not None and is_safe_dir(user):
+        base_src, base_inc, base_exc = resolve_preset_inheritance(app, active)
+        return PresetSrcResult(
+            src=user,
+            reset_active=None,
+            base_src=base_src,
+            base_include=base_inc,
+            base_exclude=base_exc,
+        )
 
     # Active points at a preset that no longer exists anywhere — freeze dest,
     # do NOT fall back to default (would silently wipe the user's config).
@@ -122,17 +357,100 @@ def _find_preset_src(app: str, name: str) -> Optional[Path]:
     choice, so a missing dest does not silently reset to default — the named
     preset is deployed as-is. 'default' resolves to the app root.
     """
+    if not _is_deployable_app(app) or not _is_safe_component(name):
+        return None
     env = get_env()
+    app_root = _safe_child(env.configs_src, app)
+    repo_presets = _safe_child(app_root, "presets") if app_root else None
+    user_presets = _safe_child(env.presets_dir, app)
+    if app_root is None or repo_presets is None or user_presets is None:
+        return None
     if name == "default":
-        src = env.configs_src / app
-        return src if src.exists() else None
-    official = env.configs_src / app / "presets" / name
-    if official.is_dir():
+        return app_root if (app_root.is_dir() or app_root.is_file()) and not app_root.is_symlink() else None
+    official = _safe_child(repo_presets, name)
+    if official is not None and official.is_dir() and not official.is_symlink():
         return official
-    user = env.presets_dir / app / name
-    if user.is_dir():
+    user = _safe_child(user_presets, name)
+    if user is not None and user.is_dir() and not user.is_symlink():
         return user
     return None
+
+
+@dataclass
+class PresetInfo:
+    """Metadata inspection for an app preset."""
+    app: str
+    name: str
+    source: str          # 'official' | 'user'
+    is_active: bool
+    path: str
+    files: List[str]
+    preserve: List[str]
+    is_editable: bool
+    is_deletable: bool
+
+
+def get_preset_info(app: str, name: str) -> PresetInfo:
+    """Inspect detailed metadata and key files for an app preset."""
+    from nyxniri.deploy.manifest import load_manifest_for
+
+    valid = _is_deployable_app(app) and _is_safe_component(name)
+    try:
+        active = read_active_preset(app) if valid else None
+    except InvalidActivePresetError:
+        active = None
+    is_active = active == name
+    src = _find_preset_src(app, name) if valid else None
+    source = "official"
+    is_editable = False
+    is_deletable = False
+    if not valid:
+        rel_path = "(invalid)"
+    elif name == "default":
+        rel_path = f"configs/{app}"
+    elif src is not None:
+        official = _safe_child(get_env().configs_src, app, "presets", name)
+        if src == official:
+            rel_path = f"configs/{app}/presets/{name}"
+        else:
+            source = "user"
+            is_editable = True
+            is_deletable = True
+            rel_path = f"~/.config/{PROJECT_NAME}/presets/{app}/{name}"
+    else:
+        rel_path = f"configs/{app}/presets/{name} (not found)"
+
+    files: List[str] = []
+    if src and src.is_dir():
+        for p in sorted(src.rglob("*")):
+            if p.is_file() and not p.name.startswith(".") and "__custom__" not in p.name:
+                if name == "default" and "presets" in p.parts:
+                    continue
+                try:
+                    rel = str(p.relative_to(src))
+                    files.append(rel)
+                except ValueError:
+                    pass
+
+    preserve: List[str] = []
+    if valid:
+        try:
+            manifest = load_manifest_for(app)
+            preserve = manifest.preserve or []
+        except Exception:
+            pass
+
+    return PresetInfo(
+        app=app,
+        name=name,
+        source=source,
+        is_active=is_active,
+        path=rel_path,
+        files=files,
+        preserve=preserve,
+        is_editable=is_editable,
+        is_deletable=is_deletable,
+    )
 
 
 def collect_presets(app: str) -> List[Tuple[str, str, bool]]:
@@ -140,21 +458,29 @@ def collect_presets(app: str) -> List[Tuple[str, str, bool]]:
 
     source is 'official' (shipped in repo) or 'user' (saved under nyx_dir).
     'default' is always first. Used by list_presets (printing) and the TUI
-    switcher (data only) — no side effects.
+    switcher. An invalid active-state file is reported and returns no choices,
+    so callers never silently treat it as the default preset.
     """
-    active = read_active_preset(app)
+    if not _is_deployable_app(app):
+        return []
+    try:
+        active = read_active_preset(app)
+    except InvalidActivePresetError:
+        print(msg("preset_warn_invalid_active", app))
+        return []
     entries: List[Tuple[str, str, bool]] = [("default", "official", active == "default")]
 
     env = get_env()
-    official_dir = env.configs_src / app / "presets"
-    if official_dir.is_dir():
+    app_root = _safe_child(env.configs_src, app)
+    official_dir = _safe_child(app_root, "presets") if app_root else None
+    if official_dir is not None and official_dir.is_dir() and not official_dir.is_symlink():
         for p in sorted(official_dir.iterdir(), key=lambda x: x.name):
-            if p.is_dir():
+            if _is_safe_component(p.name) and p.is_dir() and not p.is_symlink():
                 entries.append((p.name, "official", active == p.name))
-    user_dir = env.presets_dir / app
-    if user_dir.is_dir():
+    user_dir = _safe_child(env.presets_dir, app)
+    if user_dir is not None and user_dir.is_dir() and not user_dir.is_symlink():
         for p in sorted(user_dir.iterdir(), key=lambda x: x.name):
-            if p.is_dir():
+            if _is_safe_component(p.name) and p.is_dir() and not p.is_symlink():
                 entries.append((p.name, "user", active == p.name))
     return entries
 
@@ -191,27 +517,63 @@ def apply_preset(app: str, name: str) -> bool:
     Runs only atomic_replace + template render for this app — no hardware
     patches, no post-install services (§9: switching kitty must not rerun
     fisher). Writes the active file AFTER deploy succeeds (iron law, §3.2).
+
+    The manifest ``preserve`` list (e.g. niri/monitor.kdl, niri/effects.kdl) is
+    honoured just like the full-deploy path: a preset switch must not wipe
+    runtime-managed files the new variant doesn't ship.
     """
     from nyxniri.deploy.templates import _phase_render_templates
     from nyxniri.deploy.atomic import atomic_replace_item
+    from nyxniri.deploy.manifest import load_manifest_for
 
     env = get_env()
-    dest = env.config_dir / app
+    dest = _safe_child(env.config_dir, app)
+    if not _is_deployable_app(app) or not _is_safe_component(name) or dest is None:
+        print(msg("preset_not_found", app, name))
+        return False
     src = _find_preset_src(app, name)
     if src is None:
         print(msg("preset_not_found", app, name))
         return False
 
+    # Preserve the same manifest-declared files the full deploy would; a preset
+    # switch is otherwise indistinguishable to runtime state like effects.kdl.
+    preserve = None
+    try:
+        preserve = load_manifest_for(app).preserve or None
+    except Exception:
+        pass
+
+    base_src, base_inc, base_exc = resolve_preset_inheritance(app, name)
     preserved_log: List[str] = []
-    if not atomic_replace_item(src, dest, preserved_log=preserved_log):
+    if not atomic_replace_item(
+        src,
+        dest,
+        preserved_log=preserved_log,
+        preserve=preserve,
+        base_src=base_src,
+        base_include=base_inc,
+        base_exclude=base_exc,
+    ):
         _render_preset_result(app, name, preserved_log, failed=True)
         return False
 
     _phase_render_templates(only_app=app)
     # deploy-then-write: a crash mid-flow must not leave active pointing at a
     # preset whose deploy didn't complete (would skip re-deploy next run). §3.2
-    write_active_preset(app, name)
+    try:
+        write_active_preset(app, name)
+    except OSError as e:
+        # Deploy landed but the choice was not recorded — say so loudly instead
+        # of a bare traceback; next update would otherwise redeploy defaults.
+        print(msg("preset_apply_failed", app, name))
+        log_msg("ERROR", f"Deployed preset '{name}' to {app} but recording active state failed: {e}")
+        return False
     _render_preset_result(app, name, preserved_log)
+    if app == "niri" and shutil.which("niri"):
+        timed_run(["niri", "msg", "action", "load-config-file"], 2, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    elif app == "kitty" and shutil.which("pkill"):
+        timed_run(["pkill", "-SIGUSR1", "-x", "kitty"], 2, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     return True
 
 
@@ -229,20 +591,48 @@ def save_preset(app: str, name: str) -> bool:
     if name == "default":
         print(msg("preset_name_reserved", name))
         return False
+    if not _is_deployable_app(app) or not _is_safe_component(name):
+        print(msg("preset_not_found", app, name))
+        return False
     env = get_env()
-    dest = env.config_dir / app
-    if not dest.is_dir():
+    dest = _safe_child(env.config_dir, app)
+    if dest is None or not dest.is_dir() or dest.is_symlink():
         print(msg("preset_nothing_to_save", app))
         return False
-    if (env.configs_src / app / "presets" / name).is_dir():
+    official = _safe_child(env.configs_src, app, "presets", name)
+    if official is not None and official.is_dir() and not official.is_symlink():
         print(msg("preset_official_name_collision", name))
         return False
 
-    target = env.presets_dir / app / name
-    if target.exists():
-        shutil.rmtree(target, ignore_errors=True)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(dest, target, symlinks=True, ignore=_ignore_custom_and_manifest)
+    try:
+        with ExitStack() as stack:
+            src_fd = os.open(dest, _DIR_FLAGS)
+            stack.callback(os.close, src_fd)
+            presets_fd = _open_presets_dir(create=True)
+            stack.callback(os.close, presets_fd)
+            user_fd = _open_child_dir(presets_fd, app, create=True)
+            stack.callback(os.close, user_fd)
+            try:
+                _remove_tree_at(user_fd, name)
+            except FileNotFoundError:
+                pass
+            os.mkdir(name, mode=0o700, dir_fd=user_fd)
+            target_fd = os.open(name, _DIR_FLAGS, dir_fd=user_fd)
+            stack.callback(os.close, target_fd)
+            shutil.copytree(
+                f"/proc/self/fd/{src_fd}",
+                f"/proc/self/fd/{target_fd}",
+                symlinks=True,
+                ignore=_ignore_custom_and_manifest,
+                dirs_exist_ok=True,
+            )
+            current = os.stat(name, dir_fd=user_fd, follow_symlinks=False)
+            bound = os.fstat(target_fd)
+            if (current.st_dev, current.st_ino) != (bound.st_dev, bound.st_ino):
+                raise OSError("preset target changed while saving")
+    except OSError:
+        print(msg("preset_not_found", app, name))
+        return False
     print(msg("preset_saved", app, name))
     return True
 
@@ -252,15 +642,27 @@ def delete_preset(app: str, name: str) -> bool:
     if name == "default":
         print(msg("preset_name_reserved", name))
         return False
-    env = get_env()
-    target = env.presets_dir / app / name
-    if not target.is_dir():
+    if not _is_deployable_app(app) or not _is_safe_component(name):
         print(msg("preset_not_found", app, name))
         return False
-    if (env.configs_src / app / "presets" / name).is_dir():
+    env = get_env()
+    official = _safe_child(env.configs_src, app, "presets", name)
+    if official is not None and official.is_dir() and not official.is_symlink():
         print(msg("preset_delete_official_denied", name))
         return False
-    shutil.rmtree(target, ignore_errors=True)
+    try:
+        presets_fd = _open_presets_dir()
+        try:
+            user_fd = _open_child_dir(presets_fd, app)
+            try:
+                _remove_tree_at(user_fd, name)
+            finally:
+                os.close(user_fd)
+        finally:
+            os.close(presets_fd)
+    except OSError:
+        print(msg("preset_not_found", app, name))
+        return False
     print(msg("preset_deleted", app, name))
     return True
 
@@ -274,18 +676,33 @@ def edit_preset(app: str, name: str) -> bool:
     if name == "default":
         print(msg("preset_name_reserved", name))
         return False
-    env = get_env()
-    if (env.configs_src / app / "presets" / name).is_dir():
-        print(msg("preset_edit_official_denied", name))
-        return False
-    target = env.presets_dir / app / name
-    if not target.is_dir():
+    if not _is_deployable_app(app) or not _is_safe_component(name):
         print(msg("preset_not_found", app, name))
         return False
-    if not sys.stdin.isatty():
-        print(msg("preset_edit_notty", target))
+    env = get_env()
+    official = _safe_child(env.configs_src, app, "presets", name)
+    if official is not None and official.is_dir() and not official.is_symlink():
+        print(msg("preset_edit_official_denied", name))
         return False
-    editor = os.environ.get("EDITOR") or os.environ.get("VISUAL") or "nano"
-    subprocess.run([editor, str(target)], check=False)
+    try:
+        with ExitStack() as stack:
+            presets_fd = _open_presets_dir()
+            stack.callback(os.close, presets_fd)
+            user_parent_fd = _open_child_dir(presets_fd, app)
+            stack.callback(os.close, user_parent_fd)
+            target_fd = os.open(name, _DIR_FLAGS, dir_fd=user_parent_fd)
+            stack.callback(os.close, target_fd)
+            if not sys.stdin.isatty():
+                print(msg("preset_edit_notty", env.presets_dir / app / name))
+                return False
+            editor = os.environ.get("EDITOR") or os.environ.get("VISUAL") or "nano"
+            subprocess.run(
+                [editor, f"/proc/self/fd/{target_fd}"],
+                check=False,
+                pass_fds=(target_fd,),
+            )
+    except OSError:
+        print(msg("preset_not_found", app, name))
+        return False
     print(msg("preset_edit_opened", app, name))
     return True

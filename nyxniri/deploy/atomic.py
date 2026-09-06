@@ -6,6 +6,7 @@ The atomic_replace_item swap-then-preserve is the heart of NyxNiri's deploy
 ``preserve`` snapshot (files referenced by name, e.g. niri/monitor.kdl).
 """
 
+import fnmatch
 import os
 import shutil
 from pathlib import Path
@@ -13,6 +14,66 @@ from typing import List, Optional
 
 from nyxniri.core import get_env, log_msg, register_temp_path, remove_path
 from nyxniri.i18n import msg
+
+
+def _matches_pattern(rel_str: str, is_dir: bool, patterns: List[str]) -> bool:
+    for pat in patterns:
+        pat = pat.strip()
+        if not pat:
+            continue
+        if "/" not in pat:
+            name = rel_str.split("/")[-1]
+            if fnmatch.fnmatch(name, pat):
+                return True
+        else:
+            if fnmatch.fnmatch(rel_str, pat):
+                return True
+            if is_dir:
+                base_pat = pat.rstrip("/*")
+                if base_pat == rel_str or pat.startswith(rel_str + "/"):
+                    return True
+    return False
+
+
+def _base_deploy_ignore_factory(
+    root_src: Path,
+    include_patterns: Optional[List[str]] = None,
+    exclude_patterns: Optional[List[str]] = None,
+):
+    """copytree ignore for base overlay: drops repo-only entries and applies whitelists/blacklists."""
+    root = root_src
+    inc = [p for p in (include_patterns or []) if p and p.strip()]
+    exc = [p for p in (exclude_patterns or []) if p and p.strip()]
+
+    def _ignore(src_dir, names):
+        skip = {n for n in names if n in ("__pycache__", ".module.toml")}
+        if Path(src_dir) == root and "presets" in names:
+            skip.add("presets")
+
+        cur_dir = Path(src_dir)
+        for name in names:
+            if name in skip:
+                continue
+            item_path = cur_dir / name
+            try:
+                rel_str = item_path.relative_to(root).as_posix()
+            except ValueError:
+                rel_str = name
+            is_dir = item_path.is_dir() and not item_path.is_symlink()
+
+            # 1. Whitelist (include)
+            if inc and not _matches_pattern(rel_str, is_dir, inc):
+                skip.add(name)
+                continue
+
+            # 2. Blacklist (exclude)
+            if exc and _matches_pattern(rel_str, is_dir, exc):
+                skip.add(name)
+                continue
+
+        return skip
+
+    return _ignore
 
 
 def _deploy_ignore_factory(root_src: Path):
@@ -33,7 +94,14 @@ def _deploy_ignore_factory(root_src: Path):
     return _ignore
 
 
-def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False, preserve: Optional[List[str]] = None) -> bool:
+def atomic_replace_item(
+    src: Path, dest: Path, preserved_log: Optional[List[str]] = None,
+    test_mode: bool = False, preserve: Optional[List[str]] = None,
+    preserve_custom: bool = True,
+    base_src: Optional[Path] = None,
+    base_include: Optional[List[str]] = None,
+    base_exclude: Optional[List[str]] = None,
+) -> bool:
     """Atomic swap deployment via sibling temp directories with Dunder Protocol preservation.
 
     ``preserve`` injects manifest-declared files (e.g. monitor.kdl) into tmp_new
@@ -76,62 +144,76 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
         dest_parent.mkdir(parents=True, exist_ok=True)
         if tmp_new.exists() or tmp_new.is_symlink():
             remove_path(tmp_new)
-        shutil.copytree(src, tmp_new, symlinks=True, ignore=_deploy_ignore_factory(src))
+        if base_src is not None and base_src.is_dir() and base_src != src:
+            shutil.copytree(
+                base_src,
+                tmp_new,
+                symlinks=True,
+                ignore=_base_deploy_ignore_factory(base_src, base_include, base_exclude),
+            )
+            shutil.copytree(
+                src,
+                tmp_new,
+                symlinks=True,
+                ignore=_deploy_ignore_factory(src),
+                dirs_exist_ok=True,
+            )
+        else:
+            shutil.copytree(src, tmp_new, symlinks=True, ignore=_deploy_ignore_factory(src))
 
         # Dunder Protocol: Scan and inherit *__custom__* files and directories
-        if dest.is_dir():
-            # 1. Custom files
+        if preserve_custom and dest.is_dir():
+            preserve_entries = []
             for root, dirs, files in os.walk(dest):
-                # Prune custom directories from file search to handle them in step 2
-                dirs[:] = [d for d in dirs if "__custom__" not in d]
+                custom_dirs = [d for d in dirs if "__custom__" in d]
+                for d in custom_dirs:
+                    dirs.remove(d)
+                    preserve_entries.append(("dir", root, d))
                 for f in files:
                     if "__custom__" in f:
                         if test_mode and f in ("scratchpad-items__custom__.toml", "orbit-items__custom__.toml"):
                             continue
-                        rel_path = Path(root).relative_to(dest) / f
-                        src_custom = dest / rel_path
-                        target_custom = tmp_new / rel_path
-                        target_custom.parent.mkdir(parents=True, exist_ok=True)
-                        if src_custom.is_symlink():
-                            target_custom.unlink(missing_ok=True)
-                            target_custom.symlink_to(os.readlink(src_custom))
-                        else:
-                            shutil.copy2(src_custom, target_custom)
+                        preserve_entries.append(("file", root, f))
 
-                        rel_display = str(dest.relative_to(home / ".config") / rel_path)
-                        print(msg("log_keep_custom_file", rel_display))
-                        if preserved_log is not None:
-                            preserved_log.append(f"~/.config/{rel_display}")
-
-            # 2. Custom directories
-            for root, dirs, _ in os.walk(dest):
-                for d in list(dirs):
-                    if "__custom__" in d:
-                        dirs.remove(d)  # Don't recurse further into pruned dir
-                        rel_dir = Path(root).relative_to(dest) / d
-                        src_custom_dir = dest / rel_dir
-                        target_custom_dir = tmp_new / rel_dir
-                        target_custom_dir.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.rmtree(target_custom_dir, ignore_errors=True)
-                        shutil.copytree(src_custom_dir, target_custom_dir, symlinks=True)
-
-                        rel_display = str(dest.relative_to(home / ".config") / rel_dir)
-                        print(msg("log_keep_custom_dir", rel_display))
-                        if preserved_log is not None:
-                            preserved_log.append(f"~/.config/{rel_display}/")
+            for entry_type, root, name in preserve_entries:
+                rel_path = Path(root).relative_to(dest) / name
+                src_item = dest / rel_path
+                target_item = tmp_new / rel_path
+                target_item.parent.mkdir(parents=True, exist_ok=True)
+                if entry_type == "dir":
+                    shutil.rmtree(target_item, ignore_errors=True)
+                    shutil.copytree(src_item, target_item, symlinks=True)
+                elif src_item.is_symlink():
+                    target_item.unlink(missing_ok=True)
+                    target_item.symlink_to(os.readlink(src_item))
+                else:
+                    shutil.copy2(src_item, target_item)
+                rel_display = str(dest.relative_to(home / ".config") / rel_path)
+                suffix = "/" if entry_type == "dir" else ""
+                print(msg("log_keep_custom_dir" if entry_type == "dir" else "log_keep_custom_file", rel_display + suffix))
+                if preserved_log is not None:
+                    preserved_log.append(f"~/.config/{rel_display}{suffix}")
 
         # Manifest-declared preserve: inject into tmp_new before swap so the
         # renamed directory is already complete (no post-rename restore window).
+        # Symlinks are preserved as links (not dereferenced) so runtime link
+        # state — e.g. niri/effects.kdl → effects_normal.kdl|effects_eyecare.kdl,
+        # whose target encodes the EyeCare on/off state — survives deploys.
         if preserve and dest.is_dir():
             for rel in preserve:
                 src_p = dest / rel
-                if src_p.is_file():
-                    tgt_p = tmp_new / rel
-                    tgt_p.parent.mkdir(parents=True, exist_ok=True)
+                tgt_p = tmp_new / rel
+                tgt_p.parent.mkdir(parents=True, exist_ok=True)
+                if src_p.is_symlink():
+                    tgt_p.unlink(missing_ok=True)
+                    tgt_p.symlink_to(os.readlink(src_p))
+                elif src_p.is_file():
                     shutil.copy2(src_p, tgt_p)
-                    print(msg("log_keep_preserved_file", dest.name, rel))
-                    if preserved_log is not None:
-                        preserved_log.append(f"~/.config/{dest.name}/{rel}")
+                else:
+                    continue
+                print(msg("log_keep_preserved_file", dest.name, rel))
+                if preserved_log is not None:
+                    preserved_log.append(f"~/.config/{dest.name}/{rel}")
 
         if dest.exists() or dest.is_symlink():
             old_dest = dest.with_name(f"{dest.name}.old.{pid}")

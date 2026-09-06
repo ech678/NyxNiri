@@ -16,19 +16,35 @@
 | `label` | `<目录名>` | 菜单显示名 |
 | `detect` | `<目录名>` | 检测是否安装的命令名（纯名字，无 `binary:` 前缀 DSL） |
 
+### 预设继承控制（`[presets]` 表，可选）
+
+针对预设较多、希望支持轻量差异化预设（如 Niri `glow` 仅修改 `layout.kdl`）的应用，可通过 `[presets]` 表精确配置底版继承（Base Overlay）：
+
+| 字段 | 默认 | 作用 |
+|---|---|---|
+| `allow` | `[]` | **预设白名单**：仅列出的预设开启底版继承（未列出的保持 100% 独立） |
+| `standalone` | `[]` | **预设黑名单**：强制列出的预设独立部署，绝不继承底版 |
+| `inherit` | `false` | 全局继承开关（当 `allow` 与 `standalone` 均为空时的兜底策略） |
+| `include` | `[]` | **文件白名单**：仅从底版继承匹配这些 glob 的文件/目录（如 `["scripts/**", "*.kdl"]`） |
+| `exclude` | `[]` | **文件黑名单**：从底版继承时排除匹配这些 glob 的文件/目录 |
+
 文件型 app（`starship.toml`）用 **sidecar**：`configs/starship.toml.module.toml`（文件名 + `.module.toml`）。
 
 ### 实际 ship 的 manifest
 
 ```toml
-# configs/niri/.module.toml — monitor.kdl 被 config.kdl include 引用，不能改名走 dunder
+# configs/niri/.module.toml — monitor.kdl 被 include 引用；effects.kdl 为运行时护眼模式符号链接
 [packages]
-preserve = ["monitor.kdl"]
+preserve = ["monitor.kdl", "effects.kdl"]
 chmod = ["scripts/*.sh"]
 
-# configs/fish/.module.toml — clean-cache 不是 .sh，需声明 chmod
+[presets]
+allow = ["glow"]
+include = ["scripts/**", "*.kdl", "orbit-items__custom__.toml"]
+
+# configs/fish/.module.toml — clean-cache.py 不是 .sh，需声明 chmod
 [packages]
-chmod = ["clean-cache"]
+chmod = ["clean-cache.py"]
 
 # configs/noctalia/.module.toml — 三个主题脚本
 [packages]
@@ -45,7 +61,7 @@ detect = "starship"
 label = "Starship"
 ```
 
-kitty / fastfetch / zed **不写 manifest**（目录名 = 包名 = 二进制名 = 无例外），全默认即对。
+kitty / fastfetch / zed **不写 manifest**（目录名 = 包名 = 二进制名 = 无例外，presets 不开启继承保持独立），全默认即对。
 
 ## `.optional-apps.toml`（可选软件，无配置）
 
@@ -54,31 +70,51 @@ kitty / fastfetch / zed **不写 manifest**（目录名 = 包名 = 二进制名 
 | 字段 | 默认 | 作用 |
 |---|---|---|
 | `name` | （必填） | app 标识 |
-| `repo` | `[<name>]` | pacman 包名 |
+| `repo` | `[<name>]` | pacman 包名（Flatpak-only app 必须显式 `repo = []`，防名字泄进 pacman） |
 | `aur` | `[]` | AUR 包名 |
-| `label` | `<name>` | 菜单显示名 |
-| `detect` | `<name>` | 检测安装的命令名 |
+| `flatpak` | `[]` | Flathub app id——走 `flatpak install`，永不进 pacman/AUR/PKGBUILD |
+| `label` | `<name>` | PKGBUILD optdepends 展示名（菜单显示名走 i18n `app_*` 键） |
+| `category` | `""` | 菜单分组键，显示名走 i18n `apps_cat_<key>`；分类顺序 = 块首次出现顺序 |
+| `detect` | `<name>` | 检测安装的命令名（Flatpak app 额外用 app id 探测 `flatpak list`） |
 
-### 实际 ship 的
+块顺序即菜单顺序。菜单显示名必须配 i18n `app_<name>`（zh/en 成对，`-` 换 `_`）。
+
+### 实际 ship 的（节选）
 
 ```toml
 [[app]]
-name = "nautilus"
-repo = ["nautilus"]
+name = "brave-origin"
+label = "Brave Origin"
+category = "browser"
+repo = []                       # AUR-only → repo 显式置空
+aur = ["brave-origin-bin"]
+detect = "brave-origin"
+
+[[app]]
+name = "qq"                     # 闭源，走 Flathub
+label = "QQ"
+category = "social"
+repo = []
+flatpak = ["com.qq.QQ"]
 
 [[app]]
 name = "missioncenter"            # 目录名 missioncenter，包名 mission-center（连字符）
+label = "Mission Center"
+category = "system"
 repo = ["mission-center"]
 detect = "mission-center"
 
 [[app]]
 name = "fcitx5-rime"
+label = "Fcitx5 Rime"
+category = "system"
 repo = ["fcitx5", "fcitx5-gtk", "fcitx5-qt", "fcitx5-configtool", "fcitx5-rime"]
 aur = ["rime-ice-git"]
 ```
 
-这三个 app **无配置目录**（住 configs/ 只为 deps 菜单 + PKGBUILD optdepends 知道它们存在，
-解决"git 不跟踪空目录"）。详见 [two-axis-config](two-axis-config.md)。
+这些 app **无配置目录**（住 configs/ 只为 apps 菜单 + PKGBUILD optdepends 知道它们存在，
+解决"git 不跟踪空目录"）。例外是 **zed**：既有配置目录又登记可选（§2 双轴共存），
+可选轴字段（category 等）以 toml 为准、包不进硬依赖。详见 [two-axis-config](two-axis-config.md)。
 
 ## 两个 manifest 的分工
 

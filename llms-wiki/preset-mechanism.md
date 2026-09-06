@@ -8,9 +8,9 @@
 `~/.config/NyxNiri/presets/<app>.active`——一行，内容是预设名或 `default`。不占配置槽
 （这是扔掉 include 间接层、扔掉 `__preset__` 保留名的关键简化：一个概念减两份复杂度）。
 
-- `read_active_preset(app)` → 内容或 `"default"`（文件不存在 / 读失败 / 空白都回 default）。
+- `read_active_preset(app)` → 文件不存在时返回 `"default"`，空白、读失败或非法内容会抛出 `InvalidActivePresetError` 并冻结部署
 - `write_active_preset(app, name)` → **原子写**（temp + `os.replace`）。半写空文件会被
-  `read` 当 default 静默切回——原子写堵死这条故障路径。
+  拒绝并冻结部署——原子写堵死这条故障路径
 
 ## src 四分支（`resolve_preset_src(app, active, dest)`）
 
@@ -36,7 +36,8 @@ deploy 时根据 active 选源目录，四条分支 + 一条冻结：
 "显示新预设、实际旧配置"的错乱态。
 
 - **apply 流程**（`apply_preset`）：`atomic_replace` → `_phase_render_templates(only_app=app)`
-  → `write_active_preset`。deploy-then-write。
+  → `write_active_preset`。deploy-then-write。write 失败（磁盘满/权限）会报错返回
+  False——deploy 已落地、active 未记录，下次 update 按 default 重新部署。
 - **dest-missing reset** 是 sanctioned write-before-deploy：dest 已空，reset 后下次自愈。
 - **update 流程**（`_phase_atomic_deployment`）：active 本就正确，只在 dest-missing 时重置
   写 active；其余分支不重写 active。
@@ -61,6 +62,16 @@ theme-sync / gtk 重渲染）。切个 kitty 预设不该顺带跑 fisher，无�
 
 符合"破坏性操作必须显式确认"的精神。doctor 还有 `_check_preset_drift`——平时不 update
 也能撞见"你的 kitty 透明预设已不在上游"。
+
+## 预设继承与稀疏预设（Base Overlay & Sparse Presets）
+
+三层堆叠正式落地：`configs/<app>` (Base) ← `presets/<name>` (Overlay) ← `__custom__` (Dunder) / `preserve` (Manifest)。
+
+- **稀疏预设 (Sparse Presets)**：预设目录只需要存放与默认配置有差异的文件（例如 Niri 的 `glow` 仅需 49 行的 `layout.kdl`，无需镜像复制 4000+ 行 Python 脚本）。未重写的文件自动从仓库底版继承。
+- **双轴白名单保障**：
+  - **预设名白名单 (`allow = ["glow"]`)**：仅列入白名单的预设开启继承；未列入的预设和未声明的应用（如 Kitty）保持 100% 独立，零配置渗透。
+  - **文件白名单 (`include = ["scripts/**", "*.kdl"]`)**：仅继承白名单允许的底版文件；支持 `exclude` 黑名单进一步剔除特定文件。
+- **原子组装**：由 `atomic_replace_item(..., base_src, base_include, base_exclude)` 在 `tmp_new` 组装：先拷贝并过滤底版，再覆盖预设自身文件，最后注入 `__custom__` 与受保护文件，一次性原子 swap。
 
 ## CLI
 
