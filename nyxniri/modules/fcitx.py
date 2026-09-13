@@ -91,7 +91,10 @@ def fcitx_deploy_templates() -> bool:
 def _parse_ini(content):
     parser = configparser.ConfigParser(interpolation=None)
     parser.optionxform = str
-    parser.read_string(content)
+    try:
+        parser.read_string(content)
+    except configparser.MissingSectionHeaderError:
+        parser.read_string("[ClassicUI]\n" + content)
     return parser
 
 
@@ -99,6 +102,21 @@ def _edit_ini(content, section, changes):
     # Validate before editing; retain comments, ordering and unrelated sections.
     _parse_ini(content)
     lines = content.splitlines(keepends=True)
+    section_start = next((i for i, line in enumerate(lines)
+                          if configparser.ConfigParser.SECTCRE.match(line.strip())), None)
+    if section_start is None:
+        pending = dict(changes)
+        edited = []
+        for line in lines:
+            key = line.split("=", 1)[0].strip() if "=" in line and not line.lstrip().startswith(("#", ";")) else None
+            if key in pending:
+                value = pending.pop(key)
+                edited.append(f"{key}={value}\n")
+            else:
+                edited.append(line)
+        edited.extend(f"{key}={value}\n" for key, value in pending.items() if value is not None)
+        return "".join(edited)
+
     start = next((i for i, line in enumerate(lines)
                   if (match := configparser.ConfigParser.SECTCRE.match(line.strip()))
                   and match.group("header") == section), None)
