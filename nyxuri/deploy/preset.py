@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from nyxuri.constants import Colors, PROJECT_NAME, STORAGE_NAME
+from nyxuri.constants import Colors, STORAGE_NAME
 from nyxuri.core import get_env, log_msg, timed_run
 from nyxuri.i18n import msg
 

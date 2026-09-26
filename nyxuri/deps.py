@@ -6,6 +6,7 @@ import sys
 from typing import Dict, List, Optional
 
 from nyxuri.constants import AUR_DEPS, CORE_DEPS
+from nyxuri.core import log_msg
 from nyxuri.i18n import msg
 from nyxuri.deploy.manifest import (
     discover_manifest_apps,
