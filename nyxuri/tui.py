@@ -52,6 +52,7 @@ class TerminalGuard:
         # interactive_screen's finally ran, disable tracking + show cursor so
         # the terminal isn't left in a quirked state.
         sys.stdout.write("\033[?1006l\033[?1002l")
+        sys.stdout.write("\033[?2025l\033[?1049l")
         sys.stdout.write(Colors.CURSOR_SHOW)
         sys.stdout.flush()
 
@@ -353,11 +354,14 @@ RESERVED_ROWS = 18  # per-frame vertical budget: logo + title + hint
 def interactive_screen(clear_first: bool = True, mouse: bool = False):
     """Shared scaffolding for a full-screen interactive loop.
 
-    Clears once on entry (unless ``clear_first=False``), enters echo-off raw
-    mode, hides the cursor, and drains stale input; yields the stdin fd. On
-    exit (return, exception, or SystemExit) it drains the auto-repeat burst,
-    restores cooked mode, disables mouse tracking if it was enabled, and
-    re-shows the cursor — the body only owns the per-frame redraw
+    Enters the terminal alternate screen buffer (1049) so the loop's
+    clears never pollute the user's scrollback history, enables DEC 2025
+    frame synchronization (2025) to reduce tearing on high-refresh
+    terminals, hides the cursor, enters echo-off raw mode, and drains stale
+    input; yields the stdin fd. On exit (return, exception, or SystemExit)
+    it drains the auto-repeat burst, restores cooked mode, disables mouse
+    tracking if it was enabled, re-shows the cursor, leaves frame sync, and
+    restores the main screen — the body only owns the per-frame redraw
     (``\\033[H`` + show_logo + rows + hint) and key dispatch.
 
     ``mouse=True`` enables SGR mouse tracking (1002 + 1006) for the loop's
@@ -368,6 +372,7 @@ def interactive_screen(clear_first: bool = True, mouse: bool = False):
     if clear_first:
         clear_screen()
     sys.stdout.write(Colors.CURSOR_HIDE)
+    sys.stdout.write("\033[?1049h\033[?2025h")
     if mouse:
         # 1002 = button-event tracking, 1006 = SGR coordinate encoding
         sys.stdout.write("\033[?1002h\033[?1006h")
@@ -381,6 +386,7 @@ def interactive_screen(clear_first: bool = True, mouse: bool = False):
         stack.close()
         if mouse:
             sys.stdout.write("\033[?1006l\033[?1002l")
+        sys.stdout.write("\033[?2025l\033[?1049l")
         sys.stdout.write(Colors.CURSOR_SHOW)
         sys.stdout.flush()
 
