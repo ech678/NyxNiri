@@ -13,7 +13,7 @@ import tty
 import unicodedata
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from nyxuri.constants import Colors, get_compat_env
 from nyxuri.core import Environment, get_env
@@ -52,6 +52,7 @@ class TerminalGuard:
         # interactive_screen's finally ran, disable tracking + show cursor so
         # the terminal isn't left in a quirked state.
         sys.stdout.write("\033[?1006l\033[?1002l")
+        sys.stdout.write("\033[?2025l\033[?1049l")
         sys.stdout.write(Colors.CURSOR_SHOW)
         sys.stdout.flush()
 
@@ -353,11 +354,14 @@ RESERVED_ROWS = 18  # per-frame vertical budget: logo + title + hint
 def interactive_screen(clear_first: bool = True, mouse: bool = False):
     """Shared scaffolding for a full-screen interactive loop.
 
-    Clears once on entry (unless ``clear_first=False``), enters echo-off raw
-    mode, hides the cursor, and drains stale input; yields the stdin fd. On
-    exit (return, exception, or SystemExit) it drains the auto-repeat burst,
-    restores cooked mode, disables mouse tracking if it was enabled, and
-    re-shows the cursor — the body only owns the per-frame redraw
+    Enters the terminal alternate screen buffer (1049) so the loop's
+    clears never pollute the user's scrollback history, enables DEC 2025
+    frame synchronization (2025) to reduce tearing on high-refresh
+    terminals, hides the cursor, enters echo-off raw mode, and drains stale
+    input; yields the stdin fd. On exit (return, exception, or SystemExit)
+    it drains the auto-repeat burst, restores cooked mode, disables mouse
+    tracking if it was enabled, re-shows the cursor, leaves frame sync, and
+    restores the main screen — the body only owns the per-frame redraw
     (``\\033[H`` + show_logo + rows + hint) and key dispatch.
 
     ``mouse=True`` enables SGR mouse tracking (1002 + 1006) for the loop's
@@ -368,6 +372,7 @@ def interactive_screen(clear_first: bool = True, mouse: bool = False):
     if clear_first:
         clear_screen()
     sys.stdout.write(Colors.CURSOR_HIDE)
+    sys.stdout.write("\033[?1049h\033[?2025h")
     if mouse:
         # 1002 = button-event tracking, 1006 = SGR coordinate encoding
         sys.stdout.write("\033[?1002h\033[?1006h")
@@ -381,6 +386,7 @@ def interactive_screen(clear_first: bool = True, mouse: bool = False):
         stack.close()
         if mouse:
             sys.stdout.write("\033[?1006l\033[?1002l")
+        sys.stdout.write("\033[?2025l\033[?1049l")
         sys.stdout.write(Colors.CURSOR_SHOW)
         sys.stdout.flush()
 
@@ -929,7 +935,7 @@ def show_header(title: str, env: Optional[Environment] = None) -> int:
     if env is None:
         env = get_env()
     header_text = (
-        f"\n  {Colors.BOLD_PURPLE}NYX NIRI{Colors.RESET}  "
+        f"\n  {Colors.BOLD_PURPLE}NYXURI{Colors.RESET}  "
         f"{Colors.BOLD_WHITE}{env.version}{Colors.RESET}  "
         f"{Colors.DARK_GRAY}·{Colors.RESET}  "
         f"{Colors.BOLD_WHITE}{title}{Colors.RESET}\n\n"
@@ -1132,7 +1138,6 @@ class PresetSwitcher:
                 if show_inspector:
                     curr_item = right_items[right_focus] if right_items else None
                     if curr_item and curr_item["type"] in ("part_slot", "part_variant"):
-                        slot = curr_item["slot"]
                         s_info = curr_item["slot_info"]
                         target = s_info.get("target", "")
                         desc = s_info.get("desc", "")
@@ -1228,9 +1233,9 @@ class PresetSwitcher:
                         meta_text = f"{text('源', 'Source')}: {info.path} · {f_count} {text('包含文件', 'included')} · {p_count} {text('保留文件', 'preserved')}"
                         write_cleared(f"  {Colors.DARK_GRAY}{truncate_display(meta_text, cols - 6)}{Colors.RESET}\033[K\n")
                     else:
-                        write_cleared(f"  \033[K\n")
+                        write_cleared("  \033[K\n")
                 else:
-                    write_cleared(f"  \033[K\n")
+                    write_cleared("  \033[K\n")
 
                 if toast_msg:
                     write_cleared(f"  {toast_msg}\033[K\n")

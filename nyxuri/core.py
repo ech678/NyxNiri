@@ -16,7 +16,6 @@ from nyxuri.constants import (
     CLI_CMD,
     CONFIG_DIR_NAME,
     LEGACY_CLI_CMDS,
-    LEGACY_PROJECT_NAMES,
     LEGACY_STORAGE_NAMES,
     PROJECT_NAME,
     STORAGE_NAME,
@@ -398,6 +397,9 @@ def timed_run(cmd: list, timeout: float, **kw) -> Optional[subprocess.CompletedP
         return subprocess.run(cmd, timeout=timeout, **kw)
     except subprocess.TimeoutExpired:
         log_msg("WARN", f"Command timed out after {timeout}s: {cmd[0]}")
+        return None
+    except (FileNotFoundError, OSError):
+        log_msg("WARN", f"Command not available: {cmd[0]}")
         return None
 
 # --- CLI Binary Symlink ---
