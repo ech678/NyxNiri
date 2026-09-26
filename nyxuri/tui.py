@@ -935,7 +935,7 @@ def show_header(title: str, env: Optional[Environment] = None) -> int:
     if env is None:
         env = get_env()
     header_text = (
-        f"\n  {Colors.BOLD_PURPLE}NYX NIRI{Colors.RESET}  "
+        f"\n  {Colors.BOLD_PURPLE}NYXURI{Colors.RESET}  "
         f"{Colors.BOLD_WHITE}{env.version}{Colors.RESET}  "
         f"{Colors.DARK_GRAY}·{Colors.RESET}  "
         f"{Colors.BOLD_WHITE}{title}{Colors.RESET}\n\n"
